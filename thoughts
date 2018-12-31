@@ -1,0 +1,57 @@
+Space station components: (all have 50 hull)
+ Shield Generator	- 100 shields over a range of 4, regenerate 1, then 3, then 8 when not being attacked
+ Power Generator	- generates 3 power per turn and can store up to 15; most components take 2 to activate
+ Laser Turret		- 3 5 damage lasers
+ Missile Turret		- 1 30 damage missile
+ Lightning Turret	- 1 10 damage charge
+ Antimatter Turret	- 2 8 damage blasts
+ Connector		- always 4 way
+ Engine			- provides 3 thrust
+ Hangar			- holds up to 20 size worth of ships, can launch 1 ship per turn.
+ Factory		- turns 2 salvage into production progress (can hold 100 salvage)
+ Communications Relay	- allows players to communicate and enable the Distress Call card; maybe also gives you previews of the next wave
+
+Cards:
+ Repair			- restores a damaged (but not destroyed) component to full hull
+ Salvage		- remove a destroyed component; 4 cards are distriuted among the players
+ Power Surge		- fills all power generators
+ Power Diversion	- allows you to reuse a component unlimitedly for just 1 power per use this turn
+ Manual Targeting	- all station attacks are guaranteed hits for 5 rounds
+ Distress Call		- command gives a space station component, ship (corvette/3fighters/3bombers), or 4 cards are distributed among the players
+ Boost			- instantly turn the station any way you want
+ Transform		- turn any component into any other component
+ Time Stop		- enemies are frozen and cannot be attacked for 5 rounds
+ Shield Overcharge	- station takes no damage for 3 rounds
+ Planetary Cannon	- deal 200 damage to any enemy ship corvette or bigger
+ Bomb			- deal 30 damage to all enemy ships in a 6x6, 7x5, 8x4 or 9x3 area
+ Tractor Beam		- move up to 3 objects anywhere
+ Relocation		- move up to 2 station components to any other locations (can switch them)
+
+Friendly ships:
+ Probe		- 10 hull, 2 repair, 5 salvage capacity, 3 speed, 1 size, 5 salvage
+ Fighter	- 15 hull, 15 shields, 2 3 damage lasers, 5 speed, 3 size, 15 salvage
+ Bomber		- 15 hull, 15 shields, 1 12 damage missile, 3 speed, 3 size, 15 salvage
+ Corvette	- 40 hull, 40 shields, 3 3 damage lasers, 2 8 damage missiles, 3 speed, 8 size, 5 cargo, has a half-efficient onboard factory that can hold 15 salvage, 70 salvage
+ Frigate
+
+Enemy ships:
+ Drone		- 5 hull, 1 1 damage laser, 3 speed, 1 salvage
+ Kamikaze Drone - 10 hull, 10 damage on impact, 4 speed, 1 salvage
+ Bomber		- 20 hull, 10 shields, 1 10 damage missile, 3 speed, 3 salvage
+ Fighter	- 20 hull, 10 shields, 2 3 damage lasers, 5 speed, 3 salvage
+ Corvette	- 50 hull, 30 shields, 3 3 damage lasers, 2 8 damage missiles, 3 speed, launches a drone or kamikaze drone every fifth round, 10 salvage
+ Frigate
+ Battleship
+ Leviathan
+
+
+How often do the miners give you a new piece? Every group of waves?
+
+Stats:
+All station components can activate once per turn, requiring 2 power to do so.
+To turn the station 90 degrees, you need 2 thrust for each component (you can't accumulate more thrust than this).
+All lasers, against probes or drones, have a 75% chance to hit. Against bigger, they always hit.
+All missiles, against probes or drones, have a 25% chance to hit. Against fighters and bombers, they have a 35% chance to hit. Against corvettes, they have a 75% chance to hit. Against bigger, they always hit.
+All lightning always hits everything and does 5 times damage to shields.
+All antimatter, against probes or drones, has a 35% chance to hit. Against fighters and bombers, it has a 60% chance to hit. Against bigger, it always hits. Antimatter penetrates shields.
+All plasma ? and . Plasma does enormous damage, but is completely stopped by shields.
