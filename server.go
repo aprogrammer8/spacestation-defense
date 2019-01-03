@@ -1,23 +1,49 @@
 package main
 
 import (
-	errors "github.com/pkg/errors"
+	"bytes"
 	"log"
 	"net"
-	"time"
+
+	errors "github.com/pkg/errors"
+
+	"io"
+	"strings"
 )
 
-type Player struct {
+type client struct {
 	Name     string
 	InGame   bool
 	Inbound  chan []byte
 	Outbound chan []byte
 }
 
-type Msg struct {
+// message is a transmission from a player to the lobby server. The username is added in by the multiplexer.
+// If the Content is a chat message, it will start with "CHAT:". Otherwise, we interpret it as a control message.
+type message struct {
 	Username string
 	Content  []byte
 }
+
+// Helper function to divide the byte stream of TCP into discrete messages.
+func readUntilDelim(r io.Reader, delim byte) ([]byte, error) {
+	var buf bytes.Buffer
+	var b = []byte{0}
+	for {
+		_, err := r.Read(b)
+		if b[0] == DELIM {
+			return buf.Bytes(), nil
+		}
+		if err != nil {
+			return buf.Bytes(), err
+		}
+		buf.Write(b)
+	}
+	return buf.Bytes(), nil
+}
+
+// DELIM is a global constant used to delimit messages.
+var DELIM byte = 3
 
 func main() {
 	listener, err := net.Listen("tcp4", "127.0.0.1:1025")
@@ -25,8 +51,8 @@ func main() {
 		log.Fatal(errors.Wrap(err, "When listening on socket"))
 	}
 	defer listener.Close()
-	entryChan = make(chan Player)
-	exitChan = make(chan string)
+	entryChan := make(chan client)
+	exitChan := make(chan string)
 	go lobby(entryChan, exitChan)
 	for {
 		conn, err := listener.Accept()
@@ -38,48 +64,56 @@ func main() {
 
 }
 
-func lobby(entryChan <-chan Player, exitChan <-chan string) {
-	var players []Player
-	msgMux := make(chan Msg)
+func lobby(entryChan <-chan client, exitChan chan string) {
+	var players []client
+	msgMux := make(chan message)
 
 	for {
 		select {
 		case player := <-entryChan:
+			log.Println("Player joining:", player.Name)
 			players = append(players, player)
 			// Start a goroutine to multiplex the chat messages.
-			go func(mux chan<- Msg, player Player, exit chan<- string) {
+			go func(mux chan<- message, player client, exit chan<- string) {
 				for msg := range player.Inbound {
-					mux <- Msg{Username: player.Name, Content: msg}
+					mux <- message{Username: player.Name, Content: msg}
 				}
 				exit <- player.Name
 			}(msgMux, player, exitChan)
 		case username := <-exitChan:
+			log.Println("Player leaving:", username)
 			// We only got the name, so use it to find the player in order to delete them.
 			for i := range players {
 				if players[i].Name == username {
-					players = append(players[:i], layers[i+1:])
+					players = append(players[:i], players[i+1:]...)
 				}
 			}
-		//case msg := <-msgMux:
-			// For now, we send everything as a chat message
-			//What should the outbound messages be? Should they still be []byte? They need to have the username.
+		case msg := <-msgMux:
+			log.Println("Got message:", msg)
+			msgStr := string(msg.Content)
+			//TODO: handle command strings
+			//if strings.HasPrefix(msgStr, "CHAT:") {
+			//}
+			broadcast := msg.Username + ":" + strings.TrimPrefix(msgStr, "CHAT:")
+			for _, player := range players {
+				player.Outbound <- []byte(broadcast)
+			}
 		}
 	}
 }
 
 // handleConnection is spawned in a goroutine for each player that connects. It listens for input from the player, as well as server messages back to them.
-func handleConnection(conn net.Conn, entryChan chan<- Player, exitChan chan<- string) {
+func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- string) {
 	// When the player first connects, they're expected to choose a username.
 	// TODO: handle the case of repeat names
-	var msg []byte
-	_, err := conn.Read(&msg)
+	msg, err := readUntilDelim(conn, DELIM)
 	if err != nil {
 		log.Println(errors.Wrap(err, "When getting player's name"))
 		return
 	}
-	// Send in the Player to the lobby goroutine.
-	player = Player{
-		Name:     msg,
+	// Send in the client to the lobby goroutine.
+	player := client{
+		Name:     string(msg),
 		InGame:   false,
 		Inbound:  make(chan []byte),
 		Outbound: make(chan []byte),
@@ -100,7 +134,7 @@ func handleConnection(conn net.Conn, entryChan chan<- Player, exitChan chan<- st
 	// Connect the network socket to the inbound channel.
 	for {
 		// Read the next message from chat.
-		_, err := conn.Read(&msg)
+		_, err := readUntilDelim(conn, DELIM)
 		if err != nil {
 			log.Println(errors.Wrap(err, "When reading player message"))
 			//return
