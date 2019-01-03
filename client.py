@@ -1,6 +1,10 @@
 # TODO: turn this into a real system for receiving messages (we'll need to buffer the bytes and use delimiters, I imagine)
 def disp_message(sock):
-	print(sock.recv(3))
+	print(sock.recv(100))
+
+def encode(msg):
+	# \x03 is the delimiter byte.
+	return bytes(msg+'\x03', 'ascii')
 
 # Initialization
 import pygame, socket, selectors, random

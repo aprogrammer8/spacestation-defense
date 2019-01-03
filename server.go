@@ -69,6 +69,7 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 
 	for {
 		select {
+		// Player joining.
 		case player := <-entryChan:
 			log.Println("Player joining:", player.Name)
 			players = append(players, player)
@@ -79,6 +80,7 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 				}
 				exit <- player.Name
 			}(msgMux, player, exitChan)
+		// Player leaving.
 		case username := <-exitChan:
 			log.Println("Player leaving:", username)
 			// We only got the name, so use it to find the player in order to delete them.
@@ -87,15 +89,20 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 					players = append(players[:i], players[i+1:]...)
 				}
 			}
+		// And player sending a message.
 		case msg := <-msgMux:
 			log.Println("Got message:", msg)
 			msgStr := string(msg.Content)
-			//TODO: handle command strings
-			//if strings.HasPrefix(msgStr, "CHAT:") {
-			//}
-			broadcast := msg.Username + ":" + strings.TrimPrefix(msgStr, "CHAT:")
-			for _, player := range players {
-				player.Outbound <- []byte(broadcast)
+			if strings.HasPrefix(msgStr, "CHAT:") {
+				broadcast := msg.Username + ":" + strings.TrimPrefix(msgStr, "CHAT:")
+				for _, player := range players {
+					player.Outbound <- []byte(broadcast)
+				}
+			} else {
+				switch msgStr {
+				default:
+					log.Println("Command not recognized:", msgStr)
+				}
 			}
 		}
 	}
@@ -126,6 +133,7 @@ func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- st
 			_, err := conn.Write(msg)
 			if err != nil {
 				log.Println(errors.Wrap(err, "When sending message to player"))
+				return
 			}
 			//TODO remove them or just drop the message?
 		}
@@ -133,10 +141,10 @@ func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- st
 	// Connect the network socket to the inbound channel.
 	for {
 		// Read the next message from chat.
-		_, err := readUntilDelim(conn, DELIM)
+		msg, err := readUntilDelim(conn, DELIM)
 		if err != nil {
 			log.Println(errors.Wrap(err, "When reading player message"))
-			//return
+			return
 		}
 		player.Inbound <- msg
 	}
