@@ -39,7 +39,6 @@ func readUntilDelim(r io.Reader, delim byte) ([]byte, error) {
 		}
 		buf.Write(b)
 	}
-	return buf.Bytes(), nil
 }
 
 // DELIM is a global constant used to delimit messages.
