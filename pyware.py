@@ -266,10 +266,6 @@ def wait(keys,clock):
       elif event.type==pygame.QUIT:sys.exit()
   return key
 
-def toggle(var):
-  if var==False:return True
-  if var==True:return False
-
 def between(lowerbound,midpoint,upperbound):
   if midpoint>=lowerbound and midpoint<=upperbound:return True
   return False
