@@ -50,11 +50,11 @@ def login_screen():
 			if event.type == pygame.QUIT: sys.exit()
 			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
 				player_name = username_box.handle_event(event)
-				if player_name: # In the future, check with the server that the name is available.
+				if player_name:
+					# In the future, check with the server that the name is available.
 					sock.send(encode(player_name))
 					return
-				username_box.draw()
-				pygame.display.flip()
+				pygame.display.update(username_box.rect)
 
 def global_lobby():
 	global player_name, sock, selector, window, font, clock
@@ -66,14 +66,20 @@ def global_lobby():
 		events = selector.select(0)
 		for key, _ in events:
 			msg = recv_message(key.fileobj)
-			# For now, assume all messages are chat
-			chatbar.add_message(string(msg))
+			if msg.startswith("+LOBBY:"):
+				lobbylist.add(msg[7:])
+				lobbylist.draw()
+				pygame.display.update()
+			elif msg.startswith("-LOBBY:"):
+				lobbylist.add(msg[7:])
+				lobbylist.draw()
+				pygame.display.update()
+			else:
+				chatbar.add_message(string(msg))
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
 			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
 				chatbar.handle_event(event)
-				chatbar.draw()
 				pygame.display.update(chatbar.rect)
 
-main()
-
+if __name__ == '__main__': main()

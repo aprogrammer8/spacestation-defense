@@ -3,25 +3,23 @@
 # TODO: Add more control character handling
 # TODO: Add cursor display
 
-import pygame
+import pygame, text_wrap
 
 class InputBox:
 	def __init__(self, window, rect, bgcolor, textcolor, active_color, inactive_color, font, text=''):
 		self.window = window
 		self.rect = rect
+		self.textrect = (rect.x+1, rect.y+1, rect.w-2, rect.h-2)
 		self.bgcolor = bgcolor
 		self.textcolor = textcolor
 		self.active_color = active_color
 		self.inactive_color = inactive_color
 		self.text = text
 		self.font = font
-		self.text_surface = font.render(text, True, self.textcolor)
 		self.active = False
-
 	def rectcolor(self):
 		if self.active: return self.active_color
 		return self.inactive_color
-
 	def handle_event(self, event):
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			if self.rect.collidepoint(event.pos):
@@ -29,6 +27,7 @@ class InputBox:
 			else:
 				self.active = False
 			self.color = self.active_color if self.active else self.rectcolor()
+			self.draw()
 		elif event.type == pygame.KEYDOWN:
 			if self.active:
 				if event.key == pygame.K_RETURN:
@@ -40,20 +39,13 @@ class InputBox:
 					self.erase_needed = True
 				else:
 					self.text += event.unicode
-				self.text_surface = self.font.render(self.text, True, self.textcolor)
+				self.draw()
 				if event.key == pygame.K_RETURN:
 					return returntext
-
-	# This method currently unused.
-	def update(self):
-		# Resize the box if the text is too long.
-		width = max(200, self.text_surface.get_width()+10)
-		self.rect.w = width
-
 	def draw(self):
 		# Clear the area. Without this, the text gets blurred more and more with each re-blitting. I have no idea why.
-		pygame.draw.rect(self.window, self.bgcolor, self.rect, 0)
-		# Blit the text.
-		self.window.blit(self.text_surface, (self.rect.x+2, self.rect.y+2))
-		# Draw the rect.
+		pygame.draw.rect(self.window, self.bgcolor, self.textrect, 0)
+		# Draw the text.
+		text_wrap.draw_text(self.window, self.text, self.textcolor, self.textrect, self.font)
+		# Draw the border.
 		pygame.draw.rect(self.window, self.rectcolor(), self.rect, 1)

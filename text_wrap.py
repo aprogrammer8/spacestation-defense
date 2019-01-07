@@ -10,7 +10,7 @@ def draw_text(window, text, color, rect, font, spacing=2, aa=True, bgcolor=None)
 		if y + font_height > rect.bottom:
 			break
 		# Determine maximum width of line.
-		while font.size(text[:i])[0] < rect.width and i < len(text):
+		while font.size(text[:i])[0] < rect.w and i < len(text):
 			i += 1
 		# If we've wrapped the text, then adjust the wrap to the last word.
 		if i < len(text):
@@ -21,7 +21,7 @@ def draw_text(window, text, color, rect, font, spacing=2, aa=True, bgcolor=None)
 			image.set_colorkey(bgcolor)
 		else:
 			image = font.render(text[:i], aa, color)
-			window.blit(image, (rect.left, y))
+			window.blit(image, (rect.x, y))
 		y += font_height + spacing
 		# Remove the text we just blitted.
 		text = text[i:]

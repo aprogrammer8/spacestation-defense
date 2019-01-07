@@ -25,6 +25,7 @@ class TextList:
 		self.new_height += height + 1
 		#text_wrap.draw_text(self.window, message, self.textcolor, pygame.Rect(self.rect.x, self.rect.y+self.new_height, self.rect.w, height), self.font)
 		# Add an extra 1 space between messages.
+		self.draw()
 	def draw(self):
 		pygame.draw.rect(self.window, self.bgcolor, self.rect, 0)
 		pygame.draw.rect(self.window, self.bordercolor, self.rect, 1)
