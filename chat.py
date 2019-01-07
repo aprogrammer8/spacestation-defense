@@ -40,6 +40,7 @@ class Chat:
 		#text_wrap.draw_text(self.window, message, self.textcolor, pygame.Rect(self.rect.x, self.rect.y+self.new_height, self.rect.w, height), self.font)
 		# Add an extra 1 space between messages.
 	def draw(self):
+		pygame.draw.rect(self.window, self.bgcolor, self.rect, 0)
 		pygame.draw.rect(self.window, self.bordercolor, self.rect, 1)
 		self.entry_box.draw()
 		self.new_height = 0
