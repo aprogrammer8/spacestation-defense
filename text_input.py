@@ -1,8 +1,7 @@
 # Originally created by: skrx, from Stack Overflow
 
-
-# Add cursor display
-# Add more control character handling
+# TODO: Add more control character handling
+# TODO: Add cursor display
 
 import pygame
 
@@ -18,7 +17,6 @@ class InputBox:
 		self.font = font
 		self.text_surface = font.render(text, True, self.textcolor)
 		self.active = False
-		self.erase_needed = False
 
 	def rectcolor(self):
 		if self.active: return self.active_color
@@ -53,9 +51,8 @@ class InputBox:
 		self.rect.w = width
 
 	def draw(self):
-		if self.erase_needed:
-			pygame.draw.rect(self.window, self.bgcolor, self.rect, 0)
-			self.erase_needed = False
+		# Clear the area. Without this, the text gets blurred more and more with each re-blitting. I have no idea why.
+		pygame.draw.rect(self.window, self.bgcolor, self.rect, 0)
 		# Blit the text.
 		self.window.blit(self.text_surface, (self.rect.x+2, self.rect.y+2))
 		# Draw the rect.
