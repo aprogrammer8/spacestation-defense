@@ -14,25 +14,34 @@ class TextList:
 		self.erase_needed = False
 		self.message_list = []
 		self.new_height = 0 # The y that a new message will start at
+		self.spacing = 1
 	def add_message(self, message):
 		self.message_list += [message]
 		height = text_wrap.get_height(message, self.rect.w, 2, self.font)
-		# TODO: flush old messages if the total height gets too big
-		#fits = False
-		#while not fits:
-		#	
-		#self.(, self.textcolor, self.font)
-		self.new_height += height + 1
-		#text_wrap.draw_text(self.window, message, self.textcolor, pygame.Rect(self.rect.x, self.rect.y+self.new_height, self.rect.w, height), self.font)
-		# Add an extra 1 space between messages.
+		# If we're overflowin the box, flush old messages until there's enough room.
+		while self.new_height + height + self.spacing > self.rect.h:
+			self.new_height -= text_wrap.get_height(self.message_list[0], self.rect.w, self.spacing, self.font) + self.spacing
+			self.message_list.pop(0)
+		self.new_height += height + self.spacing
+		self.draw()
+	def remove_by_content(eslf, message):
+		i = 0
+		for msg in self.message_list:
+			if msg == message:
+				return self.remove_by_index(i)
+			i += 1
+		print("Could not remove message '"+message+"' because it was not found")
+	def remove_by_index(self, index):
+		self.message_list.pop(index)
 		self.draw()
 	def draw(self):
 		pygame.draw.rect(self.window, self.bgcolor, self.rect, 0)
 		pygame.draw.rect(self.window, self.bordercolor, self.rect, 1)
 		self.new_height = 0
 		for message in self.message_list:
-			height = text_wrap.draw_text(self.window, message, self.textcolor, pygame.Rect(self.rect.x, self.rect.y+self.new_height, self.rect.w, self.rect.h), self.font)
-			self.new_height += height + 1
+			# Cropping the rect slightly so the text isn't on the border.
+			height = text_wrap.draw_text(self.window, message, self.textcolor, pygame.Rect(self.rect.x+2, self.rect.y+self.new_height+1, self.rect.w-2, self.rect.h-1), self.font)
+			self.new_height += height + self.spacing
 
 
 # A chat element, consisting of a TextList and an InputBox.
@@ -45,8 +54,6 @@ class Chat:
 		self.textcolor = textcolor
 		self.font = font
 		self.username = username
-		#self.chat_stage_surface = font.render("", True, self.textcolor)
-		#self.entry_stage_surface = font.render("", True, self.textcolor)
 		self.erase_needed = False
 		log_rect = pygame.Rect(rect.x, rect.y, rect.w, rect.h-entryheight+1) # This +1 makes the borders overlap, so it doesn't look ugly
 		self.log = TextList(window, log_rect, bgcolor, bordercolor, textcolor, font)
@@ -64,10 +71,3 @@ class Chat:
 	def draw(self):
 		self.log.draw()
 		self.entry_box.draw()
-#		pygame.draw.rect(self.window, self.bgcolor, self.rect, 0)
-#		pygame.draw.rect(self.window, self.bordercolor, self.rect, 1)
-#		self.entry_box.draw()
-#		self.new_height = 0
-#		for message in self.message_list:
-#			height = text_wrap.draw_text(self.window, message, self.textcolor, pygame.Rect(self.rect.x, self.rect.y+self.new_height, self.rect.w, self.rect.h), self.font)
-#			self.new_height += height + 1
