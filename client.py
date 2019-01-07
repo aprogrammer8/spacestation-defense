@@ -6,12 +6,10 @@ def encode(msg):
 	# \x03 is the delimiter byte.
 	return bytes(msg+'\x03', 'ascii')
 
-# Initialization
 import pygame, socket, selectors, random
-import text_wrap, text_input
-import chat #, gamestate
+from pygame_elements import *
 from client_config import *
-
+#import gamestate
 
 def main():
 	global player_name, sock, selector, window, sock, font, clock
@@ -39,9 +37,9 @@ def main():
 
 def login_screen():
 	global player_name, sock, selector, window, font, clock
-	text_wrap.draw_text(window, "enter your name", TEXTCOLOR, LOG_RECT, font)
+	draw_text(window, "enter your name", TEXTCOLOR, LOG_RECT, font)
 	font = pygame.font.Font(pygame.font.get_default_font(), 10)
-	username_box = text_input.InputBox(window, NAME_ENTRY_RECT, BGCOLOR, TEXTCOLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font)
+	username_box = InputBox(window, NAME_ENTRY_RECT, BGCOLOR, TEXTCOLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font)
 	username_box.draw()
 	pygame.display.flip()
 	while True:
@@ -58,8 +56,9 @@ def login_screen():
 
 def global_lobby():
 	global player_name, sock, selector, window, font, clock
-	chatbar = chat.Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXTCOLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
+	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXTCOLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
 	chatbar.draw()
+	lobbylist = TextList(window, LOBBYLIST_RECT, BGCOLOR, BGCOLOR, TEXTCOLOR, font)
 	pygame.display.flip()
 	while True:
 		clock.tick(50)
@@ -71,7 +70,7 @@ def global_lobby():
 				lobbylist.draw()
 				pygame.display.update()
 			elif msg.startswith("-LOBBY:"):
-				lobbylist.add(msg[7:])
+				lobbylist.remove_by_content(msg[7:])
 				lobbylist.draw()
 				pygame.display.update()
 			else:
