@@ -46,13 +46,16 @@ class InputBox:
 				if event.key == pygame.K_RETURN:
 					return returntext
 
+	# This method currently unused.
 	def update(self):
 		# Resize the box if the text is too long.
 		width = max(200, self.text_surface.get_width()+10)
 		self.rect.w = width
 
 	def draw(self):
-		if self.erase_needed: pygame.draw.rect(self.window, self.bgcolor, self.rect, 0)
+		if self.erase_needed:
+			pygame.draw.rect(self.window, self.bgcolor, self.rect, 0)
+			self.erase_needed = False
 		# Blit the text.
 		self.window.blit(self.text_surface, (self.rect.x+2, self.rect.y+2))
 		# Draw the rect.
