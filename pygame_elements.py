@@ -149,8 +149,7 @@ class Chat:
 			if self.entry_box.rect.collidepoint(event.pos):
 				self.entry_box.handle_event(event)
 		if event.type == pygame.KEYDOWN:
-			entry = self.entry_box.handle_event(event)
-			if entry: self.log.add(self.username+": "+entry)
+			return self.entry_box.handle_event(event)
 	def add_message(self, message):
 		self.log.add(message)
 	def draw(self):

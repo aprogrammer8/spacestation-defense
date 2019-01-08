@@ -13,16 +13,16 @@ import (
 
 type client struct {
 	Name     string
-	InGame   bool
+	Lobby    string
 	Inbound  chan []byte
-	Outbound chan []byte
+	Outbound chan string
 }
 
 // message is a transmission from a player to the lobby server. The username is added in by the multiplexer.
 // If the Content is a chat message, it will start with "CHAT:". Otherwise, we interpret it as a control message.
 type message struct {
-	Username string
-	Content  []byte
+	User    client
+	Content []byte
 }
 
 // Helper function to divide the byte stream of TCP into discrete messages.
@@ -66,7 +66,6 @@ func main() {
 func lobby(entryChan <-chan client, exitChan chan string) {
 	var players []client
 	msgMux := make(chan message)
-
 	for {
 		select {
 		// Player joining.
@@ -76,11 +75,11 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 			// Start a goroutine to multiplex the chat messages.
 			go func(mux chan<- message, player client, exit chan<- string) {
 				for msg := range player.Inbound {
-					mux <- message{Username: player.Name, Content: msg}
+					mux <- message{User: player, Content: msg}
 				}
 				exit <- player.Name
 			}(msgMux, player, exitChan)
-		// Player leaving.
+		// Playser leaving.
 		case username := <-exitChan:
 			log.Println("Player leaving:", username)
 			// We only got the name, so use it to find the player in order to delete them.
@@ -93,13 +92,25 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 		case msg := <-msgMux:
 			log.Println("Got message:", msg)
 			msgStr := string(msg.Content)
-			if strings.HasPrefix(msgStr, "CHAT:") {
-				broadcast := msg.Username + ":" + strings.TrimPrefix(msgStr, "CHAT:")
+			if strings.HasPrefix(msgStr, "GLOBAL:") {
 				for _, player := range players {
-					player.Outbound <- []byte(broadcast)
+					player.Outbound <- msgStr
+				}
+			} else if strings.HasPrefix(msgStr, "LOCAL:") {
+				for _, player := range players {
+					// Local chat is only sent to other players in the same environment.
+					if player.Lobby == msg.User.Lobby {
+						player.Outbound <- msgStr
+					}
 				}
 			} else {
 				switch msgStr {
+				case "CREATE":
+					log.Println("New lobby:", msg.User.Name)
+					msg.User.Lobby = msg.User.Name
+					for i := range players {
+						players[i].Outbound <- "+LOBBY:" + msg.User.Name
+					}
 				default:
 					log.Println("Command not recognized:", msgStr)
 				}
@@ -120,9 +131,9 @@ func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- st
 	// Send in the client to the lobby goroutine.
 	player := client{
 		Name:     string(msg),
-		InGame:   false,
+		Lobby:    "",
 		Inbound:  make(chan []byte),
-		Outbound: make(chan []byte),
+		Outbound: make(chan string),
 	}
 	defer close(player.Inbound)
 	defer close(player.Outbound)
@@ -130,12 +141,11 @@ func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- st
 	// Connect the outbound channel to the network socket.
 	go func() {
 		for msg := range player.Outbound {
-			_, err := conn.Write(msg)
+			_, err := conn.Write([]byte(msg))
 			if err != nil {
 				log.Println(errors.Wrap(err, "When sending message to player"))
 				return
 			}
-			//TODO remove them or just drop the message?
 		}
 	}()
 	// Connect the network socket to the inbound channel.
@@ -149,7 +159,3 @@ func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- st
 		player.Inbound <- msg
 	}
 }
-
-//func matchmaker() {
-//
-//}

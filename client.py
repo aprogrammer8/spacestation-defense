@@ -1,6 +1,6 @@
 # TODO: turn this into a real system for receiving messages (we'll need to buffer the bytes and use delimiters, I imagine)
 def recv_message(sock):
-	return sock.recv(100)
+	return sock.recv(100).decode('ascii')
 
 def encode(msg):
 	# \x03 is the delimiter byte.
@@ -67,20 +67,22 @@ def global_lobby():
 		events = selector.select(0)
 		for key, _ in events:
 			msg = recv_message(key.fileobj)
-			if msg.startswith("+LOBBY:"):
+			if msg.startswith("GLOBAL:"):
+				chatbar.add_message(msg[7:])
+				pygame.display.update(chatbar.rect)
+			elif msg.startswith("+LOBBY:"):
 				lobbylist.add(msg[7:])
 				lobbylist.draw()
-				pygame.display.update()
+				pygame.display.update(lobbylist.rect)
 			elif msg.startswith("-LOBBY:"):
 				lobbylist.remove_by_content(msg[7:])
-				lobbylist.draw()
-				pygame.display.update()
-			else:
-				chatbar.add_message(string(msg))
+				lobbylist.draw(lobbylist.rect)
+				pygame.display.update(lobbylist.rect)
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
 			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
-				chatbar.handle_event(event)
+				entry = chatbar.handle_event(event)
+				if entry: sock.send(encode("GLOBAL:"+player_name+":"+entry))
 				if startbutton.handle_event(event):
 					sock.send(encode("CREATE"))
 					window.fill((0,0,0))
@@ -110,16 +112,18 @@ def lobby(host_name):
 		events = selector.select(0)
 		for key, _ in events:
 			msg = recv_message(key.fileobj)
-			if msg.startswith("-LOBBY:"+host_name):
+			if msg.startswith("LOCAL:"):
+				chatbar.add_message(msg[6:])
+				pygame.display.update(chatbar.rect)
+			elif msg.startswith("-LOBBY:"+host_name):
 				# The lobby closed :(
 				window.fill((0,0,0))
 				return
-			else:
-				chatbar.add_message(string(msg))
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT: sys.exit()
 				if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
-					chatbar.handle_event(event)
+					entry = chatbar.handle_event(event)
+					if entry: sock.send(encode("LOCAL:"+player_name+":"+entry))
 					if startbutton.handle_event(event):
 						sock.send(encode("START"))
 						window.fill((0,0,0))
