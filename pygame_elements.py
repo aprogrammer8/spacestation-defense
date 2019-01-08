@@ -1,8 +1,4 @@
 import pygame
-import text_input, text_wrap
-
-# WHen handling events, these classes generally return True/False first if they redrew themselves and the display needs to be updated, followed by a more tailored return value, if applicable.
-
 
 # draw_text wraps text as necessary to fit within the given area, and then draws it.
 def draw_text(window, text, color, rect, font, spacing=2, aa=True, bgcolor=None):
@@ -85,7 +81,7 @@ class InputBox:
 		# Clear the area. Without this, the text gets blurred more and more with each re-blitting. I have no idea why.
 		pygame.draw.rect(self.window, self.bgcolor, self.textrect, 0)
 		# Draw the text.
-		text_wrap.draw_text(self.window, self.text, self.textcolor, self.textrect, self.font)
+		draw_text(self.window, self.text, self.textcolor, self.textrect, self.font)
 		# Draw the border.
 		pygame.draw.rect(self.window, self.rectcolor(), self.rect, 1)
 
@@ -104,10 +100,10 @@ class TextList:
 		self.spacing = 1
 	def add(self, message):
 		self.message_list += [message]
-		height = text_wrap.get_height(message, self.rect.w, 2, self.font)
+		height = get_height(message, self.rect.w, 2, self.font)
 		# If we're overflowin the box, flush old messages until there's enough room.
 		while self.new_height + height + self.spacing > self.rect.h:
-			self.new_height -= text_wrap.get_height(self.message_list[0], self.rect.w, self.spacing, self.font) + self.spacing
+			self.new_height -= get_height(self.message_list[0], self.rect.w, self.spacing, self.font) + self.spacing
 			self.message_list.pop(0)
 		self.new_height += height + self.spacing
 		self.draw()
@@ -125,8 +121,9 @@ class TextList:
 		pygame.draw.rect(self.window, self.bordercolor, self.rect, 1)
 		self.new_height = 0
 		for message in self.message_list:
+			print(message)
 			# Cropping the rect slightly so the text isn't on the border.
-			height = text_wrap.draw_text(self.window, message, self.textcolor, pygame.Rect(self.rect.x+2, self.rect.y+self.new_height+1, self.rect.w-2, self.rect.h-1), self.font)
+			height = draw_text(self.window, message, self.textcolor, pygame.Rect(self.rect.x+2, self.rect.y+self.new_height+1, self.rect.w-2, self.rect.h-1), self.font)
 			self.new_height += height + self.spacing
 
 
@@ -143,7 +140,7 @@ class Chat:
 		log_rect = pygame.Rect(rect.x, rect.y, rect.w, rect.h-entryheight+1) # This +1 makes the borders overlap, so it doesn't look ugly
 		self.log = TextList(window, log_rect, bgcolor, bordercolor, textcolor, font)
 		entry_rect = pygame.Rect(rect.x, rect.bottom-entryheight, rect.w, entryheight)
-		self.entry_box = text_input.InputBox(window, entry_rect, bgcolor, textcolor, active_color, inactive_color, font)
+		self.entry_box = InputBox(window, entry_rect, bgcolor, textcolor, active_color, inactive_color, font)
 	def handle_event(self, event):
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			if self.entry_box.rect.collidepoint(event.pos):
@@ -177,4 +174,4 @@ class Button:
 	def draw(self):
 		if self.active: pygame.draw.rect(self.window, self.active_color, self.rect, 0)
 		else: pygame.draw.rect(self.window, self.inactive_color, self.rect, 0)
-		text_wrap.draw_text(self.window, self.label, self.textcolor, self.textrect, self.font)
+		draw_text(self.window, self.label, self.textcolor, self.textrect, self.font)
