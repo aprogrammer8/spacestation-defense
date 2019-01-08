@@ -1,6 +1,9 @@
 import pygame
 import text_input, text_wrap
 
+# WHen handling events, these classes generally return True/False first if they redrew themselves and the display needs to be updated, followed by a more tailored return value, if applicable.
+
+
 # draw_text wraps text as necessary to fit within the given area, and then draws it.
 def draw_text(window, text, color, rect, font, spacing=2, aa=True, bgcolor=None):
 	rect = pygame.Rect(rect)
@@ -45,7 +48,7 @@ def get_height(text, width, spacing, font):
 		text = text[i:]
 	return y
 
-# A text input box for pygame windows. It wraps the inputted text.
+# A text input box for pygame windows. It wraps the inputted text. It currently does not support key repeating or cursor movement.
 # Modified from code created by skrx, from Stack Overflow
 class InputBox:
 	def __init__(self, window, rect, bgcolor, textcolor, active_color, inactive_color, font, text=''):
@@ -64,21 +67,15 @@ class InputBox:
 		return self.inactive_color
 	def handle_event(self, event):
 		if event.type == pygame.MOUSEBUTTONDOWN:
-			if self.rect.collidepoint(event.pos):
-				self.active = True
-			else:
-				self.active = False
-			self.color = self.active_color if self.active else self.rectcolor()
+			self.active = self.rect.collidepoint(event.pos)
 			self.draw()
 		elif event.type == pygame.KEYDOWN:
 			if self.active:
 				if event.key == pygame.K_RETURN:
 					returntext = self.text
-					self.erase_needed = True
 					self.text = ''
 				elif event.key == pygame.K_BACKSPACE:
 					self.text = self.text[:-1]
-					self.erase_needed = True
 				else:
 					self.text += event.unicode
 				self.draw()
@@ -102,11 +99,10 @@ class TextList:
 		self.textcolor = textcolor
 		self.font = font
 		self.stage_surface = font.render("", True, self.textcolor)
-		self.erase_needed = False
 		self.message_list = []
 		self.new_height = 0 # The y that a new message will start at
 		self.spacing = 1
-	def add_message(self, message):
+	def add(self, message):
 		self.message_list += [message]
 		height = text_wrap.get_height(message, self.rect.w, 2, self.font)
 		# If we're overflowin the box, flush old messages until there's enough room.
@@ -118,8 +114,7 @@ class TextList:
 	def remove_by_content(eslf, message):
 		i = 0
 		for msg in self.message_list:
-			if msg == message:
-				return self.remove_by_index(i)
+			if msg == message: return self.remove_by_index(i)
 			i += 1
 		print("Could not remove message '"+message+"' because it was not found")
 	def remove_by_index(self, index):
@@ -145,7 +140,6 @@ class Chat:
 		self.textcolor = textcolor
 		self.font = font
 		self.username = username
-		self.erase_needed = False
 		log_rect = pygame.Rect(rect.x, rect.y, rect.w, rect.h-entryheight+1) # This +1 makes the borders overlap, so it doesn't look ugly
 		self.log = TextList(window, log_rect, bgcolor, bordercolor, textcolor, font)
 		entry_rect = pygame.Rect(rect.x, rect.bottom-entryheight, rect.w, entryheight)
@@ -156,9 +150,32 @@ class Chat:
 				self.entry_box.handle_event(event)
 		if event.type == pygame.KEYDOWN:
 			entry = self.entry_box.handle_event(event)
-			if entry: self.log.add_message(self.username+": "+entry)
+			if entry: self.log.add(self.username+": "+entry)
 	def add_message(self, message):
-		self.log.add_message(message)
+		self.log.add(message)
 	def draw(self):
 		self.log.draw()
 		self.entry_box.draw()
+
+# Currently, these buttons trigger only on down-click. They have a color change for being hovered over, but don't support color changes when being pressed.
+class Button:
+	def __init__(self, window, rect, active_color, inactive_color, textcolor, font, label):
+		self.window = window
+		self.rect = rect
+		self.textrect = (rect.x+1, rect.y+1, rect.w-2, rect.h-2)
+		self.active_color = active_color
+		self.inactive_color = inactive_color
+		self.textcolor = textcolor
+		self.font = font
+		self.label = label
+		self.active = False
+	def handle_event(self, event):
+		if event.type == pygame.MOUSEMOTION:
+			self.active = self.rect.collidepoint(event.pos)
+			self.draw()
+		if event.type == pygame.MOUSEBUTTONDOWN:
+			return self.rect.collidepoint(event.pos)
+	def draw(self):
+		if self.active: pygame.draw.rect(self.window, self.active_color, self.rect, 0)
+		else: pygame.draw.rect(self.window, self.inactive_color, self.rect, 0)
+		text_wrap.draw_text(self.window, self.label, self.textcolor, self.textrect, self.font)

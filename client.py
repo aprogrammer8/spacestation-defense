@@ -43,7 +43,7 @@ def login_screen():
 	username_box.draw()
 	pygame.display.flip()
 	while True:
-		clock.tick(50)
+		clock.tick(LOBBY_RATE)
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
 			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
@@ -58,10 +58,12 @@ def global_lobby():
 	global player_name, sock, selector, window, font, clock
 	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXTCOLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
 	chatbar.draw()
+	startbutton = Button(window, CREATE_GAME_RECT, ACTIVE_STARTBUTTON_COLOR, INACTIVE_STARTBUTTON_COLOR, TEXTCOLOR, font, "Create lobby")
+	startbutton.draw()
 	lobbylist = TextList(window, LOBBYLIST_RECT, BGCOLOR, BGCOLOR, TEXTCOLOR, font)
 	pygame.display.flip()
 	while True:
-		clock.tick(50)
+		clock.tick(LOBBY_RATE)
 		events = selector.select(0)
 		for key, _ in events:
 			msg = recv_message(key.fileobj)
@@ -79,6 +81,53 @@ def global_lobby():
 			if event.type == pygame.QUIT: sys.exit()
 			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
 				chatbar.handle_event(event)
-				pygame.display.update(chatbar.rect)
+				if startbutton.handle_event(event):
+					sock.send(encode("CREATE"))
+					window.fill((0,0,0))
+					lobby(player_name)
+					chatbar.draw()
+					startbutton.draw()
+					lobbylist.draw()
+					pygame.display.flip()
+					# Reload the global lobby somehow when it's over
+				pygame.display.update((chatbar.rect, startbutton.rect))
+			if event.type == pygame.MOUSEMOTION:
+				startbutton.handle_event(event)
+				pygame.display.update(startbutton.rect)
+
+def lobby(host_name):
+	global player_name, sock, selector, window, font, clock
+	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXTCOLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
+	chatbar.draw()
+	startbutton = Button(window, START_GAME_RECT, ACTIVE_STARTBUTTON_COLOR, INACTIVE_STARTBUTTON_COLOR, TEXTCOLOR, font, "Launch mission!")
+	startbutton.draw()
+	playerlist = TextList(window, PLAYERLIST_RECT, BGCOLOR, BGCOLOR, TEXTCOLOR, font)
+	playerlist.add(host_name)
+	if host_name != player_name: playerlist.add(player_name)
+	pygame.display.flip()
+	while True:
+		clock.tick(LOBBY_RATE)
+		events = selector.select(0)
+		for key, _ in events:
+			msg = recv_message(key.fileobj)
+			if msg.startswith("-LOBBY:"+host_name):
+				# The lobby closed :(
+				window.fill((0,0,0))
+				return
+			else:
+				chatbar.add_message(string(msg))
+			for event in pygame.event.get():
+				if event.type == pygame.QUIT: sys.exit()
+				if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+					chatbar.handle_event(event)
+					if startbutton.handle_event(event):
+						sock.send(encode("START"))
+						window.fill((0,0,0))
+						return True
+					pygame.display.update(chatbar.rect, startbutton.rect)
+				if event.type == pygame.MOUSEMOTION:
+					startbutton.handle_event(event)
+					pygame.display.update(startbutton.rect)
+
 
 if __name__ == '__main__': main()
