@@ -17,7 +17,7 @@ Cards:
  Power Surge		- fills all power generators
  Power Diversion	- allows you to reuse a component unlimitedly for just 1 power per use this turn
  Manual Targeting	- all station attacks are guaranteed hits for 5 rounds
- Distress Call		- command gives a ship (corvette/3fighters/3bombers) of course that sticks around for 10 rounds, or 4 cards are distributed among the players, but must be played immediately
+ Distress Call		- command gives reinforcements (corvette/3fighters/3bombers) of choice that stick around for 10 rounds, or 4 cards are distributed among the players, but must be played immediately
  Boost			- instantly turn the station any way you want
  Transform		- turn any component into any other component
  Time Stop		- enemies are frozen and cannot be attacked for 5 rounds
@@ -43,9 +43,6 @@ Enemy ships:
  Frigate
  Battleship
  Leviathan
-
-
-How often do the miners give you a new piece? Every group of waves?
 
 Stats:
 All station components can activate once per turn, requiring 2 power to do so.
