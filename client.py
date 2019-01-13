@@ -9,7 +9,7 @@ def encode(msg):
 import pygame, socket, selectors, random
 from pygame_elements import *
 from client_config import *
-#import gamestate
+import gamestate
 
 def main():
 	global player_name, sock, selector, window, sock, font, clock

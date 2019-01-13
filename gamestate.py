@@ -54,8 +54,9 @@ class Component(Entity):
 		return 100 # calculate which shield generators are applying to it
 
 class Weapon():
-	def __init__(self, type, power):
+	def __init__(self, type, power, tier=1):
 		self.type = type
+		self.tier = tier
 		self.power = power
 
 class Mission:
@@ -64,7 +65,8 @@ class Mission:
 		# There should be a shitton of tunable parameters in here.
 	def query(self):
 		# This method will return a list of enemies, a reward for clearing it, a number of turns till the next wave.
-		return None
+		# Temp code:
+		return [stats.drone(), stats.drone(), stats.drone()], None, 5
 
 
 # The test mission.

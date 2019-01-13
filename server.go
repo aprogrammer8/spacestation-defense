@@ -2,27 +2,36 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"log"
 	"net"
+	"os/exec"
+	"strconv"
+	"strings"
 
 	errors "github.com/pkg/errors"
-
-	"io"
-	"strings"
 )
 
 type client struct {
-	Name     string
-	Lobby    string
-	Inbound  chan []byte
-	Outbound chan string
+	Name      string
+	Lobby     string
+	Inbound   chan []byte
+	Outbound  chan string
+	MatchChan chan message
 }
 
 // message is a transmission from a player to the lobby server. The username is added in by the multiplexer.
-// If the Content is a chat message, it will start with "CHAT:". Otherwise, we interpret it as a control message.
+// If the Content is a chat message, it will start with "GLOBAL:" or "LOCAL:". Otherwise, we interpret it as a control message.
 type message struct {
 	User    client
 	Content []byte
+}
+
+// update is a transmission from the game server to the lobby server, which will in turn get sent out to connected players.
+type update struct {
+	// Hostname holds the username of the creator player.
+	Host string
+	Content	[]byte
 }
 
 // Helper function to divide the byte stream of TCP into discrete messages.
@@ -65,7 +74,9 @@ func main() {
 
 func lobby(entryChan <-chan client, exitChan chan string) {
 	var players []client
-	msgMux := make(chan message)
+	var playerMux = make(chan message)
+	var gameMux = make(chan update)
+	var nextMatchID int
 	for {
 		select {
 		// Player joining.
@@ -78,7 +89,7 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 					mux <- message{User: player, Content: msg}
 				}
 				exit <- player.Name
-			}(msgMux, player, exitChan)
+			}(playerMux, player, exitChan)
 		// Playser leaving.
 		case username := <-exitChan:
 			log.Println("Player leaving:", username)
@@ -88,8 +99,8 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 					players = append(players[:i], players[i+1:]...)
 				}
 			}
-		// And player sending a message.
-		case msg := <-msgMux:
+		// Player sending a message.
+		case msg := <-playerMux:
 			log.Println("Got message:", msg)
 			msgStr := string(msg.Content)
 			if strings.HasPrefix(msgStr, "GLOBAL:") {
@@ -111,8 +122,39 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 					for i := range players {
 						players[i].Outbound <- "+LOBBY:" + msg.User.Name
 					}
+				case "START":
+					// Make sure the user owns the lobby.
+					if msg.User.Lobby == msg.User.Name {
+						log.Println("Game starting:", msg.User.Lobby)
+						var matchChan = make(chan message)
+						go handleMatch(gameMux, matchChan, nextMatchID, msg.User.Lobby)
+						nextMatchID++
+						for _, player := range players {
+							if player.Lobby == msg.User.Lobby {
+								player.Outbound <- "START"
+								player.MatchChan = matchChan
+							} else {
+								player.Outbound <- "-LOBBY:" + msg.User.Lobby
+							}
+						}
+					} else {
+						log.Println(msg.User.Name, "can't start game created by", msg.User.Lobby)
+					}
 				default:
-					log.Println("Command not recognized:", msgStr)
+					// Any unrecognized comamnds are sent to the match server, assuming it's an in-game thing. This way the server doesn't have to know about changes in the game server interface.
+					if msg.User.MatchChan != nil {
+						msg.User.MatchChan <- msg
+					} else {
+						log.Println("Command not recognized as a lobbby control:", msgStr)
+					}
+				}
+			}
+		// We need a way to know which players are connected to which game.
+		case msg := <-gameMux:
+			for i := range players {
+				// Match players who are in the game this update is from.
+				if players[i].Lobby == msg.Host {
+					players[i].Outbound <- string(msg.Content)
 				}
 			}
 		}
@@ -123,7 +165,7 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- string) {
 	// When the player first connects, they're expected to choose a username.
 	// TODO: handle the case of repeat names
-	msg, err := readUntilDelim(conn, DELIM)
+	var msg, err = readUntilDelim(conn, DELIM)
 	if err != nil {
 		log.Println(errors.Wrap(err, "When getting player's name"))
 		return
@@ -141,7 +183,7 @@ func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- st
 	// Connect the outbound channel to the network socket.
 	go func() {
 		for msg := range player.Outbound {
-			_, err := conn.Write([]byte(msg))
+			_, err = conn.Write([]byte(msg))
 			if err != nil {
 				log.Println(errors.Wrap(err, "When sending message to player"))
 				return
@@ -151,11 +193,41 @@ func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- st
 	// Connect the network socket to the inbound channel.
 	for {
 		// Read the next message from chat.
-		msg, err := readUntilDelim(conn, DELIM)
+		msg, err = readUntilDelim(conn, DELIM)
 		if err != nil {
 			log.Println(errors.Wrap(err, "When reading player message"))
 			return
 		}
 		player.Inbound <- msg
+	}
+}
+
+func handleMatch(updateChan chan<- update, inputChan <-chan message, matchID int, host string) {
+	var sockname = "/tmp/spacestation_defense_" + strconv.Itoa(matchID) + ".sock"
+	var listener, err = net.Listen("unix", sockname)
+	err = exec.Command("./server.py", sockname).Run()
+	if err != nil {
+		log.Println(errors.Wrap(err, "Failed to start server.py"))
+		return
+	}
+	conn, err := listener.Accept()
+	if err != nil {
+		log.Println(errors.Wrap(err, "Could not establish connection with server.py"))
+	}
+	// Initialize the connection to the game server.
+	go func() {
+		for input := range inputChan {
+			_, err := conn.Write(append([]byte(input.User.Name+":"), []byte(input.Content)...))
+			if err != nil {
+				log.Println(errors.Wrap(err, "When reading player input in-game"))
+			}
+		}
+	}()
+	for {
+		var msg, err = readUntilDelim(conn, DELIM)
+		if err != nil {
+			log.Println(errors.Wrap(err, "When reading game server update"))
+		}
+		updateChan <- update{Host:host, Content: msg}
 	}
 }
