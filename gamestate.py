@@ -1,14 +1,13 @@
 class Gamestate:
-	def __init__(self, json='', mission='mission_basic'):
+	def __init__(self, json='', mission='test'):
 		if jsom:
 			self.load_json(json)
 			return
 		else: # If no JSON, we load the starting state of the mission.
-			self.mission = mission
-			self.load_mission(mission)
+			self.mission = Mission("missions/"+mission)
 			#self.enemy_ships = []
 			#self.allied_ships = []
-			self.station = Station()
+			#self.station = Station()
 			self.wave = 0
 			self.round = 0
 
@@ -44,7 +43,6 @@ class Ship(Entity):
 		# This field is used for both, but means something different.
 		self.salvage = salvage
 
-
 # A Station Component.
 class Component(Entity):
 	def __init__(self, window, station, pos, image, rot, hull):
@@ -53,6 +51,12 @@ class Component(Entity):
 	def shield(self):
 		return 100 # calculate which shield generators are applying to it
 
+class Composite:
+	def __init__(self, components):
+		self.compoments = components
+
+class Station(Composite): pass
+
 class Weapon():
 	def __init__(self, type, power, tier=1):
 		self.type = type
@@ -60,15 +64,11 @@ class Weapon():
 		self.power = power
 
 class Mission:
-	def __init__(self):
-		pass
+	def __init__(self, filename):
 		# There should be a shitton of tunable parameters in here.
-	def query(self):
+		pass
+	def query(self, wave):
+		# The wave parameter is the number, since Gamestate tracks that and there's no point tracking it in two places.
 		# This method will return a list of enemies, a reward for clearing it, a number of turns till the next wave.
 		# Temp code:
 		return [stats.drone(), stats.drone(), stats.drone()], None, 5
-
-
-# The test mission.
-mission_basic = Mission()
-

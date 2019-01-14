@@ -30,8 +30,8 @@ type message struct {
 // update is a transmission from the game server to the lobby server, which will in turn get sent out to connected players.
 type update struct {
 	// Hostname holds the username of the creator player.
-	Host string
-	Content	[]byte
+	Host    string
+	Content []byte
 }
 
 // Helper function to divide the byte stream of TCP into discrete messages.
@@ -228,6 +228,6 @@ func handleMatch(updateChan chan<- update, inputChan <-chan message, matchID int
 		if err != nil {
 			log.Println(errors.Wrap(err, "When reading game server update"))
 		}
-		updateChan <- update{Host:host, Content: msg}
+		updateChan <- update{Host: host, Content: msg}
 	}
 }

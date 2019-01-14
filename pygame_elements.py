@@ -106,7 +106,6 @@ class TextList:
 			self.new_height -= get_height(self.message_list[0], self.rect.w, self.spacing, self.font) + self.spacing
 			self.message_list.pop(0)
 		self.new_height += height + self.spacing
-		self.draw()
 	def remove_by_content(eslf, message):
 		i = 0
 		for msg in self.message_list:

@@ -62,6 +62,7 @@ def global_lobby():
 			msg = recv_message(key.fileobj)
 			if msg.startswith("GLOBAL:"):
 				chatbar.add_message(msg[7:])
+				chatbar.draw()
 				pygame.display.update(chatbar.rect)
 			elif msg.startswith("+LOBBY:"):
 				lobbylist.add(msg[7:])
@@ -79,7 +80,8 @@ def global_lobby():
 				if startbutton.handle_event(event):
 					sock.send(encode("CREATE"))
 					window.fill((0,0,0))
-					lobby(player_name)
+					result = lobby(player_name)
+					print(result)
 					chatbar.draw()
 					startbutton.draw()
 					lobbylist.draw()
@@ -96,7 +98,7 @@ def lobby(host_name):
 	chatbar.draw()
 	startbutton = Button(window, START_GAME_RECT, ACTIVE_STARTBUTTON_COLOR, INACTIVE_STARTBUTTON_COLOR, TEXTCOLOR, font, "Launch mission!")
 	startbutton.draw()
-	playerlist = TextList(window, PLAYERLIST_RECT, BGCOLOR, BGCOLOR, TEXTCOLOR, font)
+	playerlist = TextList(window, LOBBY_PLAYERLIST_RECT, BGCOLOR, BGCOLOR, TEXTCOLOR, font)
 	playerlist.add(host_name)
 	if host_name != player_name: playerlist.add(player_name)
 	pygame.display.flip()
@@ -107,24 +109,51 @@ def lobby(host_name):
 			msg = recv_message(key.fileobj)
 			if msg.startswith("LOCAL:"):
 				chatbar.add_message(msg[6:])
+				chatbar.draw()
 				pygame.display.update(chatbar.rect)
 			elif msg.startswith("-LOBBY:"+host_name):
 				# The lobby closed :(
 				window.fill((0,0,0))
 				return
-			for event in pygame.event.get():
-				if event.type == pygame.QUIT: sys.exit()
-				if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
-					entry = chatbar.handle_event(event)
-					if entry: sock.send(encode("LOCAL:"+player_name+":"+entry))
-					if startbutton.handle_event(event):
-						sock.send(encode("START"))
-						window.fill((0,0,0))
-						return True
-					pygame.display.update(chatbar.rect, startbutton.rect)
-				if event.type == pygame.MOUSEMOTION:
-					startbutton.handle_event(event)
-					pygame.display.update(startbutton.rect)
+			elif msg == "START":
+				window.fill((0,0,0))
+				return play(playerlist.message_list)
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT: sys.exit()
+			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+				entry = chatbar.handle_event(event)
+				if entry: sock.send(encode("LOCAL:"+player_name+":"+entry))
+				if startbutton.handle_event(event): sock.send(encode("START"))
+				pygame.display.update((chatbar.rect, startbutton.rect))
+			if event.type == pygame.MOUSEMOTION:
+				startbutton.handle_event(event)
+				pygame.display.update(startbutton.rect)
+
+
+def play(players):
+	global player_name, sock, selector, window, font, clock
+	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXTCOLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
+	chatbar.draw()
+	playerlist = TextList(window, GAME_PLAYERLIST_RECT, BGCOLOR, BGCOLOR, TEXTCOLOR, font)
+	# Repopulate the player list.
+	for player in players:
+		if player != player_name: playerlist.add(player)
+	pygame.display.flip()
+	while True:
+		clock.tick(LOBBY_RATE)
+		events = selector.select(0)
+		for key, _ in events:
+			msg = recv_message(key.fileobj)
+			if msg.startswith("LOCAL:"):
+				chatbar.add_message(msg[6:])
+				chatbar.draw()
+				pygame.display.update(chatbar.rect)
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT: sys.exit()
+			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+				entry = chatbar.handle_event(event)
+				if entry: sock.send(encode("LOCAL:"+player_name+":"+entry))
+				pygame.display.update(chatbar.rect, startbutton.rect)
 
 
 if __name__ == '__main__': main()
