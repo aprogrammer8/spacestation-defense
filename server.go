@@ -183,7 +183,7 @@ func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- st
 	// Connect the outbound channel to the network socket.
 	go func() {
 		for msg := range player.Outbound {
-			_, err = conn.Write([]byte(msg))
+			_, err = conn.Write(append([]byte(msg), DELIM))
 			if err != nil {
 				log.Println(errors.Wrap(err, "When sending message to player"))
 				return
@@ -217,7 +217,7 @@ func handleMatch(updateChan chan<- update, inputChan <-chan message, matchID int
 	// Initialize the connection to the game server.
 	go func() {
 		for input := range inputChan {
-			_, err := conn.Write(append([]byte(input.User.Name+":"), []byte(input.Content)...))
+			_, err := conn.Write(append([]byte(input.User.Name+":"), append([]byte(input.Content), DELIM)...))
 			if err != nil {
 				log.Println(errors.Wrap(err, "When reading player input in-game"))
 			}

@@ -1,15 +1,8 @@
-# TODO: turn this into a real system for receiving messages (we'll need to buffer the bytes and use delimiters, I imagine)
-def recv_message(sock):
-	return sock.recv(200).decode('ascii')
-
-def encode(msg):
-	# \x03 is the delimiter byte.
-	return bytes(msg+'\x03', 'ascii')
-
 import pygame, socket, selectors, random
 from pygame_elements import *
 from client_config import *
-import gamestate
+from sockets import *
+from gamestate import *
 
 def main():
 	global player_name, sock, selector, window, sock, font, clock
