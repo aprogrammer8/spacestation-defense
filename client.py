@@ -107,7 +107,6 @@ def lobby(host_name):
 		events = selector.select(0)
 		for key, _ in events:
 			msg = recv_message(key.fileobj)
-			print(msg)
 			if msg.startswith("LOCAL:"):
 				chatbar.add_message(msg[6:])
 				chatbar.draw()
@@ -154,7 +153,7 @@ def play(players):
 			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
 				entry = chatbar.handle_event(event)
 				if entry: sock.send(encode("LOCAL:"+player_name+":"+entry))
-				pygame.display.update(chatbar.rect, startbutton.rect)
+				pygame.display.update(chatbar.rect)
 
 
 if __name__ == '__main__': main()

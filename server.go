@@ -18,6 +18,7 @@ type client struct {
 	Inbound   chan []byte
 	Outbound  chan string
 	MatchChan chan message
+	Game	  int
 }
 
 // message is a transmission from a player to the lobby server. The username is added in by the multiplexer.
@@ -30,8 +31,7 @@ type message struct {
 
 // update is a transmission from the game server to the lobby server, which will in turn get sent out to connected players.
 type update struct {
-	// Hostname holds the username of the creator player.
-	Host    string
+	Game    int
 	Content []byte
 }
 
@@ -127,8 +127,13 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 					// Make sure the user owns the lobby.
 					if msg.User.Lobby == msg.User.Name {
 						log.Println("Game starting:", msg.User.Lobby)
+						// The game server will need to know what players are connected.
+						var participants []string
+						for i := range players {
+							if players[i].Lobby == msg.User.Lobby { participants = append(participants, players[i].Name) }
+						}
 						var matchChan = make(chan message)
-						go handleMatch(gameMux, matchChan, nextMatchID, msg.User.Lobby)
+						go handleMatch(gameMux, matchChan, nextMatchID, participants)
 						nextMatchID++
 						for _, player := range players {
 							if player.Lobby == msg.User.Lobby {
@@ -150,11 +155,10 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 					}
 				}
 			}
-		// We need a way to know which players are connected to which game.
 		case msg := <-gameMux:
 			for i := range players {
 				// Match players who are in the game this update is from.
-				if players[i].Lobby == msg.Host {
+				if players[i].Game == msg.Game {
 					players[i].Outbound <- string(msg.Content)
 				}
 			}
@@ -203,10 +207,10 @@ func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- st
 	}
 }
 
-func handleMatch(updateChan chan<- update, inputChan <-chan message, matchID int, host string) {
+func handleMatch(updateChan chan<- update, inputChan <-chan message, matchID int, players []string) {
 	var sockname = "/tmp/spacestation_defense_" + strconv.Itoa(matchID) + ".sock"
 	var listener, err = net.Listen("unix", sockname)
-	err = exec.Command("./server.py", sockname).Run()
+	err = exec.Command("python3.6", "server.py", sockname).Run()
 	if err != nil {
 		log.Println(errors.Wrap(err, "Failed to start server.py"))
 		return
@@ -215,7 +219,11 @@ func handleMatch(updateChan chan<- update, inputChan <-chan message, matchID int
 	if err != nil {
 		log.Println(errors.Wrap(err, "Could not establish connection with server.py"))
 	}
-	// Initialize the connection to the game server.
+	// Send the game server the list of players.
+	_, err = conn.Write([]byte(strings.Join(players, ",")))
+	// Send it the mission name. For now, assume "test".
+	_, err = conn.Write(append([]byte("test"), DELIM))
+	// I/O loop.
 	go func() {
 		for input := range inputChan {
 			_, err := conn.Write(append([]byte(input.User.Name+":"), append([]byte(input.Content), DELIM)...))
@@ -229,6 +237,6 @@ func handleMatch(updateChan chan<- update, inputChan <-chan message, matchID int
 		if err != nil {
 			log.Println(errors.Wrap(err, "When reading game server update"))
 		}
-		updateChan <- update{Host: host, Content: msg}
+		updateChan <- update{Game: matchID, Content: msg}
 	}
 }

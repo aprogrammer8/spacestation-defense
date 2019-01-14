@@ -2,14 +2,25 @@ import socket, selectors, random, sys
 from gamestate import *
 from sockets import *
 
-def main():
-	sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-	#sock.setblocking(False)
-	selector = selectors.DefaultSelector()
-	selector.register(sock, selectors.EVENT_READ)
-	sock.connect(sys.argv[1])
-	recv_message(sock)
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+#sock.setblocking(False)
+selector = selectors.DefaultSelector()
+selector.register(sock, selectors.EVENT_READ)
+sock.connect(sys.argv[1])
+# Receive the list of players
+player_names = recv_message(sock).split(",")
+print(players)
+mission = recv_message(sock)
+print(mission)
+gamestate = Gamestate(players, mission)
 
-if __name__ == '__main__': main()
+while True:
+	gamestate.upkeep()
+	# Probably update the players now?
+	collect_input()
+	players_move()
+	enemies_move()
+	# Dump gamestate to a file so it can be restored in case of a crash.
+	gamestate.encode()
 
-#Actually, I wonder if the server should actually be blocking. What does it need to do besides run the game, litsen for player input, and send it back out?
+	# Hm, gamestates are huge so the best way to send them out to each client will be by only sending the changes and letting the clients replay them themselves. That sounds doable. We'll have the gamestate log each change it makes internally and write them out.
