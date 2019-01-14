@@ -107,6 +107,7 @@ def lobby(host_name):
 		events = selector.select(0)
 		for key, _ in events:
 			msg = recv_message(key.fileobj)
+			print(msg)
 			if msg.startswith("LOCAL:"):
 				chatbar.add_message(msg[6:])
 				chatbar.draw()

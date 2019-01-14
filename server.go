@@ -23,7 +23,8 @@ type client struct {
 // message is a transmission from a player to the lobby server. The username is added in by the multiplexer.
 // If the Content is a chat message, it will start with "GLOBAL:" or "LOCAL:". Otherwise, we interpret it as a control message.
 type message struct {
-	User    client
+	// The reason this is a pointer is to allow changing the user through the message instead having to loop through the client list and find them.
+	User    *client
 	Content []byte
 }
 
@@ -73,7 +74,7 @@ func main() {
 }
 
 func lobby(entryChan <-chan client, exitChan chan string) {
-	var players []client
+	var players []*client
 	var playerMux = make(chan message)
 	var gameMux = make(chan update)
 	var nextMatchID int
@@ -82,14 +83,14 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 		// Player joining.
 		case player := <-entryChan:
 			log.Println("Player joining:", player.Name)
-			players = append(players, player)
+			players = append(players, &player)
 			// Start a goroutine to multiplex the chat messages.
-			go func(mux chan<- message, player client, exit chan<- string) {
+			go func(mux chan<- message, player *client, exit chan<- string) {
 				for msg := range player.Inbound {
 					mux <- message{User: player, Content: msg}
 				}
 				exit <- player.Name
-			}(playerMux, player, exitChan)
+			}(playerMux, &player, exitChan)
 		// Playser leaving.
 		case username := <-exitChan:
 			log.Println("Player leaving:", username)
