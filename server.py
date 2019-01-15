@@ -1,4 +1,4 @@
-import socket, selectors, random, sys
+import socket, selectors, random, sys, json
 from gamestate import *
 from sockets import *
 
@@ -23,16 +23,19 @@ def main():
 	sock.connect(sys.argv[1])
 	# Receive the list of players
 	players = recv_message(sock).split(",")
-	print(players)
 	mission = recv_message(sock)
-	print(mission)
 	gamestate = Gamestate(players, mission)
-
+	changes = gamestate.draw_cards(gamestate.mission.starting_cards)
+	if changes:
+		for change in changes: sock.send(encode("DRAW:"+change['player']+":"+change['card']))
 	while True:
 		changes = gamestate.upkeep()
+		print(changes) ###
 		if changes: sock.send(encode("INSERT:" + json.dumps(changes)))
 		collect_input()
 		players_move()
 		enemies_move()
 		# Dump gamestate to a file so it can be restored in case of a crash.
 		#gamestate.encode()
+
+if __name__ == '__main__': main()

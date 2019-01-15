@@ -20,14 +20,12 @@ class Gamestate:
 			# The draw pointer is used to keep track of who will get the next card the players draw.
 			self.draw_pointer = 0
 			self.mission = Mission("missions/"+mission)
-			self.draw_cards(self.mission.starting_cards)
-			self.upkeep()
 	#def encode(self):
 	#	"""Encodes the Gamestate into a JSON object that can be sent over the network."""
-	def draw_cards(self, num):
+	def draw_cards(self, num): # Redo this func to return the updates necessary
+		draws = []
 		for i in range(num):
-			print(self.players,self.draw_pointer)###
-			self.players[self.draw_pointer].hand.append(draw_card())
+			draws += {'player':self.players[self.draw_pointer], 'card':draw_card()}
 			self.draw_pointer += 1
 			if self.draw_pointer >= len(self.players): self.draw_pointer = 0
 	def upkeep(self):
@@ -39,10 +37,12 @@ class Gamestate:
 			self.nextwave += 1
 			return self.send_enemies(wave)
 	def send_enemies(self, enemies):
+		"Accepts enemies to send as passed by the mission's wave method and returns the changes that must be made to the gamestate."
 		inserts = []
 		for enemy_type in enemies:
 			for i in range(enemies[enemy_type]):
 				inserts.append({'type':enemy_type, 'pos':self.find_open_pos()})
+		print(inserts)
 		return inserts
 	def find_open_pos(self, size=(1,1)):
 		"""Searches through all game objects and find an unoccupied position to put the enemy on."""

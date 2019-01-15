@@ -148,12 +148,13 @@ def play(players):
 		events = selector.select(0)
 		for key, _ in events:
 			msg = recv_message(key.fileobj)
+			print(msg)
 			if msg.startswith("LOCAL:"):
 				chatbar.add_message(msg[6:])
 				chatbar.draw()
 				pygame.display.update(chatbar.rect)
 			if msg.startswith("INSERT:"):
-				# Need to handle the insretion of enemies, and updating the screen
+				# Need to handle the insertion of enemies, and updating the screen
 				print(msg)
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()

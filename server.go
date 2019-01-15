@@ -53,7 +53,7 @@ func readUntilDelim(r io.Reader, delim byte) ([]byte, error) {
 }
 
 // DELIM is a global constant used to delimit messages.
-var DELIM byte = 0
+var DELIM byte
 
 func main() {
 	listener, err := net.Listen("tcp4", "127.0.0.1:1025")
@@ -221,6 +221,8 @@ func handleMatch(updateChan chan<- update, inputChan <-chan message, matchID int
 	}
 	var cmd = exec.Command("python3.6", "server.py", sockname)
 	cmd.Stderr = os.Stderr
+	// Connecting stdout is mostly for printing diagnostics.
+	cmd.Stdout = os.Stdout
 	err = cmd.Start()
 	if err != nil {
 		log.Println(errors.Wrap(err, "Failed to start server.py"))
@@ -231,7 +233,7 @@ func handleMatch(updateChan chan<- update, inputChan <-chan message, matchID int
 		log.Println(errors.Wrap(err, "Could not establish connection with server.py"))
 	}
 	// Send the game server the list of players.
-	_, err = conn.Write([]byte(strings.Join(players, ",")))
+	_, err = conn.Write(append([]byte(strings.Join(players, ",")), DELIM))
 	// Send it the mission name. For now, assume "test".
 	_, err = conn.Write(append([]byte("test"), DELIM))
 	// I/O loop.
