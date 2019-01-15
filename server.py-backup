@@ -26,10 +26,11 @@ def main():
 	mission = recv_message(sock)
 	gamestate = Gamestate(players, mission)
 	changes = gamestate.draw_cards(gamestate.mission.starting_cards)
-	if changes: sock.send(encode(json.dumps(changes)))
-	gamestate.init_station(gamestate.mission.starting_station)
-	# The clients will initialize the station on their own, at least for now.
-	#sock.send(encode("SPAWN COMPONENTS:" + json.dumps(changes)))
+	if changes:
+		for change in changes: sock.send(encode("DRAW:"+change['player']+":"+change['card']))
+	changes = self.station = self.mission.starting_station
+	# There will always be at least one component to spawn.
+	sock.send(encode("SPAWN COMPONENTS:" + json.dumps(changes)))
 	while True:
 		changes = gamestate.upkeep()
 		print(changes) ###

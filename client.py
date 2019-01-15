@@ -1,4 +1,4 @@
-import pygame, socket, selectors, random
+import pygame, socket, selectors, random, json
 from pygame_elements import *
 from client_config import *
 from sockets import *
@@ -142,6 +142,7 @@ def play(players):
 		if player != player_name: playerlist.add(player)
 	playerlist.draw()
 	gamestate = Gamestate(playerlist.message_list+[player_name])
+	gamestate.init_station(gamestate.mission.starting_station)
 	pygame.display.flip()
 	while True:
 		clock.tick(LOBBY_RATE)
@@ -153,9 +154,12 @@ def play(players):
 				chatbar.add_message(msg[6:])
 				chatbar.draw()
 				pygame.display.update(chatbar.rect)
-			if msg.startswith("INSERT:"):
-				# Need to handle the insertion of enemies, and updating the screen
-				print(msg)
+			if msg.startswith("SPAWN ENEMIES:"):
+				enemy_json = json.loads(msg[14:])
+				print(enemy_json)
+				gamestate.insert_enemies(enemy_json)
+				gamestate.draw(window)
+				pygame.display.flip()
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
 			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
