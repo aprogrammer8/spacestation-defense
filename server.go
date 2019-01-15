@@ -212,6 +212,8 @@ func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- st
 
 func handleMatch(updateChan chan<- update, inputChan <-chan message, matchID int, players []string) {
 	var sockname = "/tmp/spacestation_defense_" + strconv.Itoa(matchID) + ".sock"
+	// No point catching the error because if it doesn't exist, then that's what we wanted; if it can't be removed for another reason, we'll get the error on the next line anyway.
+	os.Remove(sockname)
 	var listener, err = net.Listen("unix", sockname)
 	if err != nil {
 		log.Println(errors.Wrap(err, "When opening socket"))
