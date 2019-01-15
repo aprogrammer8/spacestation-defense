@@ -120,7 +120,6 @@ class TextList:
 		pygame.draw.rect(self.window, self.bordercolor, self.rect, 1)
 		self.new_height = 0
 		for message in self.message_list:
-			print(message)
 			# Cropping the rect slightly so the text isn't on the border.
 			height = draw_text(self.window, message, self.textcolor, pygame.Rect(self.rect.x+2, self.rect.y+self.new_height+1, self.rect.w-2, self.rect.h-1), self.font)
 			self.new_height += height + self.spacing

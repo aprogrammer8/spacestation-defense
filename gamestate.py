@@ -1,28 +1,33 @@
+import random
+
 class Gamestate:
 	def __init__(self, players, mission='test', json=''):
-		if jsom:
+		if json:
 			self.load_json(json)
 			return
 		else: # If no JSON, we load a new game from a mission.
 			self.enemy_ships = []
 			self.allied_ships = []
 			self.asteroids = []
-			self.wave = 0
+			self.nextwave = 0
 			self.round = 0
 			# Number of turns left before the next wave should come.
 			self.time = 0
 			# Rewards for each sent wave. The gamestate tracks this itself for restoration purposes.
-			self.rewards = []
+			self.rewards = {}
 			self.players = []
-			for player in players: self.players += Player(player)
+			for player in players: self.players.append(Player(player))
 			# The draw pointer is used to keep track of who will get the next card the players draw.
 			self.draw_pointer = 0
 			self.mission = Mission("missions/"+mission)
 			self.draw_cards(self.mission.starting_cards)
 			self.upkeep()
+	#def encode(self):
+	#	"""Encodes the Gamestate into a JSON object that can be sent over the network."""
 	def draw_cards(self, num):
 		for i in range(num):
-			self.players[self.draw_pointer].hand += draw_card()
+			print(self.players,self.draw_pointer)###
+			self.players[self.draw_pointer].hand.append(draw_card())
 			self.draw_pointer += 1
 			if self.draw_pointer >= len(self.players): self.draw_pointer = 0
 	def upkeep(self):
@@ -30,16 +35,23 @@ class Gamestate:
 			ship.already_moved = False
 		self.time -= 1
 		if self.time <= 0:
-			wave, self.rewards[self.wave], self.time = self.mission.next()
-			self.send_enemies(wave)
+			wave, self.rewards[self.nextwave], self.time = self.mission.wave(self.nextwave)
 			self.nextwave += 1
-	def send_enmeies(self, enemies):
+			return self.send_enemies(wave)
+	def send_enemies(self, enemies):
+		inserts = []
 		for enemy_type in enemies:
 			for i in range(enemies[enemy_type]):
-				if enemy_type == 'drone':
-					pos = (random.randint(1, 15), random.randint(1, 15))
-					rot = (0, 1)
-					drone(self.window, pos, rot)
+				inserts.append({'type':enemy_type, 'pos':self.find_open_pos()})
+		return inserts
+	def find_open_pos(self, size=(1,1)):
+		"""Searches through all game objects and find an unoccupied position to put the enemy on."""
+		# Placeholder.
+		return (random.randint(1,15), random.randint(1,15))
+	def insert_enemies(self, enemies):
+		"""Inserts the given enemies into the gamestate. Takes a tuple of dicts with enemy type names as keys and their board positions as values."""
+		for enemy in enemies:
+			if enemy['type'] == "Drone": self.enemy_ships.append(drone(enemy['pos'], enemy['rot']))
 
 class Player:
 	def __init__(self, name, cards=[]):
@@ -48,7 +60,7 @@ class Player:
 
 class Card:
 	def __init__(self,name):
-		self.name=name
+		self.name = name
 
 def draw_card():
 	return Card("Repair")
@@ -107,11 +119,10 @@ class Mission:
 	def __init__(self, filename):
 		# There should be a shitton of tunable parameters in here. For now, just give them all placeholder values.
 		self.starting_cards = 4
-	def next(self, wave):
-		# The wave parameter is the number, since Gamestate tracks that and there's no point tracking it in two places.
-		# This method will return a dict of enemy type:count, a reward for clearing it, a number of turns till the next wave.
+	def wave(self, num):
+		"""This method acccepts a wave number and returns a dict of enemy type:count, a reward for clearing it, and a number of turns until the next wave arrives."""
 		# Temp code:
-		return {'drone':3}, None, 5
+		return {'Drone':3}, None, 5
 
 # The functions below initialize entity types.
 

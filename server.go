@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -18,7 +19,7 @@ type client struct {
 	Inbound   chan []byte
 	Outbound  chan string
 	MatchChan chan message
-	Game	  int
+	Game      int
 }
 
 // message is a transmission from a player to the lobby server. The username is added in by the multiplexer.
@@ -130,7 +131,9 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 						// The game server will need to know what players are connected.
 						var participants []string
 						for i := range players {
-							if players[i].Lobby == msg.User.Lobby { participants = append(participants, players[i].Name) }
+							if players[i].Lobby == msg.User.Lobby {
+								participants = append(participants, players[i].Name)
+							}
 						}
 						var matchChan = make(chan message)
 						go handleMatch(gameMux, matchChan, nextMatchID, participants)
@@ -147,7 +150,7 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 						log.Println(msg.User.Name, "can't start game created by", msg.User.Lobby)
 					}
 				default:
-					// Any unrecognized comamnds are sent to the match server, assuming it's an in-game thing. This way the server doesn't have to know about changes in the game server interface.
+					// Any unrecognized comamnds are sent to the match server, assuming it's an in-game thing. This way the lobby server doesn't have to know about changes in the game server interface.
 					if msg.User.MatchChan != nil {
 						msg.User.MatchChan <- msg
 					} else {
@@ -210,7 +213,13 @@ func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- st
 func handleMatch(updateChan chan<- update, inputChan <-chan message, matchID int, players []string) {
 	var sockname = "/tmp/spacestation_defense_" + strconv.Itoa(matchID) + ".sock"
 	var listener, err = net.Listen("unix", sockname)
-	err = exec.Command("python3.6", "server.py", sockname).Run()
+	if err != nil {
+		log.Println(errors.Wrap(err, "When opening socket"))
+		return
+	}
+	var cmd = exec.Command("python3.6", "server.py", sockname)
+	cmd.Stderr = os.Stderr
+	err = cmd.Start()
 	if err != nil {
 		log.Println(errors.Wrap(err, "Failed to start server.py"))
 		return

@@ -101,6 +101,7 @@ def lobby(host_name):
 	playerlist = TextList(window, LOBBY_PLAYERLIST_RECT, BGCOLOR, BGCOLOR, TEXTCOLOR, font)
 	playerlist.add(host_name)
 	if host_name != player_name: playerlist.add(player_name)
+	playerlist.draw()
 	pygame.display.flip()
 	while True:
 		clock.tick(LOBBY_RATE)
@@ -134,10 +135,13 @@ def play(players):
 	global player_name, sock, selector, window, font, clock
 	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXTCOLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
 	chatbar.draw()
-	playerlist = TextList(window, GAME_PLAYERLIST_RECT, BGCOLOR, BGCOLOR, TEXTCOLOR, font)
+	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
+	playerlist = TextList(window, GAME_PLAYERLIST_RECT, PANEL_COLOR, PANEL_COLOR, TEXTCOLOR, font)
 	# Repopulate the player list.
 	for player in players:
 		if player != player_name: playerlist.add(player)
+	playerlist.draw()
+	gamestate = Gamestate(playerlist.message_list+[player_name])
 	pygame.display.flip()
 	while True:
 		clock.tick(LOBBY_RATE)
@@ -148,6 +152,9 @@ def play(players):
 				chatbar.add_message(msg[6:])
 				chatbar.draw()
 				pygame.display.update(chatbar.rect)
+			if msg.startswith("INSERT:"):
+				# Need to handle the insretion of enemies, and updating the screen
+				print(msg)
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
 			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
