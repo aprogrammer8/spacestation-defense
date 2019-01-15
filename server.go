@@ -53,7 +53,7 @@ func readUntilDelim(r io.Reader, delim byte) ([]byte, error) {
 }
 
 // DELIM is a global constant used to delimit messages.
-var DELIM byte = 3
+var DELIM byte = 0
 
 func main() {
 	listener, err := net.Listen("tcp4", "127.0.0.1:1025")
