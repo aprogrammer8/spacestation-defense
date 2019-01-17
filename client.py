@@ -143,7 +143,8 @@ def play(players):
 	playerlist.draw()
 	gamestate = Gamestate(playerlist.message_list+[player_name])
 	gamestate.init_station(gamestate.mission.starting_station)
-	draw_gamestate(window, gamestate, (0,0))
+	offset = [0, 0]
+	draw_gamestate(window, gamestate, offset)
 	pygame.display.flip()
 	while True:
 		clock.tick(LOBBY_RATE)
@@ -158,14 +159,25 @@ def play(players):
 			if msg.startswith("SPAWN ENEMIES:"):
 				enemy_json = json.loads(msg[14:])
 				gamestate.insert_enemies(enemy_json)
-				draw_gamestate(window, gamestate, (0,0))
+				draw_gamestate(window, gamestate, offset)
 				pygame.display.flip()
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
-			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+			if event.type == pygame.KEYDOWN:
 				entry = chatbar.handle_event(event)
 				if entry: sock.send(encode("LOCAL:"+player_name+":"+entry))
 				pygame.display.update(chatbar.rect)
+			if event.type == pygame.MOUSEBUTTONDOWN:
+				chatbar.handle_event(event)
+				if GAME_WINDOW_RECT.collidepoint(event.pos):
+					pos = reverse_calc_pos(event.pos, offset)
+					select(pos)
+				pygame.display.update((chatbar.rect, PANEL_RECT))
+
+
+def select_pos(pos):
+	"""select_pos takes a gameboard logical position and fills the panel with information about the object there."""
+	pass
 
 
 def draw_gamestate(window, gamestate, offset):
@@ -181,7 +193,13 @@ def draw_gamestate(window, gamestate, offset):
 	for pos in gamestate.enemy_ships:
 		window.blit(IMAGE_DICT[gamestate.enemy_ships[pos].type], calc_pos(pos,offset))
 
-def calc_pos(pos, offset): return ((pos[0]+offset[0])*TILESIZE[0]+GAME_WINDOW_RECT.left, (pos[1]+offset[1])*TILESIZE[1])
+def calc_pos(pos, offset):
+	"""calc_pos converts a gameboard logical position to a pixel position on screen."""
+	return ((pos[0]+offset[0])*TILESIZE[0]+GAME_WINDOW_RECT.left, (pos[1]+offset[1])*TILESIZE[1])
+
+def reverse_calc_pos(pos, offset):
+	"""reverse_calc_pos converts a pixel position on screen to a gameboard logical position."""
+	return (int((pos[0]-GAME_WINDOW_RECT.left)/TILESIZE[0])-offset[0], int(pos[1]/TILESIZE[1])-offset[1])
 
 
 if __name__ == '__main__': main()
