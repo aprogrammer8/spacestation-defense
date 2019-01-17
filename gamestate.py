@@ -46,11 +46,11 @@ class Gamestate:
 		inserts = []
 		for enemy_type in enemies:
 			for i in range(enemies[enemy_type]):
-				# The rotation of 90 is a placeholder.
-				inserts.append({'type':enemy_type, 'pos':self.find_open_pos(), 'rot':90})
+				# The rot value of 0 is a placeholder.
+				inserts.append({'type':enemy_type, 'pos':self.find_open_pos(), 'rot':0})
 		return inserts
 	def find_open_pos(self, size=(1,1)):
-		"""Searches through all ga3me objects and find an unoccupied position to put the enemy on."""
+		"""Searches through all game objects and find an unoccupied position to put the enemy on."""
 		while True:
 			pos = (random.randint(1,15), random.randint(1,15))
 			# Ensure no collisions.
@@ -91,8 +91,9 @@ class Entity:
 		self.pos[1] += change[1]
 
 class Ship(Entity):
-	def __init__(self, rot, hull, shield, shield_regen, weapons, speed, salvage, wave=0, size=0):
+	def __init__(self, type, rot, hull, shield, shield_regen, weapons, speed, salvage, wave=0, size=0):
 		Entity.__init__(self, rot=rot, hull=hull, shield=shield, shield_regen=shield_regen, weapons=weapons)
+		self.type = type
 		self.speed = speed
 		# Enemy only fields.
 		self.wave = wave
@@ -125,7 +126,7 @@ class Mission:
 	def __init__(self, filename):
 		# There should be a shitton of tunable parameters in here. For now, just give them all placeholder values.
 		self.starting_station = {
-			(7,7): "shield"
+			(7,7): "Shield Generator"
 		}
 		self.starting_cards = 4
 	def wave(self, num):
@@ -137,6 +138,6 @@ class Mission:
 
 def drone(rot):
 	weapons = (Weapon('laser', 1, 1),)
-	return Ship(rot, 5, 0, (0,), weapons, 3, 1)
+	return Ship("Drone", rot, 5, 0, (0,), weapons, 3, 1)
 
-COMPONENT_TYPES = ('shield')
+COMPONENT_TYPES = ('Shield Generator')

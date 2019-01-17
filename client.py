@@ -1,4 +1,4 @@
-import pygame, socket, selectors, random, json
+import pygame, socket, selectors, random, json, sys
 from pygame_elements import *
 from client_config import *
 from sockets import *
@@ -143,6 +143,7 @@ def play(players):
 	playerlist.draw()
 	gamestate = Gamestate(playerlist.message_list+[player_name])
 	gamestate.init_station(gamestate.mission.starting_station)
+	draw_gamestate(window, gamestate, (0,0))
 	pygame.display.flip()
 	while True:
 		clock.tick(LOBBY_RATE)
@@ -156,9 +157,9 @@ def play(players):
 				pygame.display.update(chatbar.rect)
 			if msg.startswith("SPAWN ENEMIES:"):
 				enemy_json = json.loads(msg[14:])
-				print(enemy_json)
 				gamestate.insert_enemies(enemy_json)
-				gamestate.draw(window)
+				draw_gamestate(window, gamestate, (0,0))
+				#gamestate.draw(window)
 				pygame.display.flip()
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
@@ -166,6 +167,22 @@ def play(players):
 				entry = chatbar.handle_event(event)
 				if entry: sock.send(encode("LOCAL:"+player_name+":"+entry))
 				pygame.display.update(chatbar.rect)
+
+
+def draw_gamestate(window, gamestate, offset):
+	"""The rect is the area of the screen that isn't reserved for the chatbar and panel."""
+#def draw_grid(window, GAME_WINDOW_RECT, tilesize):
+	for x in range(GAME_WINDOW_RECT.left, GAME_WINDOW_RECT.right, TILESIZE[0]):
+		pygame.draw.line(window, GRID_COLOR, (x, GAME_WINDOW_RECT.top), (x, GAME_WINDOW_RECT.bottom), 1)
+	for y in range(GAME_WINDOW_RECT.top, GAME_WINDOW_RECT.bottom, TILESIZE[1]):
+		pygame.draw.line(window, GRID_COLOR, (GAME_WINDOW_RECT.left, y), (GAME_WINDOW_RECT.right, y), 1)
+#def draw_entity():
+	for pos in gamestate.station:
+		window.blit(IMAGE_DICT[gamestate.station[pos].type], calc_pos(pos,offset))
+	for pos in gamestate.enemy_ships:
+		window.blit(IMAGE_DICT[gamestate.enemy_ships[pos].type], calc_pos(pos,offset))
+
+def calc_pos(pos, offset): return ((pos[0]+offset[0])*TILESIZE[0], (pos[1]+offset[1])*TILESIZE[1])
 
 
 if __name__ == '__main__': main()

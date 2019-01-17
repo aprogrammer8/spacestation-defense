@@ -21,4 +21,12 @@ INACTIVE_STARTBUTTON_COLOR = (0, 170, 0)
 LOBBY_PLAYERLIST_RECT = pygame.Rect(CHAT_RECT.right+5, 5, 100, SCREEN_SIZE[1]-10)
 PANEL_COLOR = (127, 127, 127)
 PANEL_RECT = pygame.Rect(SCREEN_SIZE[0]-int(SCREEN_SIZE[0]/10), 0, int(SCREEN_SIZE[0]/10), SCREEN_SIZE[1])
+GAME_WINDOW_RECT = pygame.Rect(CHAT_RECT.right, 0, SCREEN_SIZE[0]-CHAT_RECT.w-PANEL_RECT.w, SCREEN_SIZE[1])
 GAME_PLAYERLIST_RECT = pygame.Rect(PANEL_RECT.x, 0, PANEL_RECT.w, PANEL_RECT.h)
+GRID_COLOR = (255, 255, 255)
+TILESIZE = (50, 50)
+
+IMAGE_DICT = {
+	"Drone": pygame.image.load("images/drone.png"),
+	"Shield Generator": pygame.image.load("images/drone.png"),
+}
