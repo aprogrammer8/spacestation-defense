@@ -176,14 +176,9 @@ def play(players):
 
 def select_pos(gamestate, clickpos):
 	"""select_pos takes a gameboard logical position and finds the object on it, then calls fill_panel."""
-	for pos in gamestate.station:
-		if pos == clickpos: return fill_panel(gamestate.station[pos])
-	for pos in gamestate.allied_ships:
-		if pos == clickpos: return fill_panel(gamestate.allied_ships[pos])
-	for pos in gamestate.enemy_ships:
-		if pos == clickpos: return fill_panel(gamestate.enemy_ships[pos])
-	for pos in gamestate.asteroids:
-		if pos == clickpos: return fill_panel(gamestate.asteroids[pos])
+	entity = gamestate.occupied(list(clickpos))
+	if entity: fill_panel(entity)
+	else: pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
 
 def fill_panel(object):
 	"""fills the panel with information about the given object."""
@@ -201,14 +196,14 @@ def draw_gamestate(window, gamestate, offset):
 	for y in range(GAME_WINDOW_RECT.top+TILESIZE[1], GAME_WINDOW_RECT.bottom, TILESIZE[1]):
 		pygame.draw.line(window, GRID_COLOR, (GAME_WINDOW_RECT.left, y), (GAME_WINDOW_RECT.right, y), 1)
 #def draw_entity():
-	for pos in gamestate.station:
-		window.blit(IMAGE_DICT[gamestate.station[pos].type], calc_pos(pos,offset))
-	for pos in gamestate.enemy_ships:
-		window.blit(IMAGE_DICT[gamestate.enemy_ships[pos].type], calc_pos(pos,offset))
-	for pos in gamestate.allied_ships:
-		window.blit(IMAGE_DICT[gamestate.allied_ships[pos].type], calc_pos(pos,offset))
-	for pos in gamestate.asteroids:
-		window.blit(IMAGE_DICT[gamestate.asteroids[pos].type], calc_pos(pos,offset))
+	for entity in gamestate.station:
+		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
+	for entity in gamestate.enemy_ships:
+		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
+	for entity in gamestate.allied_ships:
+		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
+	for entity in gamestate.asteroids:
+		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
 
 def calc_pos(pos, offset):
 	"""calc_pos converts a gameboard logical position to a pixel position on screen."""
