@@ -159,7 +159,6 @@ def play(players):
 				enemy_json = json.loads(msg[14:])
 				gamestate.insert_enemies(enemy_json)
 				draw_gamestate(window, gamestate, (0,0))
-				#gamestate.draw(window)
 				pygame.display.flip()
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
@@ -170,11 +169,11 @@ def play(players):
 
 
 def draw_gamestate(window, gamestate, offset):
-	"""The rect is the area of the screen that isn't reserved for the chatbar and panel."""
+	"""The offset is where the player is scrolled to."""
 #def draw_grid(window, GAME_WINDOW_RECT, tilesize):
-	for x in range(GAME_WINDOW_RECT.left, GAME_WINDOW_RECT.right, TILESIZE[0]):
+	for x in range(GAME_WINDOW_RECT.left+TILESIZE[0], GAME_WINDOW_RECT.right, TILESIZE[0]):
 		pygame.draw.line(window, GRID_COLOR, (x, GAME_WINDOW_RECT.top), (x, GAME_WINDOW_RECT.bottom), 1)
-	for y in range(GAME_WINDOW_RECT.top, GAME_WINDOW_RECT.bottom, TILESIZE[1]):
+	for y in range(GAME_WINDOW_RECT.top+TILESIZE[1], GAME_WINDOW_RECT.bottom, TILESIZE[1]):
 		pygame.draw.line(window, GRID_COLOR, (GAME_WINDOW_RECT.left, y), (GAME_WINDOW_RECT.right, y), 1)
 #def draw_entity():
 	for pos in gamestate.station:
@@ -182,7 +181,7 @@ def draw_gamestate(window, gamestate, offset):
 	for pos in gamestate.enemy_ships:
 		window.blit(IMAGE_DICT[gamestate.enemy_ships[pos].type], calc_pos(pos,offset))
 
-def calc_pos(pos, offset): return ((pos[0]+offset[0])*TILESIZE[0], (pos[1]+offset[1])*TILESIZE[1])
+def calc_pos(pos, offset): return ((pos[0]+offset[0])*TILESIZE[0]+GAME_WINDOW_RECT.left, (pos[1]+offset[1])*TILESIZE[1])
 
 
 if __name__ == '__main__': main()
