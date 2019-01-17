@@ -174,7 +174,6 @@ def play(players):
 					select_pos(gamestate, pos)
 				pygame.display.update((chatbar.rect, PANEL_RECT))
 
-
 def select_pos(gamestate, clickpos):
 	"""select_pos takes a gameboard logical position and finds the object on it, then calls fill_panel."""
 	for pos in gamestate.station:

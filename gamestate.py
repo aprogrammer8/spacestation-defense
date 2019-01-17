@@ -79,9 +79,8 @@ class Entity:
 		# Rotation is stored as a number of degrees, to help with displaying.
 		self.rot = rot
 		self.maxhull = self.hull = hull
-		self.maxshield = shield
 		# Components can't have their shield property set, because it's not really theirs.
-		if type(self) != Component: self.shield = shield
+		if type(self) != Component: self.maxshield = self.shield = shield
 		self.shield_regen_amounts = shield_regen
 		self.shield_regen_pointer = 0
 		self.already_moved = False
@@ -107,10 +106,14 @@ class Component(Entity):
 	def __init__(self, station, type, rot, hull):
 		Entity.__init__(self, rot=rot, hull=hull, shield=0, shield_regen=(0,))
 		if type not in COMPONENT_TYPES: raise TypeException("Not a valid station component type: " + type)
+		self.station = station
 		self.type = type
 	@property
 	def shield(self):
 		return 100 # calculate which shield generators are applying to it
+	@property
+	def maxshield(self):
+		return 100
 
 class Composite:
 	def __init__(self, components):
