@@ -30,9 +30,9 @@ def main():
 
 def login_screen():
 	global player_name, sock, selector, window, font, clock
-	draw_text(window, "enter your name", TEXTCOLOR, LOG_RECT, font)
+	draw_text(window, "enter your name", TEXT_COLOR, LOG_RECT, font)
 	font = pygame.font.Font(pygame.font.get_default_font(), 10)
-	username_box = InputBox(window, NAME_ENTRY_RECT, BGCOLOR, TEXTCOLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font)
+	username_box = InputBox(window, NAME_ENTRY_RECT, BGCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font)
 	username_box.draw()
 	pygame.display.flip()
 	while True:
@@ -49,11 +49,11 @@ def login_screen():
 
 def global_lobby():
 	global player_name, sock, selector, window, font, clock
-	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXTCOLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
+	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
 	chatbar.draw()
-	startbutton = Button(window, CREATE_GAME_RECT, ACTIVE_STARTBUTTON_COLOR, INACTIVE_STARTBUTTON_COLOR, TEXTCOLOR, font, "Create lobby")
+	startbutton = Button(window, CREATE_GAME_RECT, ACTIVE_STARTBUTTON_COLOR, INACTIVE_STARTBUTTON_COLOR, TEXT_COLOR, font, "Create lobby")
 	startbutton.draw()
-	lobbylist = TextList(window, LOBBYLIST_RECT, BGCOLOR, BGCOLOR, TEXTCOLOR, font)
+	lobbylist = TextList(window, LOBBYLIST_RECT, BGCOLOR, BGCOLOR, TEXT_COLOR, font)
 	pygame.display.flip()
 	while True:
 		clock.tick(LOBBY_RATE)
@@ -94,11 +94,11 @@ def global_lobby():
 
 def lobby(host_name):
 	global player_name, sock, selector, window, font, clock
-	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXTCOLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
+	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
 	chatbar.draw()
-	startbutton = Button(window, START_GAME_RECT, ACTIVE_STARTBUTTON_COLOR, INACTIVE_STARTBUTTON_COLOR, TEXTCOLOR, font, "Launch mission!")
+	startbutton = Button(window, START_GAME_RECT, ACTIVE_STARTBUTTON_COLOR, INACTIVE_STARTBUTTON_COLOR, TEXT_COLOR, font, "Launch mission!")
 	startbutton.draw()
-	playerlist = TextList(window, LOBBY_PLAYERLIST_RECT, BGCOLOR, BGCOLOR, TEXTCOLOR, font)
+	playerlist = TextList(window, LOBBY_PLAYERLIST_RECT, BGCOLOR, BGCOLOR, TEXT_COLOR, font)
 	playerlist.add(host_name)
 	if host_name != player_name: playerlist.add(player_name)
 	playerlist.draw()
@@ -133,10 +133,10 @@ def lobby(host_name):
 
 def play(players):
 	global player_name, sock, selector, window, font, clock
-	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXTCOLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
+	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
 	chatbar.draw()
 	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
-	playerlist = TextList(window, GAME_PLAYERLIST_RECT, PANEL_COLOR, PANEL_COLOR, TEXTCOLOR, font)
+	playerlist = TextList(window, GAME_PLAYERLIST_RECT, PANEL_COLOR, PANEL_COLOR, TEXT_COLOR, font)
 	# Repopulate the player list.
 	for player in players:
 		if player != player_name: playerlist.add(player)
@@ -171,14 +171,28 @@ def play(players):
 				chatbar.handle_event(event)
 				if GAME_WINDOW_RECT.collidepoint(event.pos):
 					pos = reverse_calc_pos(event.pos, offset)
-					select(pos)
+					select_pos(gamestate, pos)
 				pygame.display.update((chatbar.rect, PANEL_RECT))
 
 
-def select_pos(pos):
-	"""select_pos takes a gameboard logical position and fills the panel with information about the object there."""
-	pass
+def select_pos(gamestate, clickpos):
+	"""select_pos takes a gameboard logical position and finds the object on it, then calls fill_panel."""
+	for pos in gamestate.station:
+		if pos == clickpos: return fill_panel(gamestate.station[pos])
+	for pos in gamestate.allied_ships:
+		if pos == clickpos: return fill_panel(gamestate.allied_ships[pos])
+	for pos in gamestate.enemy_ships:
+		if pos == clickpos: return fill_panel(gamestate.enemy_ships[pos])
+	for pos in gamestate.asteroids:
+		if pos == clickpos: return fill_panel(gamestate.asteroids[pos])
 
+def fill_panel(object):
+	"""fills the panel with information about the given object."""
+	#First, clear it.
+	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
+	draw_text(window, object.type, TEXT_COLOR, PANEL_NAME_RECT, font)
+	if hasattr(object, 'hull'): draw_bar(window, PANEL_HULL_RECT, TEXT_COLOR, HULL_COLOR, HULL_DAMAGE_COLOR, object.maxhull, object.hull)
+	if hasattr(object, 'shield') and object.maxshield > 0: draw_bar(window, PANEL_SHIELD_RECT, TEXT_COLOR, SHIELD_COLOR, SHIELD_DAMAGE_COLOR, object.maxshield, object.shield)
 
 def draw_gamestate(window, gamestate, offset):
 	"""The offset is where the player is scrolled to."""
