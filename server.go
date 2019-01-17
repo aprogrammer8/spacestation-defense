@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 
 	errors "github.com/pkg/errors"
@@ -19,7 +18,6 @@ type client struct {
 	Inbound   chan []byte
 	Outbound  chan string
 	MatchChan chan message
-	Game      int
 }
 
 // message is a transmission from a player to the lobby server. The username is added in by the multiplexer.
@@ -32,7 +30,7 @@ type message struct {
 
 // update is a transmission from the game server to the lobby server, which will in turn get sent out to connected players.
 type update struct {
-	Game    int
+	Game    string
 	Content []byte
 }
 
@@ -78,7 +76,6 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 	var players []*client
 	var playerMux = make(chan message)
 	var gameMux = make(chan update)
-	var nextMatchID int
 	for {
 		select {
 		// Player joining.
@@ -124,6 +121,9 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 					for i := range players {
 						players[i].Outbound <- "+LOBBY:" + msg.User.Name
 					}
+				case "JOIN":
+					log.Println(msg.User.Name, "joining", msgStr, "(joining not yet enabled)")
+					// Need to check if the lobby exists.
 				case "START":
 					// Make sure the user owns the lobby.
 					if msg.User.Lobby == msg.User.Name {
@@ -136,17 +136,15 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 							}
 						}
 						var matchChan = make(chan message)
-						go handleMatch(gameMux, matchChan, nextMatchID, participants)
+						go handleMatch(gameMux, matchChan, msg.User.Lobby, participants)
 						for _, player := range players {
 							if player.Lobby == msg.User.Lobby {
 								player.Outbound <- "START"
 								player.MatchChan = matchChan
-								player.Game = nextMatchID
 							} else {
 								player.Outbound <- "-LOBBY:" + msg.User.Lobby
 							}
 						}
-						nextMatchID++
 					} else {
 						log.Println(msg.User.Name, "can't start game created by", msg.User.Lobby)
 					}
@@ -162,7 +160,7 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 		case msg := <-gameMux:
 			for i := range players {
 				// Match players who are in the game this update is from.
-				if players[i].Game == msg.Game {
+				if players[i].Lobby == msg.Game {
 					players[i].Outbound <- string(msg.Content)
 				}
 			}
@@ -211,8 +209,8 @@ func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- st
 	}
 }
 
-func handleMatch(updateChan chan<- update, inputChan <-chan message, matchID int, players []string) {
-	var sockname = "/tmp/spacestation_defense_" + strconv.Itoa(matchID) + ".sock"
+func handleMatch(updateChan chan<- update, inputChan <-chan message, lobby string, players []string) {
+	var sockname = "/tmp/spacestation_defense_" + lobby + ".sock"
 	// No point catching the error because if it doesn't exist, then that's what we wanted; if it can't be removed for another reason, we'll get the error on the next line anyway.
 	os.Remove(sockname)
 	var listener, err = net.Listen("unix", sockname)
@@ -251,6 +249,6 @@ func handleMatch(updateChan chan<- update, inputChan <-chan message, matchID int
 		if err != nil {
 			log.Println(errors.Wrap(err, "When reading game server update"))
 		}
-		updateChan <- update{Game: matchID, Content: msg}
+		updateChan <- update{Game: lobby, Content: msg}
 	}
 }
