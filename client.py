@@ -205,6 +205,10 @@ def draw_gamestate(window, gamestate, offset):
 		window.blit(IMAGE_DICT[gamestate.station[pos].type], calc_pos(pos,offset))
 	for pos in gamestate.enemy_ships:
 		window.blit(IMAGE_DICT[gamestate.enemy_ships[pos].type], calc_pos(pos,offset))
+	for pos in gamestate.allied_ships:
+		window.blit(IMAGE_DICT[gamestate.allied_ships[pos].type], calc_pos(pos,offset))
+	for pos in gamestate.asteroids:
+		window.blit(IMAGE_DICT[gamestate.asteroids[pos].type], calc_pos(pos,offset))
 
 def calc_pos(pos, offset):
 	"""calc_pos converts a gameboard logical position to a pixel position on screen."""

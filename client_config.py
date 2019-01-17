@@ -31,11 +31,11 @@ SHIELD_DAMAGE_COLOR = (127, 0, 0)
 GAME_WINDOW_RECT = pygame.Rect(CHAT_RECT.right, 0, SCREEN_SIZE[0]-CHAT_RECT.w-PANEL_RECT.w, SCREEN_SIZE[1])
 GAME_PLAYERLIST_RECT = pygame.Rect(PANEL_RECT.x, 0, PANEL_RECT.w, PANEL_RECT.h)
 GRID_COLOR = (255, 255, 255)
-TILESIZE = (50, 50)
+TILESIZE = (25, 25)
 
 IMAGE_DICT = {
 	"Drone": pygame.image.load("images/drone.png"),
-	"Shield Generator": pygame.image.load("images/drone.png"),
+	"Shield Generator": pygame.image.load("images/shield_generator.png"),
 }
 
 for image_name in IMAGE_DICT:
