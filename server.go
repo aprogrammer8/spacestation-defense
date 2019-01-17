@@ -137,15 +137,16 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 						}
 						var matchChan = make(chan message)
 						go handleMatch(gameMux, matchChan, nextMatchID, participants)
-						nextMatchID++
 						for _, player := range players {
 							if player.Lobby == msg.User.Lobby {
 								player.Outbound <- "START"
 								player.MatchChan = matchChan
+								player.Game = nextMatchID
 							} else {
 								player.Outbound <- "-LOBBY:" + msg.User.Lobby
 							}
 						}
+						nextMatchID++
 					} else {
 						log.Println(msg.User.Name, "can't start game created by", msg.User.Lobby)
 					}

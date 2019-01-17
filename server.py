@@ -32,7 +32,6 @@ def main():
 	#sock.send(encode("SPAWN COMPONENTS:" + json.dumps(changes)))
 	while True:
 		changes = gamestate.upkeep()
-		print(changes) ###
 		if changes: sock.send(encode("SPAWN ENEMIES:" + json.dumps(changes)))
 		collect_input()
 		players_move()
