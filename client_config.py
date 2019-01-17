@@ -30,3 +30,6 @@ IMAGE_DICT = {
 	"Drone": pygame.image.load("images/drone.png"),
 	"Shield Generator": pygame.image.load("images/drone.png"),
 }
+
+for image_name in IMAGE_DICT:
+	IMAGE_DICT[image_name].set_colorkey((255,255,255))
