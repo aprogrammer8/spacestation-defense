@@ -52,22 +52,68 @@ class Gamestate:
 	def occupied(self, pos):
 		"""Checks if a gameboard space is occupied."""
 		for entity in self.station:
-			if entity.occupies(pos): return entity
+			if pos in entity.spaces(): return entity
 		for entity in self.allied_ships:
-			if entity.occupies(pos): return entity
+			if pos in entity.spaces(): return entity
 		for entity in self.enemy_ships:
-			if entity.occupies(pos): return entity
+			if pos in entity.spaces(): return entity
 		for entity in self.asteroids:
-			if entity.occupies(pos): return entity
+			if pos in entity.spaces(): return entity
 	def find_open_pos(self, size=(1,1)):
 		"""Searches through all game objects and find an unoccupied position to put the enemy on."""
 		while True:
 			pos = [random.randint(1,15), random.randint(1,15)]
 			if not self.occupied(pos): return pos
+	def in_range(self, source, type, target):
+		"""Determines whether a source is in range of a target. The source is a sequence of spaces it occupies, and the type is the type of attack."""
+		for space in source:
+			dist = [abs(target[0] - space[0]), abs(target[1] - space[1])]
+			total_dist = dist[0] + dist[1]
+			# It's ugly, but it finds the distance with magnitude reduced to 1 or -1.
+			dir = ({True: 1, False: -1}[target[0]>space[0]], {True: 1, False: -1}[target[1]>space[1]])
+			probe = [space[0], space[1]]
+			step_x, step_y = dist[0]/total_dist, dist[1]/total_dist
+			counter = [0, 0]
+			while probe != target:
+				if self.occupied(probe): break
+				counter[0] += step_x
+				counter[1] += step_y
+				if counter[0] < 1 and counter[1] < 1: continue
+				# If only x has advanced enough.
+				if counter[0] >= 1 and counter[1] < 1:
+					counter[0] -= 1
+					probe[0] += dir[0]
+					dist[0] -= 1
+				# If only y has advanced enough (it should always be at one one of them).
+				elif counter[1] > 1 and counter[0] < 1:
+					counter[1] -= 1
+					probe[1] += dir[1]
+					dist[1] -= 1
+				# They've both advanced, so we need to check which one is higher.
+				else:
+					if counter[0] > counter[1]:
+						counter[0] -= 1
+						probe[0] += dir[0]
+						dist[0] -= 1
+					else:
+						counter[1] -= 1
+						probe[1] += dir[1]
+						dist[1] -= 1
+			if probe == target: return True
+			return False
 	def insert_enemies(self, enemies):
-		"""Inserts the given enemies into the gamestate. Takes a sequence of dicts with enemy type names as keys and their board positions as values."""
+		"""Inserts the given enemies into the Gamestate. Takes a sequence of dicts with enemy type names as keys and their board positions as values."""
 		for enemy in enemies:
 			if enemy['type'] == "Drone": self.enemy_ships.append(drone(enemy['pos'], enemy['rot']))
+
+def slope(p1, p2):
+	"""Returns the slope between two points, handling division by zero with a high value if the numerator is not also zero, or 1 if it is."""
+	dist = (abs(p2[0] - p1[0]), abs(p2[1] - p1[1]))
+	if dist[0] == 0:
+		if dist[1] == 0: return 1
+		return 100
+	return dist[1]/dist[0]
+
 
 class Player:
 	def __init__(self, name, cards=[]):
@@ -94,18 +140,20 @@ class Entity:
 		if type(self) != Component: self.maxshield = self.shield = shield
 		self.shield_regen_amounts = shield_regen
 		self.shield_regen_pointer = 0
-		self.already_moved = False
-		self.stored_action = None
+		self.weapons = weapons
 	def move(self, change):
 		self.pos[0] += change[0]
 		self.pos[1] += change[1]
-	def occupies(self, space):
-		"""Returns whether the Entity is on a space."""
-		if self.pos == space: return True
+	def spaces(self):
+		"""Returns all spaces the Entity occupies."""
+		spaces = [self.pos]
 		for pos in self.shape:
 			pos = rotate(pos, self.rot)
-			if pos[0] + self.pos[0] == space[0] and pos[1] + self.pos[1] == space[1]: return True
-		return False
+			spaces.append([pos[0] + self.pos[0], pos[1] + self.pos[1]])
+		return spaces
+	def next_weapon(self):
+		for weapon in self.weapons:
+			if not weapon.target: return weapon
 
 class Ship(Entity):
 	def __init__(self, type, pos, shape, rot, hull, shield, shield_regen, weapons, speed, salvage, wave=0, size=0):
@@ -116,8 +164,9 @@ class Ship(Entity):
 		self.wave = wave
 		# Ally only fields.
 		self.size = size
-		# This field is used for both, but means something different.
+		# This field refers to salvage dropped when the ship is destroyed.
 		self.salvage = salvage
+		self.move = None
 
 # A Station Component.
 class Component(Entity):
@@ -142,6 +191,7 @@ class Weapon:
 		self.type = type
 		self.tier = tier
 		self.power = power
+		self.target = None
 
 class Mission:
 	def __init__(self, filename):

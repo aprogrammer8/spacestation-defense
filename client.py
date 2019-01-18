@@ -144,6 +144,8 @@ def play(players):
 	gamestate = Gamestate(playerlist.message_list+[player_name])
 	gamestate.init_station(gamestate.mission.starting_station)
 	offset = [0, 0]
+	selected = None
+	targeting = False
 	draw_gamestate(window, gamestate, offset)
 	pygame.display.flip()
 	while True:
@@ -167,11 +169,24 @@ def play(players):
 				entry = chatbar.handle_event(event)
 				if entry: sock.send(encode("LOCAL:"+player_name+":"+entry))
 				pygame.display.update(chatbar.rect)
+				if event.key == pygame.K_SPACE:
+					if selected and selected.next_weapon():
+						# TODO: Probably play a sound and give some visual indication.
+						targeting = True
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				chatbar.handle_event(event)
 				if GAME_WINDOW_RECT.collidepoint(event.pos):
 					pos = reverse_calc_pos(event.pos, offset)
-					select_pos(gamestate, pos)
+					if targeting:
+						target = select_pos(gamestate, pos)
+						if selected.next_weapon().in_range(selected.spaces(), target):
+							selected.next_weapon().target = target
+							if not selected.next_weapon(): targeting = False
+						else:
+							pass # TODO: Play some kind of error sound and display a message or something.
+					else:
+						selected = select_pos(gamestate, pos)
+					targeting = False
 				pygame.display.update((chatbar.rect, PANEL_RECT))
 
 def select_pos(gamestate, clickpos):
