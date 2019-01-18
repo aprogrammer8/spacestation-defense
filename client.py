@@ -179,7 +179,7 @@ def play(players):
 					pos = reverse_calc_pos(event.pos, offset)
 					if targeting:
 						target = select_pos(gamestate, pos)
-						if selected.next_weapon().in_range(selected.spaces(), target):
+						if gamestate.in_range(selected.spaces(), selected.next_weapon().type, target.pos):
 							selected.next_weapon().target = target
 							if not selected.next_weapon(): targeting = False
 						else:
@@ -194,6 +194,7 @@ def select_pos(gamestate, clickpos):
 	entity = gamestate.occupied(list(clickpos))
 	if entity: fill_panel(entity)
 	else: pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
+	return entity
 
 def fill_panel(object):
 	"""fills the panel with information about the given object."""
