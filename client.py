@@ -143,7 +143,8 @@ def play(players):
 	playerlist.draw()
 	gamestate = Gamestate(playerlist.message_list+[player_name])
 	gamestate.init_station(gamestate.mission.starting_station)
-	offset = [0, 0]
+	grid_size = [int(GAME_WINDOW_RECT.w/TILESIZE[0]), int(GAME_WINDOW_RECT.h/TILESIZE[1])]
+	offset = [int(grid_size[0]/2), int(grid_size[1]/2)]
 	selected = None
 	targeting = False
 	draw_gamestate(window, gamestate, offset)
@@ -185,6 +186,12 @@ def play(players):
 					pos = reverse_calc_pos(event.pos, offset)
 					if targeting:
 						target = select_pos(gamestate, pos)
+						if not target:
+							selected = None
+							targeting = False
+							pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
+							pygame.display.update(PANEL_RECT)
+							continue
 						# Don't let things target themselves.
 						if target == selected:
 							SFX_ERROR.play()

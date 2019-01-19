@@ -219,7 +219,10 @@ class Mission:
 	def __init__(self, filename):
 		# There should be a shitton of tunable parameters in here. For now, just give them all placeholder values.
 		self.starting_station = {
-			(7,7): "Shield Generator"
+			(2,0): "Shield Generator",
+			#(0,0): "Power Generator",
+			(-2,0): "Laser Turret",
+			(0,0): "Connector"
 		}
 		self.starting_cards = 4
 	def wave(self, num):
@@ -242,4 +245,10 @@ def drone(pos, rot=0):
 	weapons = (Weapon('laser', 1, 1),)
 	return Ship("Drone", pos, (), rot, 5, 0, (0,), weapons, 3, 1)
 
-COMPONENT_TYPES = ('Shield Generator')
+COMPONENT_TYPES = (
+	"Connector",
+	'Shield Generator',
+	'Power Generator',
+	"Laser Turret",
+	"Missile Turret",
+)

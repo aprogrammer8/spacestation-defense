@@ -39,7 +39,9 @@ TILESIZE = (25, 25)
 
 IMAGE_DICT = {
 	"Drone": pygame.image.load("images/drone.png"),
+	"Connector": pygame.image.load("images/connector.png"),
 	"Shield Generator": pygame.image.load("images/shield_generator.png"),
+	"Laser Turret": pygame.image.load("images/laser_turret.png"),
 }
 
 for image_name in IMAGE_DICT:
