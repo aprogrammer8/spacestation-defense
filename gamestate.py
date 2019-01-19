@@ -183,6 +183,7 @@ class Component(Entity):
 		if type not in COMPONENT_TYPES: raise TypeException("Not a valid station component type: " + type)
 		self.station = station
 		self.type = type
+		if type == "Shield Generator": self.shield_regen_amounts = (0, 1, 3, 8)
 	@property
 	def shield(self):
 		return 100 # calculate which shield generators are applying to it

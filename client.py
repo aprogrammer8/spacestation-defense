@@ -201,8 +201,17 @@ def fill_panel(object):
 	#First, clear it.
 	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
 	draw_text(window, object.type, TEXT_COLOR, PANEL_NAME_RECT, font)
-	if hasattr(object, 'hull'): draw_bar(window, PANEL_HULL_RECT, TEXT_COLOR, HULL_COLOR, HULL_DAMAGE_COLOR, object.maxhull, object.hull)
-	if hasattr(object, 'shield') and object.maxshield > 0: draw_bar(window, PANEL_SHIELD_RECT, TEXT_COLOR, SHIELD_COLOR, SHIELD_DAMAGE_COLOR, object.maxshield, object.shield)
+	draw_text(window, str(object.hull)+"/"+str(object.maxhull), TEXT_COLOR, PANEL_HULL_RECT, font)
+	if hasattr(object, 'hull'): draw_bar(window, PANEL_HULL_BAR_RECT, TEXT_COLOR, HULL_COLOR, HULL_DAMAGE_COLOR, object.maxhull, object.hull)
+	if hasattr(object, 'shield') and object.maxshield > 0:
+		draw_text(window, shield_repr(object), TEXT_COLOR, PANEL_SHIELD_RECT, font)
+		draw_bar(window, PANEL_SHIELD_BAR_RECT, TEXT_COLOR, SHIELD_COLOR, SHIELD_DAMAGE_COLOR, object.maxshield, object.shield)
+
+def shield_repr(entity):
+	string = str(entity.shield)+"/"+str(entity.maxshield)+"    + "+str(entity.shield_regen_amounts[entity.shield_regen_pointer])+" / "
+	for amount in entity.shield_regen_amounts:
+		string += str(amount) + "->"
+	return string[:-2]
 
 def draw_gamestate(window, gamestate, offset):
 	"""The offset is where the player is scrolled to."""
