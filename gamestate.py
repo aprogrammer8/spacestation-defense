@@ -179,7 +179,7 @@ class Ship(Entity):
 		self.size = size
 		# This field refers to salvage dropped when the ship is destroyed.
 		self.salvage = salvage
-		self.move = None
+		self.move = []
 
 # A Station Component.
 class Component(Entity):
@@ -258,3 +258,19 @@ COMPONENT_TYPES = (
 	"Laser Turret",
 	"Missile Turret",
 )
+
+def interpret_assign(gamestate, cmd):
+	source_pos = [int(cmd[:cmd.index(',')]), int(cmd[cmd.index(',')+1 : cmd.index(':')])]
+	cmd = cmd[cmd.index(':')+1:]
+	weapon_index = int(cmd[:cmd.index(':')])
+	cmd = cmd[cmd.index(':')+1:]
+	target_pos = [int(cmd[:cmd.index(',')]), int(cmd[cmd.index(',')+1:])]
+	source = gamestate.occupied(source_pos)
+	target = gamestate.occupied(target_pos)
+	source.weapons[weapon_index].target = target
+
+def interpret_unassign(gamestate, cmd):
+	unit_pos = [int(cmd[:cmd.index(',')]), int(cmd[cmd.index(',')+1:])]
+	unit = gamestate.occupied(unit_pos)
+	for weapon in unit.weapons: weapon.target = None
+	if hasattr(unit, 'speed'): unit.move = []

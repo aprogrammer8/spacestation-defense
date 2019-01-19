@@ -164,6 +164,10 @@ def play(players):
 				gamestate.insert_enemies(enemy_json)
 				draw_gamestate(window, gamestate, offset)
 				pygame.display.flip()
+			if msg.startswith("ASSIGN:"):
+				interpret_assign(gamestate, msg[7:])
+			if msg.startswith("UNASSIGN ALL:"):
+				interpret_unassign(gamestate, msg[msg.index(':')+1:])
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
 			if event.type == pygame.KEYDOWN:
@@ -174,6 +178,7 @@ def play(players):
 					if selected and selected.weapons:
 						# TODO: Probably play a sound and give some visual indication.
 						# Clear out old targets.
+						sock.send(encode("UNASSIGN ALL:" + str(selected.pos[0]) + ',' + str(selected.pos[1])))
 						for weapon in selected.weapons: weapon.target = None
 						fill_panel(selected)
 						pygame.display.update(PANEL_RECT)
@@ -198,6 +203,7 @@ def play(players):
 							targeting = False
 							continue
 						if gamestate.in_range(selected, selected.next_weapon().type, target):
+							sock.send(encode("ASSIGN:" + str(selected.pos[0]) + "," + str(selected.pos[1]) + ":" + str(selected.weapons.index(selected.next_weapon())) + ":" + str(target.pos[0]) + "," + str(target.pos[1])))
 							selected.next_weapon().target = target
 							if not selected.next_weapon(): targeting = False
 							fill_panel(selected)

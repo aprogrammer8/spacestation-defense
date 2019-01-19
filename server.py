@@ -3,15 +3,23 @@ from gamestate import *
 from sockets import *
 
 def collect_input():
+	global sock, players, gamestate
 	while True:
 		msg = recv_message(sock)
-		# Assigning an action to a ship or component. Complete actions only.
+		print(msg)
+		player = msg[:msg.index(':')]
+		msg = msg[msg.index(':')+1:]
+		# Assigning an action to a ship or component.
 		if msg.startswith("ASSIGN:"):
-			print(msg)
+			sock.send(encode(msg))
+			interpret_assign(gamestate, msg[msg.index(':')+1:])
+		# Clear an assignment.
+		if msg.startswith("UNASSIGN ALL:"):
+			sock.send(encode(msg))
+			interpret_unassign(gamestate, msg[msg.index(':')+1:])
 		# Playing a card.
 		elif msg.startswith("PLAY:"):
-			print(msg)
-
+			pass
 
 
 def main():
