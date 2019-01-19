@@ -6,7 +6,7 @@ class Gamestate:
 			self.load_json(json)
 			return
 		else: # If no JSON, we load a new game from a mission.
-			self.station = []
+			self.station = Station()
 			self.enemy_ships = []
 			self.allied_ships = []
 			self.asteroids = []
@@ -32,8 +32,13 @@ class Gamestate:
 			self.draw_pointer += 1
 			if self.draw_pointer >= len(self.players): self.draw_pointer = 0
 	def upkeep(self):
-		for ship in self.allied_ships: ship.already_moved = False
-		for ship in self.enemy_ships: ship.already_moved = False
+		for ship in self.allied_ships:
+			ship.already_moved = False
+			ship.shield_regen()
+		for ship in self.enemy_ships:
+			ship.already_moved = False
+			ship.shield_regen()
+		self.station.shield_regen()
 		for component in self.station: component.already_moved = False
 		for asteroid in self.asteroids: asteroid.already_moved = False
 		self.time -= 1
@@ -154,6 +159,9 @@ class Entity:
 	def next_weapon(self):
 		for weapon in self.weapons:
 			if not weapon.target: return weapon
+	def shield_regen(self):
+		self.shield += self.shield_regen_amounts[shield_regen_pointer]
+		if self.shield_regen_pointer < len(self.shield_regen_amounts) - 1: self.shield_regen_pointer += 1
 
 class Ship(Entity):
 	def __init__(self, type, pos, shape, rot, hull, shield, shield_regen, weapons, speed, salvage, wave=0, size=0):
@@ -185,6 +193,10 @@ class Component(Entity):
 class Composite:
 	def __init__(self, components):
 		self.compoments = components
+
+class Station(list):
+	def shield_regen(self):
+		pass
 
 class Weapon:
 	def __init__(self, type, power, tier=1):
