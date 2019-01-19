@@ -205,6 +205,8 @@ class Weapon:
 		self.tier = tier
 		self.power = power
 		self.target = None
+	def __str__(self):
+		return self.type + ": " + str(self.power)
 
 class Mission:
 	def __init__(self, filename):

@@ -206,6 +206,12 @@ def fill_panel(object):
 	if hasattr(object, 'shield') and object.maxshield > 0:
 		draw_text(window, shield_repr(object), TEXT_COLOR, PANEL_SHIELD_RECT, font)
 		draw_bar(window, PANEL_SHIELD_BAR_RECT, TEXT_COLOR, SHIELD_COLOR, SHIELD_DAMAGE_COLOR, object.maxshield, object.shield)
+	if object.weapons:
+		draw_text(window, "Weapons:", TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN, font)
+		y = 20
+		for weapon in object.weapons:
+			draw_text(window, str(weapon), TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN.move(5, y), font)
+			y += 20
 
 def shield_repr(entity):
 	string = str(entity.shield)+"/"+str(entity.maxshield)+"    + "+str(entity.shield_regen_amounts[entity.shield_regen_pointer])+" / "
