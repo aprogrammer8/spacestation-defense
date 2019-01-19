@@ -170,23 +170,35 @@ def play(players):
 				if entry: sock.send(encode("LOCAL:"+player_name+":"+entry))
 				pygame.display.update(chatbar.rect)
 				if event.key == pygame.K_SPACE:
-					if selected and selected.next_weapon():
+					if selected and selected.weapons:
 						# TODO: Probably play a sound and give some visual indication.
+						# Clear out old targets.
+						for weapon in selected.weapons: weapon.target = None
+						fill_panel(selected)
+						pygame.display.update(PANEL_RECT)
 						targeting = True
+				if event.key == pygame.K_ESCAPE:
+					targeting = False
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				chatbar.handle_event(event)
 				if GAME_WINDOW_RECT.collidepoint(event.pos):
 					pos = reverse_calc_pos(event.pos, offset)
 					if targeting:
 						target = select_pos(gamestate, pos)
-						if gamestate.in_range(selected.spaces(), selected.next_weapon().type, target.pos):
+						# Don't let things target themselves.
+						if target == selected:
+							# TODO: Play some kind of error or cancel sound (should those be different? Probably)
+							targeting = False
+							continue
+						if gamestate.in_range(selected, selected.next_weapon().type, target):
 							selected.next_weapon().target = target
 							if not selected.next_weapon(): targeting = False
+							fill_panel(selected)
+							pygame.display.update(PANEL_RECT)
 						else:
-							pass # TODO: Play some kind of error sound and display a message or something.
+							print("Can't target that") # TODO: Play some kind of error sound and display a message or something.
 					else:
 						selected = select_pos(gamestate, pos)
-					targeting = False
 				pygame.display.update((chatbar.rect, PANEL_RECT))
 
 def select_pos(gamestate, clickpos):
@@ -210,8 +222,7 @@ def fill_panel(object):
 		draw_text(window, "Weapons:", TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN, font)
 		y = 20
 		for weapon in object.weapons:
-			draw_text(window, str(weapon), TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN.move(5, y), font)
-			y += 20
+			y += draw_text(window, str(weapon), TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN.move(5, y), font)
 
 def shield_repr(entity):
 	string = str(entity.shield)+"/"+str(entity.maxshield)+"    + "+str(entity.shield_regen_amounts[entity.shield_regen_pointer])+" / "

@@ -70,42 +70,47 @@ class Gamestate:
 			pos = [random.randint(1,15), random.randint(1,15)]
 			if not self.occupied(pos): return pos
 	def in_range(self, source, type, target):
-		"""Determines whether a source is in range of a target. The source is a sequence of spaces it occupies, and the type is the type of attack."""
-		for space in source:
-			dist = [abs(target[0] - space[0]), abs(target[1] - space[1])]
-			total_dist = dist[0] + dist[1]
-			# It's ugly, but it finds the distance with magnitude reduced to 1 or -1.
-			dir = ({True: 1, False: -1}[target[0]>space[0]], {True: 1, False: -1}[target[1]>space[1]])
-			probe = [space[0], space[1]]
-			step_x, step_y = dist[0]/total_dist, dist[1]/total_dist
-			counter = [0, 0]
-			while probe != target:
-				if self.occupied(probe): break
-				counter[0] += step_x
-				counter[1] += step_y
-				if counter[0] < 1 and counter[1] < 1: continue
-				# If only x has advanced enough.
-				if counter[0] >= 1 and counter[1] < 1:
+		"""Determines whether a source is in range of a target. type is the type of attack - some might have range limits."""
+		# Try all source spaces to all target spaces.
+		for source_space in source.spaces():
+			for target_space in target.spaces():
+				if self.path(source_space, type, target_space): return True
+		return False
+	def path(self, source, type, target):
+		dist = [abs(target[0] - source[0]), abs(target[1] - source[1])]
+		total_dist = dist[0] + dist[1]
+		# It's ugly, but it finds the distance with magnitude reduced to 1 or -1.
+		dir = ({True: 1, False: -1}[target[0]>source[0]], {True: 1, False: -1}[target[1]>source[1]])
+		probe = [source[0], source[1]]
+		step_x, step_y = dist[0]/total_dist, dist[1]/total_dist
+		counter = [0, 0]
+		while probe != target:
+			if probe != source and self.occupied(probe): break
+			counter[0] += step_x
+			counter[1] += step_y
+			if counter[0] < 1 and counter[1] < 1: continue
+			# If only x has advanced enough.
+			if counter[0] >= 1 and counter[1] < 1:
+				counter[0] -= 1
+				probe[0] += dir[0]
+				dist[0] -= 1
+			# If only y has advanced enough (it should always be at one one of them).
+			elif counter[1] > 1 and counter[0] < 1:
+				counter[1] -= 1
+				probe[1] += dir[1]
+				dist[1] -= 1
+			# They've both advanced, so we need to check which one is higher.
+			else:
+				if counter[0] > counter[1]:
 					counter[0] -= 1
 					probe[0] += dir[0]
 					dist[0] -= 1
-				# If only y has advanced enough (it should always be at one one of them).
-				elif counter[1] > 1 and counter[0] < 1:
+				else:
 					counter[1] -= 1
 					probe[1] += dir[1]
 					dist[1] -= 1
-				# They've both advanced, so we need to check which one is higher.
-				else:
-					if counter[0] > counter[1]:
-						counter[0] -= 1
-						probe[0] += dir[0]
-						dist[0] -= 1
-					else:
-						counter[1] -= 1
-						probe[1] += dir[1]
-						dist[1] -= 1
-			if probe == target: return True
-			return False
+		if probe == target: return True
+		return False
 	def insert_enemies(self, enemies):
 		"""Inserts the given enemies into the Gamestate. Takes a sequence of dicts with enemy type names as keys and their board positions as values."""
 		for enemy in enemies:
