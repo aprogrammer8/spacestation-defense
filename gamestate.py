@@ -189,6 +189,12 @@ class Component(Entity):
 		self.station = station
 		self.type = type
 		if type == "Shield Generator": self.shield_regen_amounts = (0, 1, 3, 8)
+		if type == "Laser Turret":
+			self.weapons = (
+				Weapon('laser', 5, 2),
+				Weapon('laser', 5, 2),
+				Weapon('laser', 5, 2)
+			)
 	@property
 	def shield(self):
 		return 100 # calculate which shield generators are applying to it
