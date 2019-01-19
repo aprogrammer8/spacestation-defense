@@ -187,7 +187,7 @@ def play(players):
 						target = select_pos(gamestate, pos)
 						# Don't let things target themselves.
 						if target == selected:
-							# TODO: Play some kind of error or cancel sound (should those be different? Probably)
+							SFX_ERROR.play()
 							targeting = False
 							continue
 						if gamestate.in_range(selected, selected.next_weapon().type, target):
@@ -196,7 +196,7 @@ def play(players):
 							fill_panel(selected)
 							pygame.display.update(PANEL_RECT)
 						else:
-							print("Can't target that") # TODO: Play some kind of error sound and display a message or something.
+							SFX_ERROR.play()
 					else:
 						selected = select_pos(gamestate, pos)
 				pygame.display.update((chatbar.rect, PANEL_RECT))

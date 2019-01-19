@@ -1,4 +1,5 @@
 import pygame
+pygame.init()
 
 server = ("127.0.0.1", 1025)
 SCREEN_SIZE = (1800, 1000)
@@ -43,3 +44,5 @@ IMAGE_DICT = {
 
 for image_name in IMAGE_DICT:
 	IMAGE_DICT[image_name].set_colorkey((255,255,255))
+
+SFX_ERROR = pygame.mixer.Sound("sounds/error.ogg")
