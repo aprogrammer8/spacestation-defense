@@ -206,7 +206,9 @@ class Weapon:
 		self.power = power
 		self.target = None
 	def __str__(self):
-		return self.type + ": " + str(self.power)
+		string = self.type + ": " + str(self.power)
+		if self.target: string += ", targeting " + self.target.type + " at " + str(self.target.pos)
+		return string
 
 class Mission:
 	def __init__(self, filename):
