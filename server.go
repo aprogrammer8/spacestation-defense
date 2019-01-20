@@ -96,12 +96,13 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 			for i := range players {
 				if players[i].Name == username {
 					players = append(players[:i], players[i+1:]...)
+					break
 				}
 			}
 		// Player sending a message.
 		case msg := <-playerMux:
 			log.Println("Got message:", msg)
-			msgStr := string(msg.Content)
+			var msgStr = string(msg.Content)
 			if strings.HasPrefix(msgStr, "GLOBAL:") {
 				for _, player := range players {
 					player.Outbound <- msgStr
@@ -113,6 +114,23 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 						player.Outbound <- msgStr
 					}
 				}
+			} else if strings.HasPrefix(msgStr, "JOIN:") {
+				var lobby = msgStr[5:]
+				log.Println(msg.User.Name, "joining", lobby)
+				// Iterate over players to find everyone else in the lobby.
+				var lobbyPlayers []string
+				for i := range players {
+					if players[i].Lobby == lobby {
+						lobbyPlayers = append(lobbyPlayers, players[i].Name)
+						msg.User.Outbound <- "JOIN:" + players[i].Name
+						players[i].Outbound <- "JOIN:" + msg.User.Name
+					}
+				}
+				if len(lobbyPlayers) > 0 {
+					msg.User.Lobby = lobby
+				} else {
+					log.Println("Join failed, we don't handle this yet")
+				}
 			} else {
 				switch msgStr {
 				case "CREATE":
@@ -121,9 +139,6 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 					for i := range players {
 						players[i].Outbound <- "+LOBBY:" + msg.User.Name
 					}
-				case "JOIN":
-					log.Println(msg.User.Name, "joining", msgStr, "(joining not yet enabled)")
-					// Need to check if the lobby exists.
 				case "START":
 					// Make sure the user owns the lobby.
 					if msg.User.Lobby == msg.User.Name {

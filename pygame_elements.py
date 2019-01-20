@@ -64,7 +64,6 @@ class InputBox:
 	def handle_event(self, event):
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			self.active = self.rect.collidepoint(event.pos)
-			self.draw()
 		elif event.type == pygame.KEYDOWN:
 			if self.active:
 				if event.key == pygame.K_RETURN:
@@ -94,14 +93,13 @@ class TextList:
 		self.bordercolor = bordercolor
 		self.textcolor = textcolor
 		self.font = font
-		self.stage_surface = font.render("", True, self.textcolor)
 		self.message_list = []
-		self.new_height = 0 # The y that a new message will start at
+		self.new_height = 0 # The y that a new message will start at.
 		self.spacing = 1
 	def add(self, message):
 		self.message_list += [message]
 		height = get_height(message, self.rect.w, 2, self.font)
-		# If we're overflowin the box, flush old messages until there's enough room.
+		# If we're overflowing the box, flush old messages until there's enough room.
 		while self.new_height + height + self.spacing > self.rect.h:
 			self.new_height -= get_height(self.message_list[0], self.rect.w, self.spacing, self.font) + self.spacing
 			self.message_list.pop(0)
@@ -114,7 +112,6 @@ class TextList:
 		print("Could not remove message '"+message+"' because it was not found")
 	def remove_by_index(self, index):
 		self.message_list.pop(index)
-		self.draw()
 	def draw(self):
 		pygame.draw.rect(self.window, self.bgcolor, self.rect, 0)
 		pygame.draw.rect(self.window, self.bordercolor, self.rect, 1)
@@ -166,7 +163,6 @@ class Button:
 	def handle_event(self, event):
 		if event.type == pygame.MOUSEMOTION:
 			self.active = self.rect.collidepoint(event.pos)
-			self.draw()
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			return self.rect.collidepoint(event.pos)
 	def draw(self):
@@ -182,3 +178,44 @@ def draw_bar(window, rect, border_color, fill_color, empty_color, capacity, valu
 		# We have to check these manually, because pygame.Rect apparently has a minimum size of 2x2.
 		if value>0: pygame.draw.rect(window, fill_color, fill_rect, 0)
 		if value<capacity: pygame.draw.rect(window, empty_color, empty_rect, 0)
+
+# A list of buttons to be displayed like a TextList. It's unfortunate that this couldn't inherit anything.
+class ButtonList:
+	def __init__(self, window, rect, bgcolor, bordercolor, textcolor, active_color, inactive_color, font):
+		self.window = window
+		self.rect = rect
+		self.bgcolor = bgcolor
+		self.bordercolor = bordercolor
+		self.textcolor = textcolor
+		self.active_color = active_color
+		self.inactive_color = inactive_color
+		self.font = font
+		self.button_list = []
+		self.new_height = 0 # The y that a new button will start at.
+		self.spacing = 2
+		self.button_height = font.size('Tg')[1] + 4
+	def add(self, message):
+		self.button_list.append(Button(self.window, pygame.Rect(self.rect.x+2, self.rect.y+self.new_height+1, self.rect.w, self.button_height), self.active_color, self.inactive_color, self.textcolor, self.font, message))
+		self.draw()
+	def remove_by_content(self, msg):
+		i = 0
+		for button in self.button_list:
+			if msg == button.label: return self.remove_by_index(i)
+			i += 1
+		print("Could not remove button '"+msg+"' because it was not found")
+	def remove_by_index(self, index):
+		self.button_list.pop(index)
+		self.draw()
+	def handle_event(self, event):
+		for button in self.button_list:
+			# Any truthy return value means the button was clicked.
+			if button.handle_event(event): return button.label
+	def draw(self):
+		pygame.draw.rect(self.window, self.bgcolor, self.rect, 0)
+		pygame.draw.rect(self.window, self.bordercolor, self.rect, 1)
+		self.new_height = 0
+		for button in self.button_list:
+			button.draw()
+			self.new_height += self.button_height + self.spacing
+			# Don't overflow our box.
+			if self.new_height + self.button_height + self.spacing > self.rect.h: break

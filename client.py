@@ -41,6 +41,7 @@ def login_screen():
 			if event.type == pygame.QUIT: sys.exit()
 			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
 				player_name = username_box.handle_event(event)
+				username_box.draw()
 				if player_name:
 					# In the future, check with the server that the name is available.
 					sock.send(encode(player_name))
@@ -53,7 +54,7 @@ def global_lobby():
 	chatbar.draw()
 	startbutton = Button(window, CREATE_GAME_RECT, ACTIVE_STARTBUTTON_COLOR, INACTIVE_STARTBUTTON_COLOR, TEXT_COLOR, font, "Create lobby")
 	startbutton.draw()
-	lobbylist = TextList(window, LOBBYLIST_RECT, BGCOLOR, BGCOLOR, TEXT_COLOR, font)
+	lobbylist = ButtonList(window, LOBBYLIST_RECT, BGCOLOR, BGCOLOR, TEXT_COLOR, ACTIVE_LOBBYBUTTON_COLOR, INACTIVE_LOBBYBUTTON_COLOR, font)
 	pygame.display.flip()
 	while True:
 		clock.tick(LOBBY_RATE)
@@ -74,9 +75,32 @@ def global_lobby():
 				pygame.display.update(lobbylist.rect)
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
-			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+			if event.type == pygame.KEYDOWN:
 				entry = chatbar.handle_event(event)
 				if entry: sock.send(encode("GLOBAL:"+player_name+":"+entry))
+				pygame.display.update(chatbar.rect)
+				if event.key == pygame.K_RETURN:
+					sock.send(encode("CREATE"))
+					window.fill((0,0,0))
+					result = lobby(player_name)
+					print(result)
+					chatbar.draw()
+					startbutton.draw()
+					lobbylist.draw()
+					pygame.display.flip()
+			if event.type == pygame.MOUSEBUTTONDOWN:
+				entry = chatbar.handle_event(event)
+				join = lobbylist.handle_event(event)
+				if join:
+					sock.send(encode("JOIN:"+join))
+					window.fill((0,0,0))
+					result = lobby(player_name)
+					print(result)
+					chatbar.draw()
+					startbutton.draw()
+					lobbylist.draw()
+					pygame.display.flip()
+					# Reload the global lobby somehow when it's over
 				if startbutton.handle_event(event):
 					sock.send(encode("CREATE"))
 					window.fill((0,0,0))
@@ -89,6 +113,8 @@ def global_lobby():
 					# Reload the global lobby somehow when it's over
 				pygame.display.update((chatbar.rect, startbutton.rect))
 			if event.type == pygame.MOUSEMOTION:
+				lobbylist.handle_event(event)
+				for button in lobbylist.button_list: pygame.display.update(button.rect)
 				startbutton.handle_event(event)
 				pygame.display.update(startbutton.rect)
 
@@ -112,6 +138,9 @@ def lobby(host_name):
 				chatbar.add_message(msg[6:])
 				chatbar.draw()
 				pygame.display.update(chatbar.rect)
+			if msg.startswith("JOIN:"):
+				playerlist.add(msg[5:])
+				pygame.display.update(playerlist.rect)
 			elif msg.startswith("-LOBBY:"+host_name):
 				# The lobby closed :(
 				window.fill((0,0,0))
