@@ -64,6 +64,7 @@ class InputBox:
 	def handle_event(self, event):
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			self.active = self.rect.collidepoint(event.pos)
+			self.draw()
 		elif event.type == pygame.KEYDOWN:
 			if self.active:
 				if event.key == pygame.K_RETURN:
@@ -104,6 +105,7 @@ class TextList:
 			self.new_height -= get_height(self.message_list[0], self.rect.w, self.spacing, self.font) + self.spacing
 			self.message_list.pop(0)
 		self.new_height += height + self.spacing
+		self.draw()
 	def remove_by_content(eslf, message):
 		i = 0
 		for msg in self.message_list:
@@ -112,6 +114,7 @@ class TextList:
 		print("Could not remove message '"+message+"' because it was not found")
 	def remove_by_index(self, index):
 		self.message_list.pop(index)
+		self.draw()
 	def draw(self):
 		pygame.draw.rect(self.window, self.bgcolor, self.rect, 0)
 		pygame.draw.rect(self.window, self.bordercolor, self.rect, 1)
@@ -144,6 +147,7 @@ class Chat:
 			return self.entry_box.handle_event(event)
 	def add_message(self, message):
 		self.log.add(message)
+		self.entry_box.draw()
 	def draw(self):
 		self.log.draw()
 		self.entry_box.draw()
@@ -163,6 +167,7 @@ class Button:
 	def handle_event(self, event):
 		if event.type == pygame.MOUSEMOTION:
 			self.active = self.rect.collidepoint(event.pos)
+			self.draw()
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			return self.rect.collidepoint(event.pos)
 	def draw(self):

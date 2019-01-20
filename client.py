@@ -41,7 +41,6 @@ def login_screen():
 			if event.type == pygame.QUIT: sys.exit()
 			if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
 				player_name = username_box.handle_event(event)
-				username_box.draw()
 				if player_name:
 					# In the future, check with the server that the name is available.
 					sock.send(encode(player_name))
@@ -63,15 +62,12 @@ def global_lobby():
 			msg = recv_message(key.fileobj)
 			if msg.startswith("GLOBAL:"):
 				chatbar.add_message(msg[7:])
-				chatbar.draw()
 				pygame.display.update(chatbar.rect)
 			elif msg.startswith("+LOBBY:"):
 				lobbylist.add(msg[7:])
-				lobbylist.draw()
 				pygame.display.update(lobbylist.rect)
 			elif msg.startswith("-LOBBY:"):
 				lobbylist.remove_by_content(msg[7:])
-				lobbylist.draw(lobbylist.rect)
 				pygame.display.update(lobbylist.rect)
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
@@ -79,15 +75,6 @@ def global_lobby():
 				entry = chatbar.handle_event(event)
 				if entry: sock.send(encode("GLOBAL:"+player_name+":"+entry))
 				pygame.display.update(chatbar.rect)
-				if event.key == pygame.K_RETURN:
-					sock.send(encode("CREATE"))
-					window.fill((0,0,0))
-					result = lobby(player_name)
-					print(result)
-					chatbar.draw()
-					startbutton.draw()
-					lobbylist.draw()
-					pygame.display.flip()
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				entry = chatbar.handle_event(event)
 				join = lobbylist.handle_event(event)
@@ -136,7 +123,6 @@ def lobby(host_name):
 			msg = recv_message(key.fileobj)
 			if msg.startswith("LOCAL:"):
 				chatbar.add_message(msg[6:])
-				chatbar.draw()
 				pygame.display.update(chatbar.rect)
 			if msg.startswith("JOIN:"):
 				playerlist.add(msg[5:])
@@ -186,7 +172,6 @@ def play(players):
 			print(msg)
 			if msg.startswith("LOCAL:"):
 				chatbar.add_message(msg[6:])
-				chatbar.draw()
 				pygame.display.update(chatbar.rect)
 			if msg.startswith("SPAWN ENEMIES:"):
 				enemy_json = json.loads(msg[14:])
