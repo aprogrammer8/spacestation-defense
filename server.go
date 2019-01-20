@@ -82,6 +82,13 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 		case player := <-entryChan:
 			log.Println("Player joining:", player.Name)
 			players = append(players, &player)
+			// Find all the open lobbies, and send them to the new player.
+			for i := range players {
+				// Only count lobby owners, so we don't get duplicates.
+				if players[i].Lobby == players[i].Name {
+					player.Outbound <- "+LOBBY:" + players[i].Lobby
+				}
+			}
 			// Start a goroutine to multiplex the chat messages.
 			go func(mux chan<- message, player *client, exit chan<- string) {
 				for msg := range player.Inbound {
