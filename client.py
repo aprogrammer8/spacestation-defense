@@ -206,7 +206,9 @@ def play(players):
 					targeting = False
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				chatbar.handle_event(event)
-				done_button.handle_event(event)
+				if done_button.handle_event(event):
+					sock.send(encode("DONE"))
+					continue
 				if GAME_WINDOW_RECT.collidepoint(event.pos):
 					pos = reverse_calc_pos(event.pos, offset)
 					if targeting:
