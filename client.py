@@ -189,6 +189,8 @@ def play(players):
 				if entry: sock.send(encode("LOCAL:"+player_name+":"+entry))
 				pygame.display.update(chatbar.rect)
 				if event.key == pygame.K_SPACE:
+					# Don't interpret space as a command when the chatbar is active.
+					if chatbar.entry_box.active: continue
 					if selected and selected.weapons:
 						# TODO: Probably play a sound and give some visual indication.
 						# Clear out old targets.

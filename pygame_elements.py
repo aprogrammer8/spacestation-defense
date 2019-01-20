@@ -140,11 +140,8 @@ class Chat:
 		entry_rect = pygame.Rect(rect.x, rect.bottom-entryheight, rect.w, entryheight)
 		self.entry_box = InputBox(window, entry_rect, bgcolor, textcolor, active_color, inactive_color, font)
 	def handle_event(self, event):
-		if event.type == pygame.MOUSEBUTTONDOWN:
-			if self.entry_box.rect.collidepoint(event.pos):
-				self.entry_box.handle_event(event)
-		if event.type == pygame.KEYDOWN:
-			return self.entry_box.handle_event(event)
+		if event.type == pygame.MOUSEBUTTONDOWN: self.entry_box.handle_event(event)
+		if event.type == pygame.KEYDOWN: return self.entry_box.handle_event(event)
 	def add_message(self, message):
 		self.log.add(message)
 		self.entry_box.draw()
