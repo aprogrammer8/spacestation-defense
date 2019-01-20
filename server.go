@@ -54,7 +54,7 @@ func readUntilDelim(r io.Reader, delim byte) ([]byte, error) {
 var DELIM byte = 3
 
 func main() {
-	listener, err := net.Listen("tcp4", "127.0.0.1:1025")
+	listener, err := net.Listen("tcp4", "0.0.0.0:1025")
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "When listening on socket"))
 	}
