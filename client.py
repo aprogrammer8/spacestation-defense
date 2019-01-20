@@ -150,12 +150,15 @@ def play(players):
 	global player_name, sock, selector, window, font, clock
 	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
 	chatbar.draw()
+	pygame.draw.rect(window, PANEL_COLOR, TOP_PANEL_RECT, 0)
 	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
 	playerlist = TextList(window, GAME_PLAYERLIST_RECT, PANEL_COLOR, PANEL_COLOR, TEXT_COLOR, font)
 	# Repopulate the player list.
 	for player in players:
 		if player != player_name: playerlist.add(player)
 	playerlist.draw()
+	done_button = Button(window, DONE_BUTTON_RECT, ACTIVE_DONE_BUTTON_COLOR, INACTIVE_DONE_BUTTON_COLOR, TEXT_COLOR, font, "Done")
+	done_button.draw()
 	gamestate = Gamestate(playerlist.message_list+[player_name])
 	gamestate.init_station(gamestate.mission.starting_station)
 	grid_size = [int(GAME_WINDOW_RECT.w/TILESIZE[0]), int(GAME_WINDOW_RECT.h/TILESIZE[1])]
@@ -203,10 +206,11 @@ def play(players):
 					targeting = False
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				chatbar.handle_event(event)
+				done_button.handle_event(event)
 				if GAME_WINDOW_RECT.collidepoint(event.pos):
 					pos = reverse_calc_pos(event.pos, offset)
 					if targeting:
-						target = select_pos(gamestate, pos)
+						target = gamestate.occupied(pos)
 						if not target:
 							selected = None
 							targeting = False
@@ -228,7 +232,11 @@ def play(players):
 							SFX_ERROR.play()
 					else:
 						selected = select_pos(gamestate, pos)
-				pygame.display.update((chatbar.rect, PANEL_RECT))
+						pygame.display.update(PANEL_RECT)
+				pygame.display.update(chatbar.rect)
+			if event.type == pygame.MOUSEMOTION:
+				done_button.handle_event(event)
+				pygame.display.update(done_button.rect)
 
 def select_pos(gamestate, clickpos):
 	"""select_pos takes a gameboard logical position and finds the object on it, then calls fill_panel."""
@@ -251,7 +259,7 @@ def fill_panel(object):
 		draw_text(window, "Weapons:", TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN, font)
 		y = 20
 		for weapon in object.weapons:
-			y += draw_text(window, str(weapon), TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN.move(5, y), font)
+			y += draw_text(window, str(weapon), TEXT_COLOR, pygame.Rect(PANEL_WEAPON_DESC_BEGIN.x+5, PANEL_WEAPON_DESC_BEGIN.y+y, PANEL_WEAPON_DESC_BEGIN.w-7, 60), font)
 
 def shield_repr(entity):
 	string = str(entity.shield)+"/"+str(entity.maxshield)+"    + "+str(entity.shield_regen_amounts[entity.shield_regen_pointer])+" / "
@@ -282,7 +290,7 @@ def calc_pos(pos, offset):
 
 def reverse_calc_pos(pos, offset):
 	"""reverse_calc_pos converts a pixel position on screen to a gameboard logical position."""
-	return (int((pos[0]-GAME_WINDOW_RECT.left)/TILESIZE[0])-offset[0], int(pos[1]/TILESIZE[1])-offset[1])
+	return [int((pos[0]-GAME_WINDOW_RECT.left)/TILESIZE[0])-offset[0], int(pos[1]/TILESIZE[1])-offset[1]]
 
 
 if __name__ == '__main__': main()
