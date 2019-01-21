@@ -53,7 +53,12 @@ class Gamestate:
 			for i in range(enemies[enemy_type]):
 				# The rot value of 0 is a placeholder.
 				inserts.append({'type':enemy_type, 'pos':self.find_open_pos(), 'rot':0})
+				self.insert_enemies((inserts[-1],))
 		return inserts
+	def insert_enemies(self, enemies):
+		"""Inserts the given enemies into the Gamestate. Takes a sequence of dicts with enemy type names as keys and their board positions as values."""
+		for enemy in enemies:
+			if enemy['type'] == "Drone": self.enemy_ships.append(drone(enemy['pos'], enemy['rot']))
 	def occupied(self, pos):
 		"""Checks if a gameboard space is occupied."""
 		for entity in self.station:
@@ -111,10 +116,6 @@ class Gamestate:
 					dist[1] -= 1
 		if probe == target: return True
 		return False
-	def insert_enemies(self, enemies):
-		"""Inserts the given enemies into the Gamestate. Takes a sequence of dicts with enemy type names as keys and their board positions as values."""
-		for enemy in enemies:
-			if enemy['type'] == "Drone": self.enemy_ships.append(drone(enemy['pos'], enemy['rot']))
 
 def slope(p1, p2):
 	"""Returns the slope between two points, handling division by zero with a high value if the numerator is not also zero, or 1 if it is."""
@@ -164,9 +165,30 @@ class Entity:
 	def next_weapon(self):
 		for weapon in self.weapons:
 			if not weapon.target: return weapon
+	def take_damage(self, dmg, type):
+		# For now, we ignore type.
+		dealt = min(dmg, self.shield)
+		# Taking shield damage always resets the regen pointer.
+		if dealt > 0: self.shield_regen_pointer = 0
+		self.shield -= dealt
+		dmg -= dealt
+		if dmg == 0: return
+		# Now it goes through to hull.
+		self.hull -= dmg
 	def shield_regen(self):
-		self.shield += self.shield_regen_amounts[shield_regen_pointer]
+		self.shield += self.shield_regen_amounts[self.shield_regen_pointer]
 		if self.shield_regen_pointer < len(self.shield_regen_amounts) - 1: self.shield_regen_pointer += 1
+	def all_in_range(self, gamestate, enemy):
+		"""Determines whether all of the Entities weapons can hit something from the opposing team from our current position. enemy is a bool saying which team this Entity is on."""
+		# Placeholder: since we're not yet sure about range differences, just calculate one weapon.
+		if enemy:
+			for entity in gamestate.allied_ships + gamestate.station:
+				if gamestate.in_range(self, self.weapons[0].type, entity): return True
+		else:
+			for entity in gamestate.enemy_ships:
+				if gamestate.in_range(self, self.weapons[0].type, entity): return True
+	def random_targets(self, gamestate):
+		pass # This should randomly target all weapons at random enemies.
 
 class Ship(Entity):
 	def __init__(self, type, pos, shape, rot, hull, shield, shield_regen, weapons, speed, salvage, wave=0, size=0):
@@ -234,7 +256,7 @@ class Mission:
 	def wave(self, num):
 		"""This method acccepts a wave number and returns a dict of enemy type:count, a reward for clearing it, and a number of turns until the next wave arrives."""
 		# Temp code:
-		return {'Drone':3}, None, 5
+		return {'Drone':6}, None, 5
 
 def rotate(pos, rot):
 	if rot == 0: return pos

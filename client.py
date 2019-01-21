@@ -11,7 +11,6 @@ def main():
 	player_name = ""
 	window = pygame.display.set_mode(SCREEN_SIZE)
 	font = pygame.font.Font(pygame.font.get_default_font(), 10)
-	## TODO: load images and sound files or something
 	## TODO: initialize the display with a random background image
 	# Connecting to server and starting main game code
 	print("connecting to server at "+repr(server)+"...")
@@ -29,7 +28,7 @@ def main():
 
 
 def login_screen():
-	global player_name, sock, selector, window, font, clock
+	global font
 	draw_text(window, "enter your name", TEXT_COLOR, LOG_RECT, font)
 	font = pygame.font.Font(pygame.font.get_default_font(), 10)
 	username_box = InputBox(window, NAME_ENTRY_RECT, BGCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font)
@@ -48,7 +47,6 @@ def login_screen():
 				pygame.display.update(username_box.rect)
 
 def global_lobby():
-	global player_name, sock, selector, window, font, clock
 	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
 	chatbar.draw()
 	startbutton = Button(window, CREATE_GAME_RECT, ACTIVE_STARTBUTTON_COLOR, INACTIVE_STARTBUTTON_COLOR, TEXT_COLOR, font, "Create lobby")
@@ -106,7 +104,6 @@ def global_lobby():
 				pygame.display.update(startbutton.rect)
 
 def lobby(host_name):
-	global player_name, sock, selector, window, font, clock
 	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
 	chatbar.draw()
 	startbutton = Button(window, START_GAME_RECT, ACTIVE_STARTBUTTON_COLOR, INACTIVE_STARTBUTTON_COLOR, TEXT_COLOR, font, "Launch mission!")
@@ -147,7 +144,6 @@ def lobby(host_name):
 
 
 def play(players):
-	global player_name, sock, selector, window, font, clock
 	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
 	chatbar.draw()
 	pygame.draw.rect(window, PANEL_COLOR, TOP_PANEL_RECT, 0)
@@ -165,7 +161,7 @@ def play(players):
 	offset = [int(grid_size[0]/2), int(grid_size[1]/2)]
 	selected = None
 	targeting = False
-	draw_gamestate(window, gamestate, offset)
+	draw_gamestate(gamestate, offset)
 	pygame.display.flip()
 	while True:
 		clock.tick(LOBBY_RATE)
@@ -179,7 +175,7 @@ def play(players):
 			if msg.startswith("SPAWN ENEMIES:"):
 				enemy_json = json.loads(msg[14:])
 				gamestate.insert_enemies(enemy_json)
-				draw_gamestate(window, gamestate, offset)
+				draw_gamestate(gamestate, offset)
 				pygame.display.flip()
 			if msg.startswith("ASSIGN:"):
 				interpret_assign(gamestate, msg[7:])
@@ -269,7 +265,7 @@ def shield_repr(entity):
 		string += str(amount) + "->"
 	return string[:-2]
 
-def draw_gamestate(window, gamestate, offset):
+def draw_gamestate(gamestate, offset):
 	"""The offset is where the player is scrolled to."""
 #def draw_grid(window, GAME_WINDOW_RECT, tilesize):
 	for x in range(GAME_WINDOW_RECT.left+TILESIZE[0], GAME_WINDOW_RECT.right, TILESIZE[0]):
@@ -294,5 +290,20 @@ def reverse_calc_pos(pos, offset):
 	"""reverse_calc_pos converts a pixel position on screen to a gameboard logical position."""
 	return [int((pos[0]-GAME_WINDOW_RECT.left)/TILESIZE[0])-offset[0], int(pos[1]/TILESIZE[1])-offset[1]]
 
+def execute_move(cmd):
+	parts = cmd.split(':')
+	entity = gamestate.occupied(json.loads(parts[0]))
+	moves = json.loads(parts[1])
+	for move in moves:
+		pass # Do some animation
+	targets = json.loads(parts[2])
+	weapon_index = 0
+	for target_coords in targets:
+		# Do some animation
+		# Skip weapons that weren't targeted.
+		if not target_coords: continue
+		target = gamestate.occupied(target_coords)
+		target.take_damage(entity.weapons[weapon_index].dmg, entity.weapons[weapon_index].type)
+		weapon_index += 1
 
 if __name__ == '__main__': main()
