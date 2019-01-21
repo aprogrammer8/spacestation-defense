@@ -183,12 +183,15 @@ class Entity:
 		# Placeholder: since we're not yet sure about range differences, just calculate one weapon.
 		if enemy:
 			for entity in gamestate.allied_ships + gamestate.station:
-				if gamestate.in_range(self, self.weapons[0].type, entity): return True
+				if gamestate.in_range(self, self.weapons[0].type, entity): return entity
 		else:
 			for entity in gamestate.enemy_ships:
-				if gamestate.in_range(self, self.weapons[0].type, entity): return True
-	def random_targets(self, gamestate):
-		pass # This should randomly target all weapons at random enemies.
+				if gamestate.in_range(self, self.weapons[0].type, entity): return entity
+	def random_targets(self, gamestate, enemy):
+		"""Randomly target all weapons at random enemies."""
+		# For now, just pick out the first enemy we find and target everything there.
+		target = self.all_in_range(gamestate, enemy)
+		for weapon in self.weapons: weapon.target = target
 
 class Ship(Entity):
 	def __init__(self, type, pos, shape, rot, hull, shield, shield_regen, weapons, speed, salvage, wave=0, size=0):

@@ -54,7 +54,7 @@ def enemies_move():
 			print("move number",i)
 			# Stop as soon as we find a good spot to shoot from.
 			if enemy.all_in_range(gamestate, enemy=True):
-				enemy.random_targets(gamestate)
+				enemy.random_targets(gamestate, enemy=True)
 				break
 			valid_moves = []
 			for move in ([0, 1], [0, -1], [1, 0], [-1, 0]):
