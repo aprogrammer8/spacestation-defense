@@ -172,6 +172,10 @@ def play(players):
 			if msg.startswith("LOCAL:"):
 				chatbar.add_message(msg[6:])
 				pygame.display.update(chatbar.rect)
+			if msg == "ROUND":
+				gamestate.clear()
+				fill_panel(selected)
+				pygame.display.update(PANEL_RECT)
 			if msg.startswith("SPAWN ENEMIES:"):
 				enemy_json = json.loads(msg[14:])
 				gamestate.insert_enemies(enemy_json)

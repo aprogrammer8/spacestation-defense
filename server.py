@@ -94,6 +94,7 @@ def main():
 		sock.send(encode("PLAYER INPUT COLLECTED"))
 		players_move()
 		enemies_move()
+		sock.send(encode("ROUND"))
 		# Dump gamestate to a file so it can be restored in case of a crash.
 		#gamestate.encode()
 

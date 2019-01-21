@@ -31,16 +31,22 @@ class Gamestate:
 			draws += {'player':self.players[self.draw_pointer], 'card':draw_card()}
 			self.draw_pointer += 1
 			if self.draw_pointer >= len(self.players): self.draw_pointer = 0
-	def upkeep(self):
+	def clear(self):
+		"""Clears the stored actions and moves of all gamestate objects."""
 		for ship in self.allied_ships:
-			ship.already_moved = False
+			ship.already_moved = []
+			for weapon in ship.weapons: weapon.target = None
 			ship.shield_regen()
 		for ship in self.enemy_ships:
-			ship.already_moved = False
+			ship.move = []
+			for weapon in ship.weapons: weapon.target = None
 			ship.shield_regen()
 		self.station.shield_regen()
-		for component in self.station: component.already_moved = False
-		for asteroid in self.asteroids: asteroid.already_moved = False
+		for component in self.station:
+			for weapon in component.weapons: weapon.target = None
+		for asteroid in self.asteroids: asteroid.move = []
+	def upkeep(self):
+		self.clear()
 		self.time -= 1
 		if self.time <= 0:
 			wave, self.rewards[self.nextwave], self.time = self.mission.wave(self.nextwave)
