@@ -253,6 +253,8 @@ func handleMatch(updateChan chan<- update, inputChan <-chan message, lobby strin
 	if err != nil {
 		log.Println(errors.Wrap(err, "Could not establish connection with server.py"))
 	}
+	defer conn.Close()
+	defer close(updateChan)
 	// Send the game server the list of players.
 	_, err = conn.Write(append([]byte(strings.Join(players, ",")), DELIM))
 	// Send it the mission name. For now, assume "test".
@@ -263,6 +265,7 @@ func handleMatch(updateChan chan<- update, inputChan <-chan message, lobby strin
 			_, err := conn.Write(append([]byte(input.User.Name+":"), append([]byte(input.Content), DELIM)...))
 			if err != nil {
 				log.Println(errors.Wrap(err, "When reading player input in-game"))
+				return
 			}
 		}
 	}()
@@ -270,6 +273,7 @@ func handleMatch(updateChan chan<- update, inputChan <-chan message, lobby strin
 		var msg, err = readUntilDelim(conn, DELIM)
 		if err != nil {
 			log.Println(errors.Wrap(err, "When reading game server update"))
+			return
 		}
 		updateChan <- update{Game: lobby, Content: msg}
 	}
