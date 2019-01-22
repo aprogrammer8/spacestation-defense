@@ -219,19 +219,47 @@ class Component(Entity):
 		if type not in COMPONENT_TYPES: raise TypeException("Not a valid station component type: " + type)
 		self.station = station
 		self.type = type
-		if type == "Shield Generator": self.shield_regen_amounts = (0, 1, 3, 8)
+		if type == "Shield Generator":
+			self.__shield = self.__maxshield = 100
+			self.shield_regen_amounts = (0, 1, 3, 8)
 		if type == "Laser Turret":
 			self.weapons = (
 				Weapon('laser', 5, 2),
 				Weapon('laser', 5, 2),
 				Weapon('laser', 5, 2)
 			)
+	def shield_generators(self):
+		"""Find all Shield Generators covering this Component."""
+		gens = []
+		for comp in self.station:
+			if comp.type != "Shield Generator": continue
+			if abs(comp.pos[0] - self.pos[0]) + abs(comp.pos[1] - self.pos[1]) < 6:
+				gens.append(comp)
+		return gens
 	@property
 	def shield(self):
-		return 100 # calculate which shield generators are applying to it
+		if self.type == "Shield Generator": return self.__shield
+		# Otherwise, calculate which shield generators are applying to it.
+		shield = 0
+		for comp in self.shield_generators(): shield += comp.shield
+		return shield
 	@property
 	def maxshield(self):
-		return 100
+		if self.type == "Shield Generator": return self.__maxshield
+		shield = 0
+		for comp in self.shield_generators(): shield += comp.maxshield
+		return shield
+	@shield.setter
+	def shield(self, new):
+		diff = self.shield - new
+		# Calling this ahead of time so it doesn't incur an overhead calling it every time we loop for large amounts of damage.
+		gens = self.shield_generators()
+		while diff:
+			# Spread out the damage over all in-range generators.
+			for gen in gens:
+				if gen.shield>0:
+					gen.__shield -= 1
+					diff -= 1
 
 class Composite:
 	def __init__(self, components):
@@ -239,7 +267,8 @@ class Composite:
 
 class Station(list):
 	def shield_regen(self):
-		pass
+		for comp in self:
+			if comp.type == "Shield Generator": comp.shield_regen()
 
 class Weapon:
 	def __init__(self, type, power, tier=1):

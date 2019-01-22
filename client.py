@@ -188,6 +188,8 @@ def play(players):
 			# Unit action happening commands.
 			if msg.startswith("ACTION:"):
 				execute_move(gamestate, msg[msg.index(':')+1:])
+				fill_panel(selected)
+				pygame.display.update(PANEL_RECT)
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
 			if event.type == pygame.KEYDOWN:
