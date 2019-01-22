@@ -185,6 +185,9 @@ def play(players):
 				interpret_assign(gamestate, msg[7:])
 			if msg.startswith("UNASSIGN ALL:"):
 				interpret_unassign(gamestate, msg[msg.index(':')+1:])
+			# Unit action happening commands.
+			if msg.startswith("ACTION:"):
+				execute_move(gamestate, msg[msg.index(':')+1:])
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
 			if event.type == pygame.KEYDOWN:
@@ -294,20 +297,26 @@ def reverse_calc_pos(pos, offset):
 	"""reverse_calc_pos converts a pixel position on screen to a gameboard logical position."""
 	return [int((pos[0]-GAME_WINDOW_RECT.left)/TILESIZE[0])-offset[0], int(pos[1]/TILESIZE[1])-offset[1]]
 
-def execute_move(cmd):
+def execute_move(gamestate, cmd):
+	print("Executing move:", cmd)
 	parts = cmd.split(':')
 	entity = gamestate.occupied(json.loads(parts[0]))
 	moves = json.loads(parts[1])
 	for move in moves:
 		pass # Do some animation
 	targets = json.loads(parts[2])
-	weapon_index = 0
-	for target_coords in targets:
-		# Do some animation
-		# Skip weapons that weren't targeted.
-		if not target_coords: continue
-		target = gamestate.occupied(target_coords)
-		target.take_damage(entity.weapons[weapon_index].dmg, entity.weapons[weapon_index].type)
+	# This starts as -1 instead of 0 so we can increment it at the beginning of the loop, so that it doesn't get messed up by continue statements.
+	weapon_index = -1
+	for info in targets:
 		weapon_index += 1
+		print("weapon",weapon_index,"targeting",info)
+		# Skip weapons that weren't targeted.
+		if not info: continue
+		coords = info[:2] # The first two are the pos, the third one is whether the attack hit.
+		# TODO: Do some animation
+		# Nothing is changed in the gamestate if the attack misses.
+		if not info[2]: continue
+		target = gamestate.occupied(coords)
+		target.take_damage(entity.weapons[weapon_index].power, entity.weapons[weapon_index].type)
 
 if __name__ == '__main__': main()

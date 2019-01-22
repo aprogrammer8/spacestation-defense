@@ -47,11 +47,8 @@ def players_move():
 
 def enemies_move():
 	global sock, players, gamestate
-	print("in enemies_move")
 	for enemy in gamestate.enemy_ships:
-		print("working on enemy", enemy)
 		for i in range(enemy.speed):
-			print("move number",i)
 			# Stop as soon as we find a good spot to shoot from.
 			if enemy.all_in_range(gamestate, enemy=True):
 				enemy.random_targets(gamestate, enemy=True)
@@ -65,9 +62,17 @@ def enemies_move():
 		# We build a JSON list of targets with indexes corresponding to weapon indexes.
 		targets = []
 		for weapon in enemy.weapons:
-			if weapon.target: targets.append(weapon.target.pos)
+			if weapon.target:
+				if random.randint(1, 100) <= hit_chance(weapon.type, weapon.target):
+					# The third value in here is whether it hit.
+					targets.append(weapon.target.pos+[True])
+					# Remember to reflect the gamestate change server-side as well.
+					weapon.target.take_damage(weapon.power, weapon.type)
+				else:
+					targets.append(weapon.target.pos+[False])
 			else: targets.append(None)
-		sock.send(encode("ENEMY TURN:" + json.dumps(enemy.pos) + ':' + json.dumps(enemy.move) + ':' + json.dumps(targets)))
+
+		sock.send(encode("ACTION:" + json.dumps(enemy.pos) + ':' + json.dumps(enemy.move) + ':' + json.dumps(targets)))
 
 def main():
 	global sock, players, gamestate

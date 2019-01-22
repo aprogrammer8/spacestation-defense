@@ -275,6 +275,13 @@ def rotate(pos, rot):
 	print("Not a valid rotation:", rot)
 	return pos
 
+def hit_chance(attack, target):
+	"""Calculates the hit rate of a given attack type against the target ship."""
+	# Station components can never be missed by anything.
+	if type(target) == Component: return 100
+	if target.type in ('probe', 'drone'): return {'laser':75, 'missile':25}[attack]
+	# Error message that should never get triggered.
+	print("Did not have a hit chance for", attack, "against a", target.type)
 
 # The functions below initialize entity types.
 
