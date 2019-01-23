@@ -187,7 +187,7 @@ def play(players):
 				interpret_unassign(gamestate, msg[msg.index(':')+1:])
 			# Unit action happening commands.
 			if msg.startswith("ACTION:"):
-				execute_move(gamestate, msg[msg.index(':')+1:])
+				execute_move(gamestate, offset, msg[msg.index(':')+1:])
 				fill_panel(selected)
 				pygame.display.update(PANEL_RECT)
 		for event in pygame.event.get():
@@ -299,13 +299,18 @@ def reverse_calc_pos(pos, offset):
 	"""reverse_calc_pos converts a pixel position on screen to a gameboard logical position."""
 	return [int((pos[0]-GAME_WINDOW_RECT.left)/TILESIZE[0])-offset[0], int(pos[1]/TILESIZE[1])-offset[1]]
 
-def execute_move(gamestate, cmd):
+def execute_move(gamestate, offset, cmd):
+	"""Takes an ACTION command from the server and executes it. It needs the offset to call draw_gamestate()."""
 	print("Executing move:", cmd)
 	parts = cmd.split(':')
 	entity = gamestate.occupied(json.loads(parts[0]))
 	moves = json.loads(parts[1])
 	for move in moves:
-		pass # Do some animation
+		entity.move(move)
+		draw_gamestate(gamestate, offset)
+		pygame.display.flip()
+		pygame.time.wait(500)
+		# TODO: Do some animation
 	targets = json.loads(parts[2])
 	# This starts as -1 instead of 0 so we can increment it at the beginning of the loop, so that it doesn't get messed up by continue statements.
 	weapon_index = -1

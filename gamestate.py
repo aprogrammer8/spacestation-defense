@@ -146,7 +146,7 @@ def draw_card():
 
 # An Entity is anything with a position on the board.
 class Entity:
-	def __init__(self, pos, shape, rot, hull, shield=0, shield_regen=(0,), weapons=()):
+	def __init__(self, pos, shape, rot, hull, shield=0, shield_regen=(0,), weapons=(), speed=0):
 		self.pos = pos
 		# self.shape is a tuple of other positions expressed as offsets from the main pos (when rot == 0), that the Entity also occupies (used for Entities bigger than 1x1).
 		self.shape = shape
@@ -158,6 +158,9 @@ class Entity:
 		self.shield_regen_amounts = shield_regen
 		self.shield_regen_pointer = 0
 		self.weapons = weapons
+		self.speed = speed
+		# The sequence of moves the Entity plans to make.
+		self.movement = []
 	def move(self, change):
 		self.pos[0] += change[0]
 		self.pos[1] += change[1]
@@ -201,16 +204,14 @@ class Entity:
 
 class Ship(Entity):
 	def __init__(self, type, pos, shape, rot, hull, shield, shield_regen, weapons, speed, salvage, wave=0, size=0):
-		Entity.__init__(self, pos, shape, rot=rot, hull=hull, shield=shield, shield_regen=shield_regen, weapons=weapons)
+		Entity.__init__(self, pos, shape, rot=rot, hull=hull, shield=shield, shield_regen=shield_regen, weapons=weapons, speed=speed)
 		self.type = type
-		self.speed = speed
 		# Enemy only fields.
 		self.wave = wave
 		# Ally only fields.
 		self.size = size
 		# This field refers to salvage dropped when the ship is destroyed.
 		self.salvage = salvage
-		self.move = []
 
 # A Station Component.
 class Component(Entity):
@@ -308,7 +309,7 @@ def hit_chance(attack, target):
 	"""Calculates the hit rate of a given attack type against the target ship."""
 	# Station components can never be missed by anything.
 	if type(target) == Component: return 100
-	if target.type in ('probe', 'drone'): return {'laser':75, 'missile':25}[attack]
+	if target.type in ('Probe', 'Drone'): return {'laser':75, 'missile':25}[attack]
 	# Error message that should never get triggered.
 	print("Did not have a hit chance for", attack, "against a", target.type)
 

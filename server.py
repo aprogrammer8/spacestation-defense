@@ -42,8 +42,10 @@ def collect_input():
 
 
 def players_move():
+	# This one is very simple since no AI is necessary.
 	global sock, players, gamestate
-	return
+	for component in gamestate.station: marshal_action(component)
+	for ship in gamestate.allied_ships: marshal_action(ship)
 
 def enemies_move():
 	global sock, players, gamestate
@@ -59,28 +61,30 @@ def enemies_move():
 				# TOOD: Make this support multi-space ships.
 				if not gamestate.occupied([enemy.pos[0]+move[0], enemy.pos[1]+move[1]]): valid_moves.append(move)
 			if not valid_moves: break
-			enemy.move.append(random.choice(valid_moves))
-		# We build a JSON list of targets with indexes corresponding to weapon indexes.
-		targets = []
-		for weapon in enemy.weapons:
-			if weapon.target:
-				if random.randint(1, 100) <= hit_chance(weapon.type, weapon.target):
-					# The third value in here is whether it hit.
-					targets.append(weapon.target.pos+[True])
-					# Remember to reflect the gamestate change server-side as well.
-					weapon.target.take_damage(weapon.power, weapon.type)
-				else:
-					targets.append(weapon.target.pos+[False])
-			else: targets.append(None)
+			enemy.movement.append(random.choice(valid_moves))
+		# Now make it all happen.
+		marshal_action(enemy)
 
-		sock.send(encode("ACTION:" + json.dumps(enemy.pos) + ':' + json.dumps(enemy.move) + ':' + json.dumps(targets)))
+def marshal_action(entity):
+	global sock, players, gamestate
+	"""Takes an Entity with all its actions set, reflects them in the gamestate, and then encodes them as JSON so the clients can do the same."""
+	# We build a JSON list of targets with indexes corresponding to weapon indexes.
+	targets = []
+	for weapon in entity.weapons:
+		if weapon.target:
+			if random.randint(1, 100) <= hit_chance(weapon.type, weapon.target):
+				# The third value in here is whether it hit.
+				targets.append(weapon.target.pos+[True])
+				# Remember to reflect the gamestate change server-side as well.
+				weapon.target.take_damage(weapon.power, weapon.type)
+			else:
+				targets.append(weapon.target.pos+[False])
+		else: targets.append(None)
+	sock.send(encode("ACTION:" + json.dumps(entity.pos) + ':' + json.dumps(entity.movement) + ':' + json.dumps(targets)))
 
 def main():
 	global sock, players, gamestate
 	sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-	#sock.setblocking(False)
-	#selector = selectors.DefaultSelector()
-	#selector.register(sock, selectors.EVENT_READ)
 	sock.connect(sys.argv[1])
 	# Receive the list of players.
 	player_names = recv_message(sock).split(",")
