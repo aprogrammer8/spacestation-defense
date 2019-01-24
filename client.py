@@ -28,7 +28,7 @@ def main():
 
 
 def login_screen():
-	global font
+	global player_name, font
 	draw_text(window, "enter your name", TEXT_COLOR, LOG_RECT, font)
 	font = pygame.font.Font(pygame.font.get_default_font(), 10)
 	username_box = InputBox(window, NAME_ENTRY_RECT, BGCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font)
