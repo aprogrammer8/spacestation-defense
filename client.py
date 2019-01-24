@@ -157,8 +157,8 @@ def play(players):
 	done_button.draw()
 	gamestate = Gamestate(playerlist.message_list+[player_name])
 	gamestate.init_station(gamestate.mission.starting_station)
-	grid_size = [int(GAME_WINDOW_RECT.w/TILESIZE[0]), int(GAME_WINDOW_RECT.h/TILESIZE[1])]
-	offset = [int(grid_size[0]/2), int(grid_size[1]/2)]
+	grid_size = [GAME_WINDOW_RECT.w//TILESIZE[0], GAME_WINDOW_RECT.h//TILESIZE[1]]
+	offset = [grid_size[0]//2, grid_size[1]//2]
 	selected = None
 	targeting = False
 	draw_gamestate(gamestate, offset)
@@ -256,6 +256,8 @@ def fill_panel(object):
 	"""fills the panel with information about the given object."""
 	#First, clear it.
 	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
+	# This catch is here so we can call fill_panel(None) to blank it.
+	if not object: return
 	draw_text(window, object.type, TEXT_COLOR, PANEL_NAME_RECT, font)
 	draw_text(window, str(object.hull)+"/"+str(object.maxhull), TEXT_COLOR, PANEL_HULL_RECT, font)
 	if hasattr(object, 'hull'): draw_bar(window, PANEL_HULL_BAR_RECT, TEXT_COLOR, HULL_COLOR, HULL_DAMAGE_COLOR, object.maxhull, object.hull)
@@ -274,14 +276,17 @@ def shield_repr(entity):
 		string += str(amount) + "->"
 	return string[:-2]
 
-def draw_gamestate(gamestate, offset):
-	"""The offset is where the player is scrolled to."""
-#def draw_grid(window, GAME_WINDOW_RECT, tilesize):
+
+def draw_grid(rect=None):
+	"""Draw the game window grid."""
 	for x in range(GAME_WINDOW_RECT.left+TILESIZE[0], GAME_WINDOW_RECT.right, TILESIZE[0]):
 		pygame.draw.line(window, GRID_COLOR, (x, GAME_WINDOW_RECT.top), (x, GAME_WINDOW_RECT.bottom), 1)
 	for y in range(GAME_WINDOW_RECT.top+TILESIZE[1], GAME_WINDOW_RECT.bottom, TILESIZE[1]):
 		pygame.draw.line(window, GRID_COLOR, (GAME_WINDOW_RECT.left, y), (GAME_WINDOW_RECT.right, y), 1)
-#def draw_entity():
+
+def draw_gamestate(gamestate, offset, rect=None):
+	"""The offset is where the player is scrolled to. The rect is which area of the gameboard should be updated. It's measured in logical position, not pixel position."""
+	draw_grid(rect)
 	for entity in gamestate.station:
 		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
 	for entity in gamestate.enemy_ships:
@@ -297,7 +302,11 @@ def calc_pos(pos, offset):
 
 def reverse_calc_pos(pos, offset):
 	"""reverse_calc_pos converts a pixel position on screen to a gameboard logical position."""
-	return [int((pos[0]-GAME_WINDOW_RECT.left)/TILESIZE[0])-offset[0], int(pos[1]/TILESIZE[1])-offset[1]]
+	return [int(pos[0]-GAME_WINDOW_RECT.left)//TILESIZE[0]-offset[0], pos[1]//TILESIZE[1]-offset[1]]
+
+def entity_pixel_rect(entity, offset):
+	rect = entity.rect()
+	return pygame.Rect(calc_pos(rect[0:2],offset), (rect[2]*TILESIZE[0], rect[3]*TILESIZE[1]))
 
 def execute_move(gamestate, offset, cmd):
 	"""Takes an ACTION command from the server and executes it. It needs the offset to call draw_gamestate()."""
@@ -306,17 +315,21 @@ def execute_move(gamestate, offset, cmd):
 	entity = gamestate.occupied(json.loads(parts[0]))
 	moves = json.loads(parts[1])
 	for move in moves:
+		# TODO: This should be smoothly animated
+		# TODO: Need to make sure stuff won't get overwritten.
+		window.fill((0,0,0), entity_pixel_rect(entity,offset))
 		entity.move(move)
-		draw_gamestate(gamestate, offset)
+		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
+		# Temp:
+		draw_grid()
+		#draw_gamestate(gamestate, offset, entity_pixel_rect(entity, offset))
 		pygame.display.flip()
 		pygame.time.wait(500)
-		# TODO: Do some animation
 	targets = json.loads(parts[2])
 	# This starts as -1 instead of 0 so we can increment it at the beginning of the loop, so that it doesn't get messed up by continue statements.
 	weapon_index = -1
 	for info in targets:
 		weapon_index += 1
-		print("weapon",weapon_index,"targeting",info)
 		# Skip weapons that weren't targeted.
 		if not info: continue
 		coords = info[:2] # The first two are the pos, the third one is whether the attack hit.

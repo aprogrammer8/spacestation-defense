@@ -51,7 +51,6 @@ def enemies_move():
 	global sock, players, gamestate
 	for enemy in gamestate.enemy_ships:
 		for i in range(enemy.speed):
-			print("iterating:", enemy.pos, i)
 			# Stop as soon as we find a good spot to shoot from.
 			if enemy.all_in_range(gamestate, enemy=True):
 				enemy.random_targets(gamestate, enemy=True)
@@ -81,6 +80,8 @@ def marshal_action(entity):
 				targets.append(weapon.target.pos+[False])
 		else: targets.append(None)
 	sock.send(encode("ACTION:" + json.dumps(entity.pos) + ':' + json.dumps(entity.movement) + ':' + json.dumps(targets)))
+	# Finally, play out the movement on the server side.
+	for move in entity.movement: entity.move(move)
 
 def main():
 	global sock, players, gamestate

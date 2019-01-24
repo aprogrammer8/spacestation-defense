@@ -34,17 +34,17 @@ class Gamestate:
 	def clear(self):
 		"""Clears the stored actions and moves of all gamestate objects."""
 		for ship in self.allied_ships:
-			ship.already_moved = []
+			ship.movement = []
 			for weapon in ship.weapons: weapon.target = None
 			ship.shield_regen()
 		for ship in self.enemy_ships:
-			ship.move = []
+			ship.movement = []
 			for weapon in ship.weapons: weapon.target = None
 			ship.shield_regen()
 		self.station.shield_regen()
 		for component in self.station:
 			for weapon in component.weapons: weapon.target = None
-		for asteroid in self.asteroids: asteroid.move = []
+		for asteroid in self.asteroids: asteroid.movement = []
 	def upkeep(self):
 		self.clear()
 		self.time -= 1
@@ -171,7 +171,19 @@ class Entity:
 			pos = rotate(pos, self.rot)
 			spaces.append([pos[0] + self.pos[0], pos[1] + self.pos[1]])
 		return spaces
+	def rect(self):
+		"""Returns the top-left space of the Entity and the bottom right."""
+		spaces = self.spaces()
+		left = right = spaces[0][0]
+		top = bottom = spaces[0][1]
+		for space in spaces[1:]:
+			if space[0] < left: left = space[0]
+			if space[0] > right: right = space[0]
+			if space[1] < top: top = space[1]
+			if space[1] > bottom: bottom = space[1]
+		return left, top, right-left+1, bottom-top+1
 	def next_weapon(self):
+		"""Returns the first weapon that doesn't have a target."""
 		for weapon in self.weapons:
 			if not weapon.target: return weapon
 	def take_damage(self, dmg, type):
@@ -341,4 +353,4 @@ def interpret_unassign(gamestate, cmd):
 	unit_pos = [int(cmd[:cmd.index(',')]), int(cmd[cmd.index(',')+1:])]
 	unit = gamestate.occupied(unit_pos)
 	for weapon in unit.weapons: weapon.target = None
-	if hasattr(unit, 'speed'): unit.move = []
+	if hasattr(unit, 'speed'): unit.movement = []
