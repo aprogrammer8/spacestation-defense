@@ -279,10 +279,11 @@ def shield_repr(entity):
 
 def draw_grid(rect=None):
 	"""Draw the game window grid."""
-	for x in range(GAME_WINDOW_RECT.left+TILESIZE[0], GAME_WINDOW_RECT.right, TILESIZE[0]):
-		pygame.draw.line(window, GRID_COLOR, (x, GAME_WINDOW_RECT.top), (x, GAME_WINDOW_RECT.bottom), 1)
-	for y in range(GAME_WINDOW_RECT.top+TILESIZE[1], GAME_WINDOW_RECT.bottom, TILESIZE[1]):
-		pygame.draw.line(window, GRID_COLOR, (GAME_WINDOW_RECT.left, y), (GAME_WINDOW_RECT.right, y), 1)
+	if not rect: rect = pygame.Rect(GAME_WINDOW_RECT.left+TILESIZE[0],GAME_WINDOW_RECT.top+TILESIZE[1], GAME_WINDOW_RECT.w-TILESIZE[0], GAME_WINDOW_RECT.h-TILESIZE[1])
+	for x in range(rect.left, rect.right, TILESIZE[0]):
+		pygame.draw.line(window, GRID_COLOR, (x, rect.top), (x, rect.bottom), 1)
+	for y in range(rect.top, rect.bottom, TILESIZE[1]):
+		pygame.draw.line(window, GRID_COLOR, (rect.left, y), (rect.right, y), 1)
 
 def draw_gamestate(gamestate, offset, rect=None):
 	"""The offset is where the player is scrolled to. The rect is which area of the gameboard should be updated. It's measured in logical position, not pixel position."""
@@ -318,10 +319,9 @@ def execute_move(gamestate, offset, cmd):
 		# TODO: This should be smoothly animated
 		# TODO: Need to make sure stuff won't get overwritten.
 		window.fill((0,0,0), entity_pixel_rect(entity,offset))
+		draw_grid(entity_pixel_rect(entity,offset))
 		entity.move(move)
 		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
-		# Temp:
-		draw_grid()
 		#draw_gamestate(gamestate, offset, entity_pixel_rect(entity, offset))
 		pygame.display.flip()
 		pygame.time.wait(500)
