@@ -76,6 +76,8 @@ def marshal_action(entity):
 				targets.append(weapon.target.pos+[True])
 				# Remember to reflect the gamestate change server-side as well.
 				weapon.target.take_damage(weapon.power, weapon.type)
+				# Remove dead targets.
+				if weapon.target.hull <= 0: gamestate.remove(weapon.target)
 			else:
 				targets.append(weapon.target.pos+[False])
 		else: targets.append(None)

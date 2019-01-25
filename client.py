@@ -20,7 +20,6 @@ def main():
 	selector.register(sock, selectors.EVENT_READ)
 	sock.connect_ex(server)
 	# Now that we've started the connection, we do the login.
-
 	login_screen()
 	window.fill((0,0,0))
 	pygame.display.flip()
@@ -306,11 +305,17 @@ def reverse_calc_pos(pos, offset):
 	return [int(pos[0]-GAME_WINDOW_RECT.left)//TILESIZE[0]-offset[0], pos[1]//TILESIZE[1]-offset[1]]
 
 def entity_pixel_rect(entity, offset):
+	"""Finds the rectangle that an Entity is occupying (in terms of pixels)."""
 	rect = entity.rect()
 	return pygame.Rect(calc_pos(rect[0:2],offset), (rect[2]*TILESIZE[0], rect[3]*TILESIZE[1]))
 
+def erase(rect):
+	"""Takes a pixel rect and erases only the gameboard entities on it (by redrawing the grid.)"""
+	window.fill((0,0,0), rect)
+	draw_grid(rect)
+
 def execute_move(gamestate, offset, cmd):
-	"""Takes an ACTION command from the server and executes it. It needs the offset to call draw_gamestate()."""
+	"""Takes an ACTION command from the server and executes it. It needs the offset for graphics/animation purposes."""
 	print("Executing move:", cmd)
 	parts = cmd.split(':')
 	entity = gamestate.occupied(json.loads(parts[0]))
@@ -318,8 +323,7 @@ def execute_move(gamestate, offset, cmd):
 	for move in moves:
 		# TODO: This should be smoothly animated
 		# TODO: Need to make sure stuff won't get overwritten.
-		window.fill((0,0,0), entity_pixel_rect(entity,offset))
-		draw_grid(entity_pixel_rect(entity,offset))
+		erase(entity_pixel_rect(entity,offset))
 		entity.move(move)
 		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
 		#draw_gamestate(gamestate, offset, entity_pixel_rect(entity, offset))
@@ -337,6 +341,15 @@ def execute_move(gamestate, offset, cmd):
 		# Nothing is changed in the gamestate if the attack misses.
 		if not info[2]: continue
 		target = gamestate.occupied(coords)
+		# This should happen if we killed the target in a previous attack.
+		if not target: continue
 		target.take_damage(entity.weapons[weapon_index].power, entity.weapons[weapon_index].type)
+		# Remove dead targets.
+		if target.hull <= 0:
+			rect = entity_pixel_rect(target,offset)
+			erase(rect)
+			pygame.display.update(rect)
+			# TODO: Animate.
+			gamestate.remove(target)
 
 if __name__ == '__main__': main()

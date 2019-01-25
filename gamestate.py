@@ -122,6 +122,24 @@ class Gamestate:
 					dist[1] -= 1
 		if probe == target: return True
 		return False
+	def remove(self, entity):
+		for e in self.station:
+			if e == entity:
+				self.station.remove(e)
+				return
+		for e in self.allied_ships:
+			if e == entity:
+				self.allied_ships.remove(e)
+				return
+		for e in self.enemy_ships:
+			if e == entity:
+				self.enemy_ships.remove(e)
+				return
+		for e in self.asteroids:
+			if e == entity:
+				self.asteroids.remove(e)
+				return
+
 
 def slope(p1, p2):
 	"""Returns the slope between two points, handling division by zero with a high value if the numerator is not also zero, or 1 if it is."""
