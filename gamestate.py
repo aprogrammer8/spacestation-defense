@@ -8,7 +8,7 @@ class Gamestate:
 		else: # If no JSON, we load a new game from a mission.
 			self.station = Station()
 			self.enemy_ships = []
-			self.allied_ships = []
+			self.allied_ships = [probe([0, 5])]
 			self.asteroids = []
 			self.nextwave = 0
 			self.round = 0
@@ -349,6 +349,14 @@ def hit_chance(attack, target):
 def drone(pos, rot=0):
 	weapons = (Weapon('laser', 1, 1),)
 	return Ship("Drone", pos, (), rot, 5, 0, (0,), weapons, 3, 1)
+
+def kamikaze_drone(pos, rot=0):
+	return Ship("Kamikaze Drone", pos, (), rot, 10, 0, (0,), (), 5, 1)
+
+# Player ships.
+
+def probe(pos, rot=0):
+	return Ship("Probe", pos, (), rot, 10, 0, (0,), (), 3, 1)
 
 COMPONENT_TYPES = (
 	"Connector",

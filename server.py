@@ -51,6 +51,7 @@ def enemies_move():
 	global sock, players, gamestate
 	for enemy in gamestate.enemy_ships:
 		for i in range(enemy.speed):
+			print("iterating:",enemy.pos,i)
 			# Stop as soon as we find a good spot to shoot from.
 			if enemy.all_in_range(gamestate, enemy=True):
 				enemy.random_targets(gamestate, enemy=True)
@@ -104,7 +105,7 @@ def main():
 		changes = gamestate.upkeep()
 		if changes: sock.send(encode("SPAWN ENEMIES:" + json.dumps(changes)))
 		collect_input()
-		sock.send(encode("PLAYER INPUT COLLECTED"))
+		sock.send(encode("DONE"))
 		players_move()
 		enemies_move()
 		sock.send(encode("ROUND"))
