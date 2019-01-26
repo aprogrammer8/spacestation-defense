@@ -25,12 +25,13 @@ class Gamestate:
 		for pos in data: self.station.append(Component(list(pos), self.station, data[pos], 0, 50))
 	#def encode(self):
 	#	"""Encodes the Gamestate into a JSON object that can be sent over the network."""
-	def draw_cards(self, num): # Redo this func to return the updates necessary
+	def draw_cards(self, num):
 		draws = []
 		for i in range(num):
 			draws += {'player':self.players[self.draw_pointer], 'card':draw_card()}
 			self.draw_pointer += 1
 			if self.draw_pointer >= len(self.players): self.draw_pointer = 0
+		return draws
 	def clear(self):
 		"""Clears the stored actions and moves of all gamestate objects."""
 		for ship in self.allied_ships:
