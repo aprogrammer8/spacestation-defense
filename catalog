@@ -1,6 +1,6 @@
 Space station components: (all have 50 hull)
  Shield Generator	- 100 shields over a range of 4, regenerate 1, then 3, then 8 when not being attacked
- Power Generator	- generates 3 power per turn and can store up to 15; most components take 2 to activate
+ Power Generator	- generates 5 power per turn and can store up to 25; most components take 2 to activate
  Laser Turret		- 3 5 damage lasers
  Missile Turret		- 1 30 damage missile
  Lightning Turret	- 1 10 damage charge
@@ -12,12 +12,12 @@ Space station components: (all have 50 hull)
  Communications Relay	- allows players to communicate and enable the Distress Call card; maybe also gives you previews of the next wave
 
 Cards:
- Repair			- restores a damaged (but not destroyed) component to full hull
+ Repair			- restore up to 100 lost hull of player units
  Salvage		- remove a destroyed component; 4 cards are distriuted among the players
  Power Surge		- fills all power generators
  Power Diversion	- allows you to reuse a component unlimitedly for just 1 power per use this turn
  Manual Targeting	- all station attacks are guaranteed hits for 5 rounds
- Distress Call		- command gives reinforcements (corvette/3fighters/3bombers) of choice that stick around for 10 rounds, or 4 cards are distributed among the players, but must be played immediately
+ Distress Call		- command gives reinforcements (corvette/3fighters/3bombers) of choice that stick around for 10 rounds, or 3 cards are distributed among the players, but must be played immediately
  Boost			- instantly turn the station any way you want
  Transform		- turn any component into any other component
  Time Stop		- enemies are frozen and cannot be attacked for 5 rounds
@@ -40,7 +40,7 @@ Enemy ships:
  Bomber		- 20 hull, 10 shields, 1 10 damage missile, 3 speed, 3 salvage
  Fighter	- 20 hull, 10 shields, 2 3 damage lasers, 5 speed, 3 salvage
  Corvette	- 50 hull, 30 shields, 3 3 damage lasers, 2 8 damage missiles, 3 speed, launches a drone or kamikaze drone every fifth round, 10 salvage
- Frigate
+ Frigate	- 100 hull, 80 shields, 2 6 damage lasers, 2 15 damage missiles, 3 speed, launches a fighter or bomber every fourth round, 25 salvage
  Battleship
  Leviathan
 
