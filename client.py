@@ -278,7 +278,7 @@ def shield_repr(entity):
 
 def draw_grid(rect=None):
 	"""Draw the game window grid."""
-	if not rect: rect = pygame.Rect(GAME_WINDOW_RECT.left+TILESIZE[0],GAME_WINDOW_RECT.top+TILESIZE[1], GAME_WINDOW_RECT.w-TILESIZE[0], GAME_WINDOW_RECT.h-TILESIZE[1])
+	if not rect: rect = pygame.Rect(GAME_WINDOW_RECT.left, GAME_WINDOW_RECT.top, GAME_WINDOW_RECT.w, GAME_WINDOW_RECT.h)
 	for x in range(rect.left, rect.right, TILESIZE[0]):
 		pygame.draw.line(window, GRID_COLOR, (x, rect.top), (x, rect.bottom), 1)
 	for y in range(rect.top, rect.bottom, TILESIZE[1]):
