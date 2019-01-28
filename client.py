@@ -198,7 +198,7 @@ def play(players):
 				if event.key == pygame.K_SPACE:
 					# Don't interpret space as a command when the chatbar is active.
 					if chatbar.entry_box.active: continue
-					if selected and selected.weapons:
+					if selected:
 						# TODO: Probably play a sound and give some visual indication.
 						# Clear out old targets.
 						sock.send(encode("UNASSIGN ALL:" + str(selected.pos[0]) + ',' + str(selected.pos[1])))
@@ -206,8 +206,21 @@ def play(players):
 						fill_panel(selected)
 						pygame.display.update(PANEL_RECT)
 						targeting = True
-				if event.key == pygame.K_ESCAPE:
+				elif event.key == pygame.K_ESCAPE:
 					targeting = False
+				elif targeting and len(selected.movement)<=selected.speed:
+					if event.key == pygame.K_UP:
+						selected.movement.append([0, -1])
+						project_move(selected, offset)
+					if event.key == pygame.K_DOWN:
+						selected.movement.append([0, 1])
+						project_move(selected, offset)
+					if event.key == pygame.K_LEFT:
+						selected.movement.append([-1, 0])
+						project_move(selected, offset)
+					if event.key == pygame.K_RIGHT:
+						selected.movement.append([1, 0])
+						project_move(selected, offset)
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				chatbar.handle_event(event)
 				if done_button.handle_event(event):
@@ -215,7 +228,7 @@ def play(players):
 					continue
 				if GAME_WINDOW_RECT.collidepoint(event.pos):
 					pos = reverse_calc_pos(event.pos, offset)
-					if targeting:
+					if targeting and selected.weapons:
 						target = gamestate.occupied(pos)
 						if not target:
 							selected = None
@@ -275,6 +288,12 @@ def shield_repr(entity):
 		string += str(amount) + "->"
 	return string[:-2]
 
+def project_move(entity, offset):
+	pos = (entity.pos[0]+offset[0], entity.pos[1]+offset[1])
+	for move in entity.movement:
+		pos = (pos[0]+move[0], pos[1]+move[1])
+		pygame.draw.rect(window, (255,255,0), (GAME_WINDOW_RECT.left+TILESIZE[0]*pos[0], GAME_WINDOW_RECT.top+TILESIZE[1]*pos[1], TILESIZE[0], TILESIZE[1]), 2)
+	pygame.display.flip()
 
 def draw_grid(rect=None):
 	"""Draw the game window grid."""
