@@ -47,7 +47,10 @@ def players_move():
 	for component in gamestate.station: marshal_action(component)
 	for ship in gamestate.allied_ships: marshal_action(ship)
 
+
 def enemies_move():
+	import time
+	time.sleep(10)
 	global sock, players, gamestate
 	for enemy in gamestate.enemy_ships:
 		for i in range(enemy.speed):
@@ -68,23 +71,29 @@ def enemies_move():
 def marshal_action(entity):
 	global sock, players, gamestate
 	"""Takes an Entity with all its actions set, reflects them in the gamestate, and then encodes them as JSON so the clients can do the same."""
-	# We build a JSON list of targets with indexes corresponding to weapon indexes.
-	targets = []
-	for weapon in entity.weapons:
-		if weapon.target:
-			if random.randint(1, 100) <= hit_chance(weapon.type, weapon.target):
+	#pos = entity.pos
+	for action in entity.actions:
+		# If it's a move.
+		if len(action) == 2:
+			entity.move(action)
+			#pos = (pos[0] + action[0], pos[1] + action[1])
+		# If it's an attack.
+		elif len(action) == 3:
+			weapon = entity.weapons[action[0]]
+			target = gamestate.occupied(action[1:])
+			# This should happen if the target was already destroyed.
+			if not target: continue
+			if random.randint(1, 100) <= hit_chance(weapon.type, target):
 				# The third value in here is whether it hit.
-				targets.append(weapon.target.pos+[True])
+				action.append(True)
 				# Remember to reflect the gamestate change server-side as well.
-				weapon.target.take_damage(weapon.power, weapon.type)
+				target.take_damage(weapon.power, weapon.type)
 				# Remove dead targets.
-				if weapon.target.hull <= 0: gamestate.remove(weapon.target)
+				if target.hull <= 0: gamestate.remove(target)
 			else:
-				targets.append(weapon.target.pos+[False])
-		else: targets.append(None)
-	sock.send(encode("ACTION:" + json.dumps(entity.pos) + ':' + json.dumps(entity.movement) + ':' + json.dumps(targets)))
-	# Finally, play out the movement on the server side.
-	for move in entity.movement: entity.move(move)
+				action.append(False)
+		else: print(action, "is an invalid action to marshal")
+	sock.send(encode("ACTION:" + json.dumps(entity.pos) + ':' + json.dumps(entity.actions)))
 
 def main():
 	global sock, players, gamestate

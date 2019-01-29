@@ -1,4 +1,4 @@
-import random
+import random, json
 
 class Gamestate:
 	def __init__(self, players, mission='test', json=''):
@@ -178,8 +178,8 @@ class Entity:
 		self.shield_regen_pointer = 0
 		self.weapons = weapons
 		self.speed = speed
-		# The sequence of moves the Entity plans to make.
-		self.movement = []
+		# The sequence of actions the Entity plans to make.
+		self.actions = []
 	def move(self, change):
 		self.pos[0] += change[0]
 		self.pos[1] += change[1]
@@ -201,10 +201,6 @@ class Entity:
 			if space[1] < top: top = space[1]
 			if space[1] > bottom: bottom = space[1]
 		return left, top, right-left+1, bottom-top+1
-	def next_weapon(self):
-		"""Returns the first weapon that doesn't have a target."""
-		for weapon in self.weapons:
-			if not weapon.target: return weapon
 	def take_damage(self, dmg, type):
 		# For now, we ignore type.
 		dealt = min(dmg, self.shield)
@@ -218,6 +214,28 @@ class Entity:
 	def shield_regen(self):
 		self.shield += self.shield_regen_amounts[self.shield_regen_pointer]
 		if self.shield_regen_pointer < len(self.shield_regen_amounts) - 1: self.shield_regen_pointer += 1
+	def moves_left(self):
+		moves = self.speed
+		for action in self.actions:
+			# Moves are always length 2.
+			if len(action) == 2: moves -= 1
+		return moves > 0
+	def target(self, index, pos):
+		action_index = 0
+		for action in self.actions:
+			if len(action) > 2 and action[0] == index:
+				self.actions[action_index] = [index, *pos]
+				return
+			action_index += 1
+		self.actions.append([index, *pos])
+	def desc_target(self, weapon, gamestate):
+		"""Takes a weapon and returns a string describing what it's targeting, if anything."""
+		index = self.weapons.index(weapon)
+		for action in self.actions:
+			if len(action) > 2 and action[0] == index:
+				target = gamestate.occupied(action[1:3])
+				if target: return ", targeting " + target.type + " at " + str(target.pos)
+		return ""
 	def all_in_range(self, gamestate, enemy):
 		"""Determines whether all of the Entities weapons can hit something from the opposing team from our current position. enemy is a bool saying which team this Entity is on."""
 		# Placeholder: since we're not yet sure about range differences, just calculate one weapon.
@@ -307,11 +325,8 @@ class Weapon:
 		self.type = type
 		self.tier = tier
 		self.power = power
-		self.target = None
 	def __str__(self):
-		string = self.type + ": " + str(self.power)
-		if self.target: string += ", targeting " + self.target.type + " at " + str(self.target.pos)
-		return string
+		return self.type + ": " + str(self.power)
 
 class Mission:
 	def __init__(self, filename):
@@ -366,18 +381,14 @@ COMPONENT_TYPES = (
 	"Missile Turret",
 )
 
-def interpret_assign(gamestate, cmd):
-	source_pos = [int(cmd[:cmd.index(',')]), int(cmd[cmd.index(',')+1 : cmd.index(':')])]
-	cmd = cmd[cmd.index(':')+1:]
-	weapon_index = int(cmd[:cmd.index(':')])
-	cmd = cmd[cmd.index(':')+1:]
-	target_pos = [int(cmd[:cmd.index(',')]), int(cmd[cmd.index(',')+1:])]
-	source = gamestate.occupied(source_pos)
-	target = gamestate.occupied(target_pos)
-	source.weapons[weapon_index].target = target
 
-def interpret_unassign(gamestate, cmd):
-	unit_pos = [int(cmd[:cmd.index(',')]), int(cmd[cmd.index(',')+1:])]
+def interpret_assign(gamestate, cmd):
+	unit_pos = json.loads(cmd[:cmd.index(':')])
 	unit = gamestate.occupied(unit_pos)
-	for weapon in unit.weapons: weapon.target = None
-	if hasattr(unit, 'speed'): unit.movement = []
+	unit.actions = json.loads(cmd[cmd.index(':')+1:])
+
+# Unassign commands clear all actions for a ship, both movement and targeting.
+def interpret_unassign(gamestate, cmd):
+	unit_pos = json.loads(cmd)
+	unit = gamestate.occupied(unit_pos)
+	unit.actions = []

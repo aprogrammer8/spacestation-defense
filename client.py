@@ -143,6 +143,7 @@ def lobby(host_name):
 
 
 def play(players):
+	global gamestate
 	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
 	chatbar.draw()
 	pygame.draw.rect(window, PANEL_COLOR, TOP_PANEL_RECT, 0)
@@ -159,8 +160,8 @@ def play(players):
 	grid_size = [GAME_WINDOW_RECT.w//TILESIZE[0], GAME_WINDOW_RECT.h//TILESIZE[1]]
 	offset = [grid_size[0]//2, grid_size[1]//2]
 	selected = None
-	targeting = False
-	draw_gamestate(gamestate, offset)
+	assigning = False # When assigning a unit that has weapons, this is set to an int instead of True.
+	draw_gamestate(offset)
 	pygame.display.flip()
 	while True:
 		clock.tick(LOBBY_RATE)
@@ -178,7 +179,7 @@ def play(players):
 			if msg.startswith("SPAWN ENEMIES:"):
 				enemy_json = json.loads(msg[14:])
 				gamestate.insert_enemies(enemy_json)
-				draw_gamestate(gamestate, offset)
+				draw_gamestate(offset)
 				pygame.display.flip()
 			if msg.startswith("ASSIGN:"):
 				interpret_assign(gamestate, msg[7:])
@@ -186,41 +187,54 @@ def play(players):
 				interpret_unassign(gamestate, msg[msg.index(':')+1:])
 			# Unit action happening commands.
 			if msg.startswith("ACTION:"):
-				execute_move(gamestate, offset, msg[msg.index(':')+1:])
+				execute_move(offset, msg[msg.index(':')+1:])
 				fill_panel(selected)
 				pygame.display.update(PANEL_RECT)
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
 			if event.type == pygame.KEYDOWN:
-				entry = chatbar.handle_event(event)
-				if entry: sock.send(encode("LOCAL:"+player_name+":"+entry))
-				pygame.display.update(chatbar.rect)
+				# If the chatbar is active, just pass it the input and don't bother with gamestate commands.
+				if chatbar.entry_box.active:
+					entry = chatbar.handle_event(event)
+					if entry: sock.send(encode("LOCAL:"+player_name+":"+entry))
+					pygame.display.update(chatbar.rect)
+					continue
 				if event.key == pygame.K_SPACE:
-					# Don't interpret space as a command when the chatbar is active.
-					if chatbar.entry_box.active: continue
 					if selected:
 						# TODO: Probably play a sound and give some visual indication.
 						# Clear out old targets.
-						sock.send(encode("UNASSIGN ALL:" + str(selected.pos[0]) + ',' + str(selected.pos[1])))
-						for weapon in selected.weapons: weapon.target = None
+						sock.send(encode("UNASSIGN ALL:" + json.dumps(selected.pos)))
+						selected.actions = []
 						fill_panel(selected)
 						pygame.display.update(PANEL_RECT)
-						targeting = True
-				elif event.key == pygame.K_ESCAPE:
-					targeting = False
-				elif targeting and len(selected.movement)<=selected.speed:
-					if event.key == pygame.K_UP:
-						selected.movement.append([0, -1])
-						project_move(selected, offset)
-					if event.key == pygame.K_DOWN:
-						selected.movement.append([0, 1])
-						project_move(selected, offset)
-					if event.key == pygame.K_LEFT:
-						selected.movement.append([-1, 0])
-						project_move(selected, offset)
-					if event.key == pygame.K_RIGHT:
-						selected.movement.append([1, 0])
-						project_move(selected, offset)
+						if selected.weapons: assigning = 0
+						else: assigning = True
+				elif assigning is not False:
+					if event.key == pygame.K_RETURN:
+						# Maybe play a sound?
+						sock.send(encode("ASSIGN:" + json.dumps(selected.pos) + ":" + json.dumps(selected.actions)))
+						assigning = False
+					# Esc gets out of assigning mode.
+					elif event.key == pygame.K_ESCAPE:
+						assigning = False
+					# Shift cycles weapons.
+					elif event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT:
+						assigning += 1
+						if assigning == len(selected.weapons): assigning = 0
+						# TODO: Maybe play SFX_ERROR if it has no weapons?
+					elif selected.moves_left():
+						if event.key == pygame.K_UP:
+							selected.actions.append([0, -1])
+							project_move(selected, offset)
+						if event.key == pygame.K_DOWN:
+							selected.actions.append([0, 1])
+							project_move(selected, offset)
+						if event.key == pygame.K_LEFT:
+							selected.actions.append([-1, 0])
+							project_move(selected, offset)
+						if event.key == pygame.K_RIGHT:
+							selected.actions.append([1, 0])
+							project_move(selected, offset)
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				chatbar.handle_event(event)
 				if done_button.handle_event(event):
@@ -228,37 +242,39 @@ def play(players):
 					continue
 				if GAME_WINDOW_RECT.collidepoint(event.pos):
 					pos = reverse_calc_pos(event.pos, offset)
-					if targeting and selected.weapons:
+					if assigning is not False and selected.weapons:
 						target = gamestate.occupied(pos)
 						if not target:
+							# If you try to target nothing, we assume you want to deselect the unit, since that would almost never be a mistake.
 							selected = None
-							targeting = False
+							assigning = False
 							pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
 							pygame.display.update(PANEL_RECT)
 							continue
 						# Don't let things target themselves.
 						if target == selected:
 							SFX_ERROR.play()
-							targeting = False
+							assigning = False
 							continue
-						if gamestate.in_range(selected, selected.next_weapon().type, target):
-							sock.send(encode("ASSIGN:" + str(selected.pos[0]) + "," + str(selected.pos[1]) + ":" + str(selected.weapons.index(selected.next_weapon())) + ":" + str(target.pos[0]) + "," + str(target.pos[1])))
-							selected.next_weapon().target = target
-							if not selected.next_weapon(): targeting = False
+						if gamestate.in_range(selected, selected.weapons[assigning].type, target):
+							selected.target(assigning, target.pos)
+							assigning += 1
+							if assigning == len(selected.weapons): assigning = 0
 							fill_panel(selected)
 							pygame.display.update(PANEL_RECT)
 						else:
 							SFX_ERROR.play()
 					else:
-						selected = select_pos(gamestate, pos)
+						selected = select_pos(pos)
 						pygame.display.update(PANEL_RECT)
 				pygame.display.update(chatbar.rect)
 			if event.type == pygame.MOUSEMOTION:
 				done_button.handle_event(event)
 				pygame.display.update(done_button.rect)
 
-def select_pos(gamestate, clickpos):
+def select_pos(clickpos):
 	"""select_pos takes a gameboard logical position and finds the object on it, then calls fill_panel."""
+	global gamestate
 	entity = gamestate.occupied(list(clickpos))
 	if entity: fill_panel(entity)
 	else: pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
@@ -266,6 +282,7 @@ def select_pos(gamestate, clickpos):
 
 def fill_panel(object):
 	"""fills the panel with information about the given object."""
+	global gamestate
 	#First, clear it.
 	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
 	# This catch is here so we can call fill_panel(None) to blank it.
@@ -280,7 +297,7 @@ def fill_panel(object):
 		draw_text(window, "Weapons:", TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN, font)
 		y = 20
 		for weapon in object.weapons:
-			y += draw_text(window, str(weapon), TEXT_COLOR, pygame.Rect(PANEL_WEAPON_DESC_BEGIN.x+5, PANEL_WEAPON_DESC_BEGIN.y+y, PANEL_WEAPON_DESC_BEGIN.w-7, 60), font)
+			y += draw_text(window, str(weapon)+object.desc_target(weapon,gamestate), TEXT_COLOR, pygame.Rect(PANEL_WEAPON_DESC_BEGIN.x+5, PANEL_WEAPON_DESC_BEGIN.y+y, PANEL_WEAPON_DESC_BEGIN.w-7, 60), font)
 
 def shield_repr(entity):
 	string = str(entity.shield)+"/"+str(entity.maxshield)+"    + "+str(entity.shield_regen_amounts[entity.shield_regen_pointer])+" / "
@@ -290,7 +307,9 @@ def shield_repr(entity):
 
 def project_move(entity, offset):
 	pos = (entity.pos[0]+offset[0], entity.pos[1]+offset[1])
-	for move in entity.movement:
+	for move in entity.actions:
+		# Skip non-moves.
+		if len(move) != 2: continue
 		pos = (pos[0]+move[0], pos[1]+move[1])
 		pygame.draw.rect(window, (255,255,0), (GAME_WINDOW_RECT.left+TILESIZE[0]*pos[0], GAME_WINDOW_RECT.top+TILESIZE[1]*pos[1], TILESIZE[0], TILESIZE[1]), 2)
 	pygame.display.flip()
@@ -303,8 +322,9 @@ def draw_grid(rect=None):
 	for y in range(rect.top, rect.bottom, TILESIZE[1]):
 		pygame.draw.line(window, GRID_COLOR, (rect.left, y), (rect.right, y), 1)
 
-def draw_gamestate(gamestate, offset, rect=None):
+def draw_gamestate(offset, rect=None):
 	"""The offset is where the player is scrolled to. The rect is which area of the gameboard should be updated. It's measured in logical position, not pixel position."""
+	global gamestate
 	draw_grid(rect)
 	for entity in gamestate.station:
 		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
@@ -333,42 +353,41 @@ def erase(rect):
 	window.fill((0,0,0), rect)
 	draw_grid(rect)
 
-def execute_move(gamestate, offset, cmd):
+def execute_move(offset, cmd):
 	"""Takes an ACTION command from the server and executes it. It needs the offset for graphics/animation purposes."""
+	global gamestate
 	print("Executing move:", cmd)
 	parts = cmd.split(':')
 	entity = gamestate.occupied(json.loads(parts[0]))
-	moves = json.loads(parts[1])
-	for move in moves:
-		# TODO: This should be smoothly animated
-		# TODO: Need to make sure stuff won't get overwritten.
-		erase(entity_pixel_rect(entity,offset))
-		entity.move(move)
-		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
-		#draw_gamestate(gamestate, offset, entity_pixel_rect(entity, offset))
-		pygame.display.flip()
-		pygame.time.wait(500)
-	targets = json.loads(parts[2])
-	# This starts as -1 instead of 0 so we can increment it at the beginning of the loop, so that it doesn't get messed up by continue statements.
-	weapon_index = -1
-	for info in targets:
-		weapon_index += 1
-		# Skip weapons that weren't targeted.
-		if not info: continue
-		coords = info[:2] # The first two are the pos, the third one is whether the attack hit.
-		# TODO: Do some animation
-		# Nothing is changed in the gamestate if the attack misses.
-		if not info[2]: continue
-		target = gamestate.occupied(coords)
-		# This should happen if we killed the target in a previous attack.
-		if not target: continue
-		target.take_damage(entity.weapons[weapon_index].power, entity.weapons[weapon_index].type)
-		# Remove dead targets.
-		if target.hull <= 0:
-			rect = entity_pixel_rect(target,offset)
-			erase(rect)
-			pygame.display.update(rect)
-			# TODO: Animate.
-			gamestate.remove(target)
+	actions = json.loads(parts[1])
+	for action in actions:
+		# Moves.
+		if len(action) == 2:
+			# TODO: This should be smoothly animated
+			# TODO: Need to make sure stuff won't get overwritten.
+			erase(entity_pixel_rect(entity,offset))
+			entity.move(action)
+			window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
+			#draw_gamestate(gamestate, offset, entity_pixel_rect(entity, offset))
+			pygame.display.flip()
+			pygame.time.wait(500)
+		# Attacks.
+		elif len(action) == 4:
+			weapon = entity.weapons[action[0]]
+			target = gamestate.occupied(action[1:3])
+			# This should happen if we killed the target in a previous attack.
+			if not target: continue
+			# TODO: Do some animation
+			# Nothing is changed in the gamestate if the attack misses.
+			if not action[3]: continue
+			target.take_damage(weapon.power, weapon.type)
+			# Remove dead targets.
+			if target.hull <= 0:
+				rect = entity_pixel_rect(target,offset)
+				erase(rect)
+				pygame.display.update(rect)
+				# TODO: Animate.
+				gamestate.remove(target)
+		else: print(action, "is an invalid action to marshal")
 
 if __name__ == '__main__': main()
