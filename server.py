@@ -49,34 +49,29 @@ def players_move():
 
 
 def enemies_move():
-	import time
-	time.sleep(10)
 	global sock, players, gamestate
 	for enemy in gamestate.enemy_ships:
-		for i in range(enemy.speed):
-			print("iterating:",enemy.pos,i)
-			# Stop as soon as we find a good spot to shoot from.
-			if enemy.all_in_range(gamestate, enemy=True):
-				enemy.random_targets(gamestate, enemy=True)
-				break
+		enemy.random_targets(gamestate, enemy=True)
+		while enemy.untargeted() and enemy.moves_left():
 			valid_moves = []
 			for move in ([0, 1], [0, -1], [1, 0], [-1, 0]):
 				# TOOD: Make this support multi-space ships.
 				if not gamestate.occupied([enemy.pos[0]+move[0], enemy.pos[1]+move[1]]): valid_moves.append(move)
 			if not valid_moves: break
 			enemy.movement.append(random.choice(valid_moves))
-		# Now make it all happen.
-		marshal_action(enemy)
+			enemy.random_targets(gamestate, enemy=True)
+	# Now make it all happen.
+	marshal_action(enemy)
 
 def marshal_action(entity):
 	global sock, players, gamestate
 	"""Takes an Entity with all its actions set, reflects them in the gamestate, and then encodes them as JSON so the clients can do the same."""
-	#pos = entity.pos
+	# We'll need the original at the end.
+	orig_pos = entity.pos[:]
 	for action in entity.actions:
 		# If it's a move.
 		if len(action) == 2:
 			entity.move(action)
-			#pos = (pos[0] + action[0], pos[1] + action[1])
 		# If it's an attack.
 		elif len(action) == 3:
 			weapon = entity.weapons[action[0]]
@@ -93,7 +88,7 @@ def marshal_action(entity):
 			else:
 				action.append(False)
 		else: print(action, "is an invalid action to marshal")
-	sock.send(encode("ACTION:" + json.dumps(entity.pos) + ':' + json.dumps(entity.actions)))
+	sock.send(encode("ACTION:" + json.dumps(orig_pos) + ':' + json.dumps(entity.actions)))
 
 def main():
 	global sock, players, gamestate

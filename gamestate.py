@@ -84,7 +84,7 @@ class Gamestate:
 	def in_range(self, source, type, target):
 		"""Determines whether a source is in range of a target. type is the type of attack - some might have range limits."""
 		# Try all source spaces to all target spaces.
-		for source_space in source.spaces():
+		for source_space in source.projected_spaces():
 			for target_space in target.spaces():
 				if self.path(source_space, type, target_space): return True
 		return False
@@ -185,11 +185,12 @@ class Entity:
 		self.pos[1] += change[1]
 	def spaces(self):
 		"""Returns all spaces the Entity occupies."""
-		spaces = [self.pos]
-		for pos in self.shape:
-			pos = rotate(pos, self.rot)
-			spaces.append([pos[0] + self.pos[0], pos[1] + self.pos[1]])
-		return spaces
+		return spaces(self.pos, self.shape, self.rot)
+	def projected_spaces(self):
+		final_pos = self.pos
+		for move in filter(lambda x: len(x)>2, self.actions):
+			final_pos = [final_pos[0] + move[0], final_pos[1] + move[1]]
+		return spaces(final_pos, self.shape, self.rot)
 	def rect(self):
 		"""Returns the top-left space of the Entity and the bottom right."""
 		spaces = self.spaces()
@@ -236,20 +237,40 @@ class Entity:
 				target = gamestate.occupied(action[1:3])
 				if target: return ", targeting " + target.type + " at " + str(target.pos)
 		return ""
+	def untargeted(self):
+		"""Returns all weapons with no target."""
+		# First, construct a list of indexes of weapons.
+		weapons = []
+		i = 0
+		for w in self.weapons:
+			weapons.append(i)
+			i += 1
+		# Now filter out the ones that have targets.
+		for action in self.actions:
+			if len(action) > 2: weapons.remove(action[0])
+		return weapons
 	def all_in_range(self, gamestate, enemy):
-		"""Determines whether all of the Entities weapons can hit something from the opposing team from our current position. enemy is a bool saying which team this Entity is on."""
-		# Placeholder: since we're not yet sure about range differences, just calculate one weapon.
-		if enemy:
-			for entity in gamestate.allied_ships + gamestate.station:
-				if gamestate.in_range(self, self.weapons[0].type, entity): return entity
-		else:
-			for entity in gamestate.enemy_ships:
-				if gamestate.in_range(self, self.weapons[0].type, entity): return entity
+		"""Returns all weapons that can hit something from the opposing team from our current position. enemy is a bool saying which team this Entity is on."""
+		weapons = []
+		if enemy: targets = gamestate.allied_ships + gamestate.station
+		else: targets = gamestate.enemy_ships + gamestate.asteroids
+		for weapon in self.weapons:
+			for target in target:
+				if gamestate.in_range(self, weapon.type, target):
+					weapons.append(self.index[weapon])
+					break
+		return weapons
 	def random_targets(self, gamestate, enemy):
 		"""Randomly target all weapons at random enemies."""
-		# For now, just pick out the first enemy we find and target everything there.
-		target = self.all_in_range(gamestate, enemy)
-		for weapon in self.weapons: weapon.target = target
+		if enemy: targets = gamestate.allied_ships + gamestate.station
+		else: targets = gamestate.enemy_ships + gamestate.asteroids
+		i = 0
+		for weapon in self.untargeted():
+			# For now, we just pick out the first possible target.
+			for target in targets:
+				if gamestate.in_range(self, self.weapons[weapon], target):
+					self.actions.append([i, *target.pos])
+					break
 
 class Ship(Entity):
 	def __init__(self, type, pos, shape, rot, hull, shield, shield_regen, weapons, speed, salvage, wave=0, size=0):
@@ -350,6 +371,14 @@ def rotate(pos, rot):
 	if rot == 270: return [pos[1], -pos[0]]
 	print("Not a valid rotation:", rot)
 	return pos
+
+def spaces(main_pos, shape, rot):
+	"""Takes an Entity's position, shape and rotation and returns all the positions it occupies."""
+	spaces = [main_pos]
+	for pos in shape:
+		pos = rotate(pos, rot)
+		spaces.append([pos[0] + main_pos[0], pos[1] + main_pos[1]])
+	return spaces
 
 def hit_chance(attack, target):
 	"""Calculates the hit rate of a given attack type against the target ship."""
