@@ -22,7 +22,7 @@ class Gamestate:
 			self.draw_pointer = 0
 			self.mission = Mission("missions/"+mission)
 	def init_station(self, data):
-		for pos in data: self.station.append(Component(list(pos), self.station, data[pos], 0, 50))
+		for pos in data: self.station.append(Component(list(pos), self.station, data[pos], 0, COMPONENT_HULL))
 	#def encode(self):
 	#	"""Encodes the Gamestate into a JSON object that can be sent over the network."""
 	def draw_cards(self, num):
@@ -284,8 +284,8 @@ class Component(Entity):
 		self.station = station
 		self.type = type
 		if type == "Shield Generator":
-			self.__shield = self.__maxshield = 100
-			self.shield_regen_amounts = (0, 1, 3, 8)
+			self.__shield = self.__maxshield = SHIELD_GEN_CAP
+			self.shield_regen_amounts = SHIELD_GEN_REGEN
 		if type == "Laser Turret":
 			self.weapons = (
 				Weapon('laser', 5, 2),
@@ -414,6 +414,13 @@ COMPONENT_TYPES = (
 	"Missile Turret",
 )
 
+# Game rule constants.
+COMPONENT_HULL = 50
+SHIELD_GEN_CAP = 100
+SHIELD_GEN_REGEN = (0, 1, 3, 8)
+POWER_GEN_SPEED = 5
+POWER_GEN_CAP = 25
+ENGINE_SPEED = 2
 
 def interpret_assign(gamestate, cmd):
 	unit_pos = json.loads(cmd[:cmd.index(':')])
