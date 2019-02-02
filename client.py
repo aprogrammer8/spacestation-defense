@@ -143,7 +143,7 @@ def lobby(host_name):
 
 
 def play(players):
-	global gamestate
+	global gamestate, offset
 	chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font, player_name)
 	chatbar.draw()
 	pygame.draw.rect(window, PANEL_COLOR, TOP_PANEL_RECT, 0)
@@ -204,6 +204,7 @@ def play(players):
 						# TODO: Probably play a sound and give some visual indication.
 						# Clear out old targets.
 						sock.send(encode("UNASSIGN ALL:" + json.dumps(selected.pos)))
+						clear_projected_move(selected)
 						selected.actions = []
 						fill_panel(selected)
 						pygame.display.update(PANEL_RECT)
@@ -225,27 +226,28 @@ def play(players):
 					elif selected.moves_left():
 						if event.key == pygame.K_UP:
 							selected.actions.append([0, -1])
-							project_move(selected, offset)
+							project_move(selected)
 						if event.key == pygame.K_DOWN:
 							selected.actions.append([0, 1])
-							project_move(selected, offset)
+							project_move(selected)
 						if event.key == pygame.K_LEFT:
 							selected.actions.append([-1, 0])
-							project_move(selected, offset)
+							project_move(selected)
 						if event.key == pygame.K_RIGHT:
 							selected.actions.append([1, 0])
-							project_move(selected, offset)
+							project_move(selected)
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				chatbar.handle_event(event)
 				if done_button.handle_event(event):
 					sock.send(encode("DONE"))
 					continue
 				if GAME_WINDOW_RECT.collidepoint(event.pos):
-					pos = reverse_calc_pos(event.pos, offset)
+					pos = reverse_calc_pos(event.pos)
 					if assigning is not False and selected.weapons:
 						target = gamestate.occupied(pos)
 						if not target:
 							# If you try to target nothing, we assume you want to deselect the unit, since that would almost never be a mistake.
+							clear_projected_move(selected)
 							selected = None
 							assigning = False
 							pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
@@ -265,6 +267,7 @@ def play(players):
 						else:
 							SFX_ERROR.play()
 					else:
+						if selected: clear_projected_move(selected)
 						selected = select_pos(pos)
 						pygame.display.update(PANEL_RECT)
 				pygame.display.update(chatbar.rect)
@@ -273,10 +276,12 @@ def play(players):
 				pygame.display.update(done_button.rect)
 
 def select_pos(clickpos):
-	"""select_pos takes a gameboard logical position and finds the object on it, then calls fill_panel."""
+	"""select_pos takes a gameboard logical position and finds the object on it, then calls fill_panel and projects its planned move."""
 	global gamestate
 	entity = gamestate.occupied(list(clickpos))
-	if entity: fill_panel(entity)
+	if entity:
+		fill_panel(entity)
+		project_move(entity)
 	else: pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
 	return entity
 
@@ -300,12 +305,14 @@ def fill_panel(object):
 			y += draw_text(window, str(weapon)+object.desc_target(weapon,gamestate), TEXT_COLOR, pygame.Rect(PANEL_WEAPON_DESC_BEGIN.x+5, PANEL_WEAPON_DESC_BEGIN.y+y, PANEL_WEAPON_DESC_BEGIN.w-7, 60), font)
 
 def shield_repr(entity):
+	"""Returns a string suitable to lable the shield bar on the panel."""
 	string = str(entity.shield)+"/"+str(entity.maxshield)+"    + "+str(entity.shield_regen_amounts[entity.shield_regen_pointer])+" / "
 	for amount in entity.shield_regen_amounts:
 		string += str(amount) + "->"
 	return string[:-2]
 
-def project_move(entity, offset):
+def project_move(entity):
+	"""Show a yellow path from a selected Entity projecting the moves it's going to make."""
 	pos = (entity.pos[0]+offset[0], entity.pos[1]+offset[1])
 	for move in entity.actions:
 		# Skip non-moves.
@@ -313,6 +320,16 @@ def project_move(entity, offset):
 		pos = (pos[0]+move[0], pos[1]+move[1])
 		pygame.draw.rect(window, (255,255,0), (GAME_WINDOW_RECT.left+TILESIZE[0]*pos[0], GAME_WINDOW_RECT.top+TILESIZE[1]*pos[1], TILESIZE[0], TILESIZE[1]), 2)
 	pygame.display.flip()
+
+def clear_projected_move(entity):
+	"""Clears the yellow projected path from an Entity while assigning move commands to it."""
+	rect = pygame.Rect(entity.move_rect())
+	rect = pygame.Rect(calc_pos(rect.topleft), (rect.size[0]*TILESIZE[0], rect.size[1]*TILESIZE[1]))
+	window.fill((0,0,0), rect) # Temporary until we get a background image.
+	draw_grid(rect.inflate_ip(1,1))
+	draw_gamestate(offset, rect)
+	pygame.display.flip()
+
 
 def draw_grid(rect=None):
 	"""Draw the game window grid."""
@@ -327,26 +344,26 @@ def draw_gamestate(offset, rect=None):
 	global gamestate
 	draw_grid(rect)
 	for entity in gamestate.station:
-		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
+		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos))
 	for entity in gamestate.enemy_ships:
-		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
+		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos))
 	for entity in gamestate.allied_ships:
-		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
+		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos))
 	for entity in gamestate.asteroids:
-		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
+		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos))
 
-def calc_pos(pos, offset):
+def calc_pos(pos):
 	"""calc_pos converts a gameboard logical position to a pixel position on screen."""
 	return ((pos[0]+offset[0])*TILESIZE[0]+GAME_WINDOW_RECT.left, (pos[1]+offset[1])*TILESIZE[1])
 
-def reverse_calc_pos(pos, offset):
+def reverse_calc_pos(pos):
 	"""reverse_calc_pos converts a pixel position on screen to a gameboard logical position."""
 	return [int(pos[0]-GAME_WINDOW_RECT.left)//TILESIZE[0]-offset[0], pos[1]//TILESIZE[1]-offset[1]]
 
-def entity_pixel_rect(entity, offset):
+def entity_pixel_rect(entity):
 	"""Finds the rectangle that an Entity is occupying (in terms of pixels)."""
 	rect = entity.rect()
-	return pygame.Rect(calc_pos(rect[0:2],offset), (rect[2]*TILESIZE[0], rect[3]*TILESIZE[1]))
+	return pygame.Rect(calc_pos(rect[0:2]), (rect[2]*TILESIZE[0], rect[3]*TILESIZE[1]))
 
 def erase(rect):
 	"""Takes a pixel rect and erases only the gameboard entities on it (by redrawing the grid.)"""
@@ -365,10 +382,10 @@ def execute_move(offset, cmd):
 		if len(action) == 2:
 			# TODO: This should be smoothly animated
 			# TODO: Need to make sure stuff won't get overwritten.
-			erase(entity_pixel_rect(entity,offset))
+			erase(entity_pixel_rect(entity))
 			entity.move(action)
-			window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos,offset))
-			#draw_gamestate(gamestate, offset, entity_pixel_rect(entity, offset))
+			window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos))
+			#draw_gamestate(gamestate, entity_pixel_rect(entity))
 			pygame.display.flip()
 			pygame.time.wait(500)
 		# Attacks.
@@ -383,7 +400,7 @@ def execute_move(offset, cmd):
 			target.take_damage(weapon.power, weapon.type)
 			# Remove dead targets.
 			if target.hull <= 0:
-				rect = entity_pixel_rect(target,offset)
+				rect = entity_pixel_rect(target)
 				erase(rect)
 				pygame.display.update(rect)
 				# TODO: Animate.

@@ -188,20 +188,16 @@ class Entity:
 		return spaces(self.pos, self.shape, self.rot)
 	def projected_spaces(self):
 		final_pos = self.pos
-		for move in filter(lambda x: len(x)>2, self.actions):
+		for move in filter(lambda x: len(x)==2, self.actions):
 			final_pos = [final_pos[0] + move[0], final_pos[1] + move[1]]
 		return spaces(final_pos, self.shape, self.rot)
+
 	def rect(self):
 		"""Returns the top-left space of the Entity and the bottom right."""
-		spaces = self.spaces()
-		left = right = spaces[0][0]
-		top = bottom = spaces[0][1]
-		for space in spaces[1:]:
-			if space[0] < left: left = space[0]
-			if space[0] > right: right = space[0]
-			if space[1] < top: top = space[1]
-			if space[1] > bottom: bottom = space[1]
-		return left, top, right-left+1, bottom-top+1
+		return rect(self.spaces())
+	def move_rect(self):
+		"""Like Entity.rect, but encompasses both current position and projected position."""
+		return rect(self.spaces()+self.projected_spaces())
 	def take_damage(self, dmg, type):
 		# For now, we ignore type.
 		dealt = min(dmg, self.shield)
@@ -379,6 +375,17 @@ def spaces(main_pos, shape, rot):
 		pos = rotate(pos, rot)
 		spaces.append([pos[0] + main_pos[0], pos[1] + main_pos[1]])
 	return spaces
+
+def rect(spaces):
+	"""Takes a sequence of spaces and returns the inputs for a Rect containing them."""
+	left = right = spaces[0][0]
+	top = bottom = spaces[0][1]
+	for space in spaces[1:]:
+		if space[0] < left: left = space[0]
+		if space[0] > right: right = space[0]
+		if space[1] < top: top = space[1]
+		if space[1] > bottom: bottom = space[1]
+	return left, top, right-left+1, bottom-top+1
 
 def hit_chance(attack, target):
 	"""Calculates the hit rate of a given attack type against the target ship."""
