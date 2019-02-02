@@ -58,10 +58,10 @@ def enemies_move():
 				# TOOD: Make this support multi-space ships.
 				if not gamestate.occupied([enemy.pos[0]+move[0], enemy.pos[1]+move[1]]): valid_moves.append(move)
 			if not valid_moves: break
-			enemy.movement.append(random.choice(valid_moves))
+			enemy.actions.append(random.choice(valid_moves))
 			enemy.random_targets(gamestate, enemy=True)
-	# Now make it all happen.
-	marshal_action(enemy)
+		# Now make it happen.
+		marshal_action(enemy)
 
 def marshal_action(entity):
 	global sock, players, gamestate

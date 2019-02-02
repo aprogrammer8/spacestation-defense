@@ -321,7 +321,7 @@ class Component(Entity):
 		diff = self.shield - new
 		# Calling this ahead of time so it doesn't incur an overhead calling it every time we loop for large amounts of damage.
 		gens = self.shield_generators()
-		while diff:
+		while diff>0:
 			# Spread out the damage over all in-range generators.
 			for gen in gens:
 				if gen.shield>0:
