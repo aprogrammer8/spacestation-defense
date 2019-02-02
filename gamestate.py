@@ -350,9 +350,9 @@ class Mission:
 		# There should be a shitton of tunable parameters in here. For now, just give them all placeholder values.
 		self.starting_station = {
 			(2,0): "Shield Generator",
-			#(0,0): "Power Generator",
+			(0,-2): "Power Generator",
 			(-2,0): "Laser Turret",
-			(0,0): "Connector"
+			(0,0): "Connector",
 		}
 		self.starting_cards = 4
 	def wave(self, num):

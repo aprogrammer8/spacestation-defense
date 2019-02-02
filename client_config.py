@@ -67,6 +67,7 @@ IMAGE_DICT = {
 	"Probe": pygame.image.load("images/probe.png"),
 	"Connector": pygame.image.load("images/connector.png"),
 	"Shield Generator": pygame.image.load("images/shield_generator.png"),
+	"Power Generator": pygame.image.load("images/power_generator.png"),
 	"Laser Turret": pygame.image.load("images/laser_turret.png"),
 }
 
