@@ -316,6 +316,10 @@ class Component(Entity):
 	@shield.setter
 	def shield(self, new):
 		diff = self.shield - new
+		# If we're regenerating. We can assume that we're a Shield Generator because this method wouldn't get called in this way on anything else.
+		if diff < 0:
+			self.__shield = min(self.__shield - diff, self.__maxshield)
+			return
 		# Calling this ahead of time so it doesn't incur an overhead calling it every time we loop for large amounts of damage.
 		gens = self.shield_generators()
 		while diff>0:
@@ -330,9 +334,24 @@ class Composite:
 		self.compoments = components
 
 class Station(list):
+	def __init__(self, li=[]):
+		list.__init__(self, li)
+		self.power = 0
 	def shield_regen(self):
 		for comp in self:
 			if comp.type == "Shield Generator": comp.shield_regen()
+	def power_regen(self):
+		for comp in self.power_generators(): self.power += POWER_GEN_SPEED
+		self.power = min(self.power, self.maxpower())
+	def power_generators(self):
+		gens = []
+		for comp in self:
+			if comp.type == "Power Generator": gens.append(comp)
+		return gens
+	def maxpower(self):
+		cap = 0
+		for comp in self.power_generators(): cap += POWER_GEN_CAP
+
 
 class Weapon:
 	def __init__(self, type, power, tier=1):
