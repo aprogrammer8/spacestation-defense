@@ -35,17 +35,17 @@ class Gamestate:
 	def clear(self):
 		"""Clears the stored actions and moves of all gamestate objects."""
 		for ship in self.allied_ships:
-			ship.movement = []
+			ship.actions = []
 			for weapon in ship.weapons: weapon.target = None
 			ship.shield_regen()
 		for ship in self.enemy_ships:
-			ship.movement = []
+			ship.actions = []
 			for weapon in ship.weapons: weapon.target = None
 			ship.shield_regen()
 		self.station.shield_regen()
 		for component in self.station:
 			for weapon in component.weapons: weapon.target = None
-		for asteroid in self.asteroids: asteroid.movement = []
+		for asteroid in self.asteroids: asteroid.actions = []
 	def upkeep(self):
 		self.clear()
 		self.time -= 1
