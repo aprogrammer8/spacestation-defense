@@ -326,8 +326,7 @@ def clear_projected_move(entity):
 	rect = pygame.Rect(entity.move_rect())
 	rect = pygame.Rect(calc_pos(rect.topleft), (rect.size[0]*TILESIZE[0], rect.size[1]*TILESIZE[1]))
 	window.fill((0,0,0), rect) # Temporary until we get a background image.
-	draw_grid(rect.inflate_ip(1,1))
-	draw_gamestate(offset, rect)
+	draw_gamestate(offset, rect.inflate_ip(1,1))
 	pygame.display.flip()
 
 
