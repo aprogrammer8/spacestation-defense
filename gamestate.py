@@ -327,6 +327,7 @@ class Component(Entity):
 			for gen in gens:
 				if gen.shield>0:
 					gen.__shield -= 1
+					gen.shield_regen_pointer = 0
 					diff -= 1
 
 class Composite:
