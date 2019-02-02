@@ -34,25 +34,23 @@ class Gamestate:
 		return draws
 	def clear(self):
 		"""Clears the stored actions and moves of all gamestate objects."""
-		for ship in self.allied_ships:
-			ship.actions = []
-			for weapon in ship.weapons: weapon.target = None
-			ship.shield_regen()
-		for ship in self.enemy_ships:
-			ship.actions = []
-			for weapon in ship.weapons: weapon.target = None
-			ship.shield_regen()
-		self.station.shield_regen()
-		for component in self.station:
-			for weapon in component.weapons: weapon.target = None
+		for ship in self.allied_ships: ship.actions = []
+		for ship in self.enemy_ships: ship.actions = []
+		for component in self.station: component.actions = []
 		for asteroid in self.asteroids: asteroid.actions = []
-	def upkeep(self):
+	def upkeep(self, clientside=False):
 		self.clear()
-		self.time -= 1
-		if self.time <= 0:
-			wave, self.rewards[self.nextwave], self.time = self.mission.wave(self.nextwave)
-			self.nextwave += 1
-			return self.send_enemies(wave)
+		# Regen everyone's shields.
+		for ship in self.allied_ships: ship.shield_regen()
+		for ship in self.enemy_ships: ship.shield_regen()
+		self.station.shield_regen()
+		if not clientside:
+			# Advance the mission track.
+			self.time -= 1
+			if self.time <= 0:
+				wave, self.rewards[self.nextwave], self.time = self.mission.wave(self.nextwave)
+				self.nextwave += 1
+				return self.send_enemies(wave)
 	def send_enemies(self, enemies):
 		"Accepts enemies to send as passed by the mission's wave method and returns the changes that must be made to the gamestate."
 		inserts = []
@@ -191,7 +189,6 @@ class Entity:
 		for move in filter(lambda x: len(x)==2, self.actions):
 			final_pos = [final_pos[0] + move[0], final_pos[1] + move[1]]
 		return spaces(final_pos, self.shape, self.rot)
-
 	def rect(self):
 		"""Returns the top-left space of the Entity and the bottom right."""
 		return rect(self.spaces())

@@ -173,7 +173,7 @@ def play(players):
 				chatbar.add_message(msg[6:])
 				pygame.display.update(chatbar.rect)
 			if msg == "ROUND":
-				gamestate.clear()
+				gamestate.upkeep(clientside=True)
 				fill_panel(selected)
 				pygame.display.update(PANEL_RECT)
 			if msg.startswith("SPAWN ENEMIES:"):
