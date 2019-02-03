@@ -292,6 +292,9 @@ class Component(Entity):
 				Weapon('laser', 5, 2),
 				Weapon('laser', 5, 2)
 			)
+		if type == "Power Generator":
+			# For now, the rule for starting power is half the max power.
+			self.station.power += POWER_GEN_CAP // 2
 	def shield_generators(self):
 		"""Find all Shield Generators covering this Component."""
 		gens = []
@@ -329,6 +332,11 @@ class Component(Entity):
 					gen.__shield -= 1
 					gen.shield_regen_pointer = 0
 					diff -= 1
+	def powered(self):
+		"""Returns whether the Component is currently using power."""
+		if self.type == "Shield Generator": return True
+		if self.type == "Laser Turret": return bool(self.actions)
+		return False
 
 class Composite:
 	def __init__(self, components):
@@ -344,6 +352,7 @@ class Station(list):
 	def power_regen(self):
 		for comp in self.power_generators(): self.power += POWER_GEN_SPEED
 		self.power = min(self.power, self.maxpower())
+		self.projected_power = power
 	def power_generators(self):
 		gens = []
 		for comp in self:
@@ -352,6 +361,12 @@ class Station(list):
 	def maxpower(self):
 		cap = 0
 		for comp in self.power_generators(): cap += POWER_GEN_CAP
+		return cap
+	def projected_power(self):
+		used = 0
+		for comp in self:
+			if comp.powered(): used += COMPONENT_POWER_USAGE
+		return self.power - used
 
 
 class Weapon:
@@ -440,6 +455,7 @@ SHIELD_GEN_CAP = 100
 SHIELD_GEN_REGEN = (0, 1, 3, 8)
 POWER_GEN_SPEED = 5
 POWER_GEN_CAP = 25
+COMPONENT_POWER_USAGE = 2
 ENGINE_SPEED = 2
 
 def interpret_assign(gamestate, cmd):

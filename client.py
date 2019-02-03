@@ -298,18 +298,28 @@ def fill_panel(object):
 	if hasattr(object, 'shield') and object.maxshield > 0:
 		draw_text(window, shield_repr(object), TEXT_COLOR, PANEL_SHIELD_RECT, font)
 		draw_bar(window, PANEL_SHIELD_BAR_RECT, TEXT_COLOR, SHIELD_COLOR, SHIELD_DAMAGE_COLOR, object.maxshield, object.shield)
+	y = 0
 	if object.weapons:
 		draw_text(window, "Weapons:", TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN, font)
-		y = 20
+		y += 20
 		for weapon in object.weapons:
 			y += draw_text(window, str(weapon)+object.desc_target(weapon,gamestate), TEXT_COLOR, pygame.Rect(PANEL_WEAPON_DESC_BEGIN.x+5, PANEL_WEAPON_DESC_BEGIN.y+y, PANEL_WEAPON_DESC_BEGIN.w-7, 60), font)
+	# Station components also display the pooled power.
+	if object in gamestate.station:
+		draw_text(window, power_repr(), TEXT_COLOR, PANEL_POWER_RECT, font)
+		draw_bar(window, PANEL_POWER_BAR_RECT, TEXT_COLOR, POWER_COLOR, POWER_LOW_COLOR, gamestate.station.maxpower(), gamestate.station.power)
 
 def shield_repr(entity):
-	"""Returns a string suitable to lable the shield bar on the panel."""
+	"""Returns a string suitable to label the shield bar on the panel."""
 	string = str(entity.shield)+"/"+str(entity.maxshield)+"    + "+str(entity.shield_regen_amounts[entity.shield_regen_pointer])+" / "
 	for amount in entity.shield_regen_amounts:
 		string += str(amount) + "->"
 	return string[:-2]
+
+def power_repr():
+	"""Returns a string suitable to label the power bar on a Station component."""
+	string = str(gamestate.station.power) + "(" + str(gamestate.station.projected_power()) + ") / " + str(gamestate.station.maxpower()) + "    + " + str(POWER_GEN_SPEED * len(gamestate.station.power_generators()))
+	return string
 
 def project_move(entity):
 	"""Show a yellow path from a selected Entity projecting the moves it's going to make."""

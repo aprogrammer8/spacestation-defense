@@ -175,7 +175,10 @@ class Button:
 def draw_bar(window, rect, border_color, fill_color, empty_color, capacity, value):
 		pygame.draw.rect(window, border_color, rect, 1)
 		#inner_rect = (rect.left+1, rect.top+1, rect.w-2, rect.h-2)
-		fill_rect = pygame.Rect(rect.left+1, rect.top+1, int((rect.w-2)*(value/capacity)), rect.h-2)
+		if capacity > 0:
+			fill_rect = pygame.Rect(rect.left+1, rect.top+1, int((rect.w-2)*(value/capacity)), rect.h-2)
+		else:
+			fill_rect = pygame.Rect(rect.left+1, rect.top+1, rect.w-2, rect.h-2)
 		empty_rect = pygame.Rect(fill_rect.right, rect.top+1, rect.w-2-fill_rect.w, rect.h-2)
 		# We have to check these manually, because pygame.Rect apparently has a minimum size of 2x2.
 		if value>0: pygame.draw.rect(window, fill_color, fill_rect, 0)
