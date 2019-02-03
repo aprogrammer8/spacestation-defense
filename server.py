@@ -68,6 +68,8 @@ def marshal_action(entity):
 	"""Takes an Entity with all its actions set, reflects them in the gamestate, and then encodes them as JSON so the clients can do the same."""
 	# We'll need the original at the end.
 	orig_pos = entity.pos[:]
+	# Subtract power for used components.
+	if type(entity) == Component: gamestate.station.power -= COMPONENT_POWER_USAGE
 	for action in entity.actions:
 		# If it's a move.
 		if len(action) == 2:

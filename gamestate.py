@@ -44,6 +44,7 @@ class Gamestate:
 		for ship in self.allied_ships: ship.shield_regen()
 		for ship in self.enemy_ships: ship.shield_regen()
 		self.station.shield_regen()
+		self.station.power_regen()
 		if not clientside:
 			# Advance the mission track.
 			self.time -= 1
@@ -352,7 +353,6 @@ class Station(list):
 	def power_regen(self):
 		for comp in self.power_generators(): self.power += POWER_GEN_SPEED
 		self.power = min(self.power, self.maxpower())
-		self.projected_power = power
 	def power_generators(self):
 		gens = []
 		for comp in self:

@@ -386,6 +386,8 @@ def execute_move(offset, cmd):
 	parts = cmd.split(':')
 	entity = gamestate.occupied(json.loads(parts[0]))
 	actions = json.loads(parts[1])
+	# Subtract power for used components.
+	if type(entity) == Component and entity.powered(): gamestate.station.power -= COMPONENT_POWER_USAGE
 	for action in actions:
 		# Moves.
 		if len(action) == 2:
