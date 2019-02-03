@@ -51,8 +51,10 @@ def players_move():
 def enemies_move():
 	global sock, players, gamestate
 	for enemy in gamestate.enemy_ships:
+		print(enemy.pos, "thinking")
 		enemy.random_targets(gamestate, enemy=True)
 		while enemy.untargeted() and enemy.moves_left():
+			print(enemy.pos, "moving with ", enemy.moves_left())
 			valid_moves = []
 			for move in ([0, 1], [0, -1], [1, 0], [-1, 0]):
 				# TOOD: Make this support multi-space ships.

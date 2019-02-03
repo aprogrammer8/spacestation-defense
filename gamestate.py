@@ -214,7 +214,7 @@ class Entity:
 		for action in self.actions:
 			# Moves are always length 2.
 			if len(action) == 2: moves -= 1
-		return moves > 0
+		return moves
 	def target(self, index, pos):
 		action_index = 0
 		for action in self.actions:
@@ -306,16 +306,14 @@ class Component(Entity):
 		return gens
 	@property
 	def shield(self):
-		if self.type == "Shield Generator": return self.__shield
-		# Otherwise, calculate which shield generators are applying to it.
+		# Calculate which shield generators are applying to it, and use their underlying fields.
 		shield = 0
-		for comp in self.shield_generators(): shield += comp.shield
+		for comp in self.shield_generators(): shield += comp.__shield
 		return shield
 	@property
 	def maxshield(self):
-		if self.type == "Shield Generator": return self.__maxshield
 		shield = 0
-		for comp in self.shield_generators(): shield += comp.maxshield
+		for comp in self.shield_generators(): shield += comp.__maxshield
 		return shield
 	@shield.setter
 	def shield(self, new):
