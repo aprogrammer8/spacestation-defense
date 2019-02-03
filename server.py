@@ -88,7 +88,10 @@ def marshal_action(entity):
 				# Remember to reflect the gamestate change server-side as well.
 				target.take_damage(weapon.power, weapon.type)
 				# Remove dead targets.
-				if target.hull <= 0: gamestate.remove(target)
+				if target.hull <= 0:
+					gamestate.remove(target)
+					# Spawn the salvage pile.
+					gamestate.salvages.append(Salvage(target.pos, target.salvage))
 			else:
 				action.append(False)
 		else: print(action, "is an invalid action to marshal")

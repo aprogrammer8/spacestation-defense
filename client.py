@@ -416,6 +416,8 @@ def execute_move(offset, cmd):
 				pygame.display.update(rect)
 				# TODO: Animate.
 				gamestate.remove(target)
+				# Spawn salvage pile.
+				gamestate.salvages.append(Salvage(target.pos, target.salvage))
 		else: print(action, "is an invalid action to marshal")
 
 if __name__ == '__main__': main()

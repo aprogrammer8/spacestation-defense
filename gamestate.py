@@ -10,6 +10,7 @@ class Gamestate:
 			self.enemy_ships = []
 			self.allied_ships = [probe([0, 5])]
 			self.asteroids = []
+			self.salvages = []
 			self.nextwave = 0
 			self.round = 0
 			# Number of turns left before the next wave should come.
@@ -45,6 +46,12 @@ class Gamestate:
 		for ship in self.enemy_ships: ship.shield_regen()
 		self.station.shield_regen()
 		self.station.power_regen()
+		# Salvage decay. We make a new list to avoid messings things up by changing the size during iteration.
+		new_salvages = []
+		for salvage in self.salvages:
+			salvage.decay()
+			if salvage.amount: new_salvages.append(salvage)
+		self.salvages = new_salvages
 		if not clientside:
 			# Advance the mission track.
 			self.time -= 1
@@ -164,7 +171,7 @@ def draw_card():
 
 # An Entity is anything with a position on the board.
 class Entity:
-	def __init__(self, pos, shape, rot, hull, shield=0, shield_regen=(0,), weapons=(), speed=0):
+	def __init__(self, pos, shape, rot, salvage, hull, shield=0, shield_regen=(0,), weapons=(), speed=0):
 		self.pos = pos
 		# self.shape is a tuple of other positions expressed as offsets from the main pos (when rot == 0), that the Entity also occupies (used for Entities bigger than 1x1).
 		self.shape = shape
@@ -177,6 +184,8 @@ class Entity:
 		self.shield_regen_pointer = 0
 		self.weapons = weapons
 		self.speed = speed
+		# This field refers to salvage dropped when the ship is destroyed.
+		self.salvage = salvage
 		# The sequence of actions the Entity plans to make.
 		self.actions = []
 	def move(self, change):
@@ -267,20 +276,18 @@ class Entity:
 					break
 
 class Ship(Entity):
-	def __init__(self, type, pos, shape, rot, hull, shield, shield_regen, weapons, speed, salvage, wave=0, size=0):
-		Entity.__init__(self, pos, shape, rot=rot, hull=hull, shield=shield, shield_regen=shield_regen, weapons=weapons, speed=speed)
+	def __init__(self, type, pos, shape, rot, salvage, hull, shield, shield_regen, weapons, speed, wave=0, size=0):
+		Entity.__init__(self, pos=pos, shape=shape, rot=rot, salvage=salvage, hull=hull, shield=shield, shield_regen=shield_regen, weapons=weapons, speed=speed)
 		self.type = type
 		# Enemy only fields.
 		self.wave = wave
 		# Ally only fields.
 		self.size = size
-		# This field refers to salvage dropped when the ship is destroyed.
-		self.salvage = salvage
 
 # A Station Component.
 class Component(Entity):
 	def __init__(self, pos, station, type, rot, hull):
-		Entity.__init__(self, pos, shape=((1,0),(0,1),(1,1)), rot=rot, hull=hull, shield=0, shield_regen=(0,))
+		Entity.__init__(self, pos, shape=((1,0),(0,1),(1,1)), rot=rot, salvage=COMPONENT_SALVAGE, hull=hull, shield=0, shield_regen=(0,))
 		if type not in COMPONENT_TYPES: raise TypeException("Not a valid station component type: " + type)
 		self.station = station
 		self.type = type
@@ -366,7 +373,6 @@ class Station(list):
 			if comp.powered(): used += COMPONENT_POWER_USAGE
 		return self.power - used
 
-
 class Weapon:
 	def __init__(self, type, power, tier=1):
 		self.type = type
@@ -374,6 +380,16 @@ class Weapon:
 		self.power = power
 	def __str__(self):
 		return self.type + ": " + str(self.power)
+
+class Salvage:
+	def __init__(self, pos, amount):
+		self.pos = pos
+		self.amount = amount
+		self.time = SALVAGE_START_TIME
+	def decay(self):
+		self.time -= 1
+		if self.time < 0: self.amount -= 1
+
 
 class Mission:
 	def __init__(self, filename):
@@ -429,15 +445,15 @@ def hit_chance(attack, target):
 
 def drone(pos, rot=0):
 	weapons = (Weapon('laser', 1, 1),)
-	return Ship("Drone", pos, (), rot, 5, 0, (0,), weapons, 3, 1)
+	return Ship("Drone", pos=pos, shape=(), rot=rot, salvage=1, hull=5, shield=0, shield_regen=(0,), weapons=weapons, speed=3)
 
 def kamikaze_drone(pos, rot=0):
-	return Ship("Kamikaze Drone", pos, (), rot, 10, 0, (0,), (), 5, 1)
+	return Ship("Kamikaze Drone", pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=5)
 
 # Player ships.
 
 def probe(pos, rot=0):
-	return Ship("Probe", pos, (), rot, 10, 0, (0,), (), 3, 1)
+	return Ship("Probe", pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=3)
 
 COMPONENT_TYPES = (
 	"Connector",
@@ -449,12 +465,14 @@ COMPONENT_TYPES = (
 
 # Game rule constants.
 COMPONENT_HULL = 50
+COMPONENT_SALVAGE = 20
 SHIELD_GEN_CAP = 100
 SHIELD_GEN_REGEN = (0, 1, 3, 8)
 POWER_GEN_SPEED = 5
 POWER_GEN_CAP = 25
 COMPONENT_POWER_USAGE = 2
 ENGINE_SPEED = 2
+SALVAGE_START_TIME = 5
 
 def interpret_assign(gamestate, cmd):
 	unit_pos = json.loads(cmd[:cmd.index(':')])
