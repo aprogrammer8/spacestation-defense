@@ -352,6 +352,8 @@ def draw_gamestate(offset, rect=None):
 	"""The offset is where the player is scrolled to. The rect is which area of the gameboard should be updated. It's measured in logical position, not pixel position."""
 	global gamestate
 	draw_grid(rect)
+	for salvage in gamestate.salvages:
+		window.blit(IMAGE_DICT['salvage'], calc_pos(salvage.pos))
 	for entity in gamestate.station:
 		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos))
 	for entity in gamestate.enemy_ships:

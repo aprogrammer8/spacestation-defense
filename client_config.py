@@ -68,15 +68,22 @@ GRID_COLOR = (255, 255, 255)
 TILESIZE = (25, 25)
 
 IMAGE_DICT = {
+	# Enemy ships.
 	"Drone": pygame.image.load("images/drone.png"),
 	"Kamikaze Drone": pygame.image.load("images/kamikaze_drone.png"),
+	# Player ships.
 	"Probe": pygame.image.load("images/probe.png"),
+	# Station components.
 	"Connector": pygame.image.load("images/connector.png"),
 	"Shield Generator": pygame.image.load("images/shield_generator.png"),
 	"Power Generator": pygame.image.load("images/power_generator.png"),
 	"Laser Turret": pygame.image.load("images/laser_turret.png"),
+	"Factory": pygame.image.load("images/factory.png"),
+	# Misc.
+	"salvage": pygame.image.load("images/salvage1.png"),
 }
 
+# Handle transparency.
 for image_name in IMAGE_DICT:
 	IMAGE_DICT[image_name].set_colorkey((255,255,255))
 

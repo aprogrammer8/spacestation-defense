@@ -461,6 +461,7 @@ COMPONENT_TYPES = (
 	'Power Generator',
 	"Laser Turret",
 	"Missile Turret",
+	"Factory",
 )
 
 # Game rule constants.
