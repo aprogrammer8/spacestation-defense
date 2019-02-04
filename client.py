@@ -6,6 +6,8 @@ from gamestate import *
 
 def main():
 	global player_name, sock, selector, window, sock, font, clock
+	# This helps the sound delay. The 4th param defaults to 4096, which gives a huge delay.
+	pygame.mixer.pre_init(22050,-16,2,1024)
 	pygame.init()
 	clock = pygame.time.Clock()
 	player_name = ""
