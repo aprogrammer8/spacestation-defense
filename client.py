@@ -176,8 +176,10 @@ def play(players):
 				pygame.display.update(chatbar.rect)
 			if msg == "ROUND":
 				gamestate.upkeep(clientside=True)
+				window.fill((0,0,0), GAME_WINDOW_RECT)
+				draw_gamestate()
 				fill_panel(selected)
-				pygame.display.update(PANEL_RECT)
+				pygame.display.flip()
 			if msg.startswith("SPAWN ENEMIES:"):
 				enemy_json = json.loads(msg[14:])
 				gamestate.insert_enemies(enemy_json)
@@ -298,17 +300,19 @@ def select_pos(clickpos):
 	"""select_pos takes a gameboard logical position and finds the object on it, then calls fill_panel and projects its planned move."""
 	global gamestate
 	entity = gamestate.occupied(list(clickpos))
-	if entity:
-		fill_panel(entity)
-		project_move(entity)
-	else: pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
+	if tuple(clickpos) in gamestate.salvages: salvage = gamestate.salvages[tuple(clickpos)]
+	else: salvage = None
+	fill_panel(entity, salvage)
+	if entity: project_move(entity)
 	return entity
 
-def fill_panel(object):
+def fill_panel(object, salvage=None):
 	"""fills the panel with information about the given object."""
 	global gamestate
 	#First, clear it.
 	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
+	# Draw info of whatever salvage is here first, so that it still gets drawn if there's no object.
+	if salvage: draw_text(window, str(salvage), TEXT_COLOR, PANEL_SALVAGE_RECT, font)
 	# This catch is here so we can call fill_panel(None) to blank it.
 	if not object: return
 	draw_text(window, object.type, TEXT_COLOR, PANEL_NAME_RECT, font)
@@ -375,8 +379,8 @@ def draw_gamestate(rect=None):
 	"""The offset is where the player is scrolled to. The rect is which area of the gameboard should be updated. It's measured in logical position, not pixel position."""
 	global gamestate
 	draw_grid(rect)
-	for salvage in gamestate.salvages:
-		window.blit(IMAGE_DICT['salvage'], calc_pos(salvage.pos))
+	for pos in gamestate.salvages:
+		window.blit(IMAGE_DICT['salvage'], calc_pos(pos))
 	for entity in gamestate.station:
 		window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos))
 	for entity in gamestate.enemy_ships:
@@ -426,12 +430,12 @@ def execute_move(offset, cmd):
 			window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos))
 			# Probes pick up salvage when they walk over it.
 			if entity.type == "Probe":
-				for salvage in gamestate.salvages:
-					if salvage.pos == entity.pos:
+				for pos in gamestate.salvages:
+					if pos == tuple(entity.pos):
+						salvage = gamestate.salvages[pos]
 						entity.collect(salvage)
-						print(salvage)
 						if salvage.amount <= 0:
-							gamestate.salvages.remove(salvage)
+							del gamestate.salvages[pos]
 							draw_gamestate()
 						break
 			#draw_gamestate(gamestate, entity_pixel_rect(entity))
@@ -454,8 +458,8 @@ def execute_move(offset, cmd):
 				# TODO: Animate.
 				gamestate.remove(target)
 				# Spawn salvage pile.
-				gamestate.salvages.append(Salvage(target.pos, target.salvage))
-				#TODO: draw the salvage
+				gamestate.add_salvage(target.pos, Salvage(target.salvage))
+				window.blit(IMAGE_DICT['salvage'], calc_pos(target.pos))
 				pygame.display.update(rect)
 		else: print(action, "is an invalid action to marshal")
 

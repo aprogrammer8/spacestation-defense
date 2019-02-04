@@ -10,7 +10,7 @@ class Gamestate:
 			self.enemy_ships = []
 			self.allied_ships = [probe([0, 5])]
 			self.asteroids = []
-			self.salvages = []
+			self.salvages = {}
 			self.nextwave = 0
 			self.round = 0
 			# Number of turns left before the next wave should come.
@@ -46,11 +46,12 @@ class Gamestate:
 		for ship in self.enemy_ships: ship.shield_regen()
 		self.station.shield_regen()
 		self.station.power_regen()
-		# Salvage decay. We make a new list to avoid messings things up by changing the size during iteration.
-		new_salvages = []
-		for salvage in self.salvages:
+		# Salvage decay. We make a new dict to avoid messings things up by changing the size during iteration.
+		new_salvages = {}
+		for pos in self.salvages:
+			salvage = self.salvages[tuple(pos)]
 			salvage.decay()
-			if salvage.amount: new_salvages.append(salvage)
+			if salvage.amount > 0: new_salvages[tuple(pos)] = salvage
 		self.salvages = new_salvages
 		if not clientside:
 			# Advance the mission track.
@@ -72,6 +73,16 @@ class Gamestate:
 		"""Inserts the given enemies into the Gamestate. Takes a sequence of dicts with enemy type names as keys and their board positions as values."""
 		for enemy in enemies:
 			if enemy['type'] == "Drone": self.enemy_ships.append(drone(enemy['pos'], enemy['rot']))
+	def add_salvage(self, pos, salvage):
+		# Salvage positions have to be tuples, because they're keys in a dict. It's not a problem because they never move anyway.
+		if type(pos) != tuple: pos = tuple(pos)
+		if pos not in self.salvages:
+			# Easy case, we just add it.
+			self.salvages[pos] = salvage
+		else:
+			# If there's already one, it stacks.
+			self.salvages[pos].amount += salvage.amount
+			self.salvages[pos].time = max(self.salvages[pos].time, salvage.time)
 	def occupied(self, pos):
 		"""Checks if a gameboard space is occupied."""
 		for entity in self.station:
@@ -400,14 +411,15 @@ class Weapon:
 		return self.type + ": " + str(self.power)
 
 class Salvage:
-	def __init__(self, pos, amount):
-		self.pos = pos
+	def __init__(self, amount):
 		self.amount = amount
 		self.time = SALVAGE_START_TIME
 	def decay(self):
 		self.time -= 1
 		if self.time < 0: self.amount -= 1
-
+	def __str__(self):
+		if self.time > 0: return str(self.amount) + " salvage, " + str(self.time) + " turns until decay"
+		return str(self.amount) + " salvage, decaying"
 
 class Mission:
 	def __init__(self, filename):

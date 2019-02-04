@@ -77,11 +77,11 @@ def marshal_action(entity):
 		if len(action) == 2:
 			entity.move(action)
 			if entity.type == "Probe":
-				for salvage in gamestate.salvages:
-					if salvage.pos == entity.pos:
+				for pos in gamestate.salvages:
+					if pos == tuple(entity.pos):
+						salvage = gamestate.salvages[pos]
 						entity.collect(salvage)
-						print(salvage.amount)
-						if salvage.amount <= 0: gamestate.salvages.remove(salvage)
+						if salvage.amount <= 0: del gamestate.salvages[pos]
 						break
 		# If it's an attack.
 		elif len(action) == 3:
@@ -98,7 +98,7 @@ def marshal_action(entity):
 				if target.hull <= 0:
 					gamestate.remove(target)
 					# Spawn the salvage pile.
-					gamestate.salvages.append(Salvage(target.pos, target.salvage))
+					gamestate.add_salvage(target.pos, Salvage(target.salvage))
 			else:
 				action.append(False)
 		else: print(action, "is an invalid action to marshal")
