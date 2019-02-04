@@ -351,7 +351,6 @@ def clear_projected_move(entity):
 	draw_gamestate(rect.inflate_ip(1,1))
 	pygame.display.flip()
 
-
 def draw_grid(rect=None):
 	"""Draw the game window grid."""
 	if not rect: rect = pygame.Rect(GAME_WINDOW_RECT.left, GAME_WINDOW_RECT.top, GAME_WINDOW_RECT.w, GAME_WINDOW_RECT.h)
@@ -407,8 +406,11 @@ def execute_move(offset, cmd):
 		if len(action) == 2:
 			# TODO: This should be smoothly animated
 			# TODO: Need to make sure stuff won't get overwritten.
-			erase(entity_pixel_rect(entity))
+			rect = entity_pixel_rect(entity)
+			erase(rect)
 			entity.move(action)
+			# We redraw old stuff there, incase there was salvage or something.
+			draw_gamestate(rect)
 			window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos))
 			# Probes pick up salvage when they walk over it.
 			if entity.type == "Probe":
@@ -437,11 +439,12 @@ def execute_move(offset, cmd):
 			if target.hull <= 0:
 				rect = entity_pixel_rect(target)
 				erase(rect)
-				pygame.display.update(rect)
 				# TODO: Animate.
 				gamestate.remove(target)
 				# Spawn salvage pile.
 				gamestate.salvages.append(Salvage(target.pos, target.salvage))
+				#TODO: draw the salvage
+				pygame.display.update(rect)
 		else: print(action, "is an invalid action to marshal")
 
 if __name__ == '__main__': main()
