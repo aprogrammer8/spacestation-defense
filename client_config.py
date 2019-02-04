@@ -57,6 +57,9 @@ PANEL_SHIELD_BAR_RECT = pygame.Rect(PANEL_RECT.left+1, PANEL_SHIELD_RECT.bottom+
 SHIELD_COLOR = (0, 0, 255)
 SHIELD_DAMAGE_COLOR = (127, 0, 0)
 PANEL_WEAPON_DESC_BEGIN = pygame.Rect(PANEL_RECT.left+1, PANEL_SHIELD_BAR_RECT.bottom+20, PANEL_RECT.w-2, 20)
+# Salvage / hangar capcity.
+CAPACITY_COLOR = (127, 63, 0)
+CAPACITY_EMPTY_COLOR = (0, 0, 0)
 # Station-wide info starts at the bottom and grows upward.
 PANEL_POWER_BAR_RECT = pygame.Rect(PANEL_RECT.left+1, PANEL_RECT.bottom-22, PANEL_RECT.w-2, 20)
 PANEL_POWER_RECT = pygame.Rect(PANEL_RECT.left+1, PANEL_POWER_BAR_RECT.top-20, PANEL_RECT.w-2, 16)

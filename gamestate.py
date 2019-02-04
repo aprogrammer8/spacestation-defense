@@ -85,7 +85,7 @@ class Gamestate:
 	def find_open_pos(self, size=(1,1)):
 		"""Searches through all game objects and find an unoccupied position to put the enemy on."""
 		while True:
-			pos = [random.randint(1,15), random.randint(1,15)]
+			pos = [random.randint(-5,5), random.randint(5,7)]
 			if not self.occupied(pos): return pos
 	def in_range(self, source, type, target):
 		"""Determines whether a source is in range of a target. type is the type of attack - some might have range limits."""
@@ -283,6 +283,16 @@ class Ship(Entity):
 		self.wave = wave
 		# Ally only fields.
 		self.size = size
+		# Probes can carry salvage.
+		if self.type == "Probe": self.load = 0
+	def collect(self, salvage):
+		"""The Ship picks up a piece of salvage. Only Probes can do this."""
+		if self.type != "Probe":
+			print("Something is wrong, this ship cannot pick up salvage:", self.type, self.pos)
+			return
+		collected = min(salvage.amount, PROBE_CAPACITY-self.load)
+		self.load += collected
+		salvage.amount -= collected
 
 # A Station Component.
 class Component(Entity):
@@ -474,6 +484,7 @@ POWER_GEN_CAP = 25
 COMPONENT_POWER_USAGE = 2
 ENGINE_SPEED = 2
 SALVAGE_START_TIME = 5
+PROBE_CAPACITY = 5
 
 def interpret_assign(gamestate, cmd):
 	unit_pos = json.loads(cmd[:cmd.index(':')])

@@ -163,7 +163,7 @@ def play(players):
 	offset = [grid_size[0]//2, grid_size[1]//2]
 	selected = None
 	assigning = False # When assigning a unit that has weapons, this is set to an int instead of True.
-	draw_gamestate(offset)
+	draw_gamestate()
 	pygame.display.flip()
 	while True:
 		clock.tick(LOBBY_RATE)
@@ -181,7 +181,7 @@ def play(players):
 			if msg.startswith("SPAWN ENEMIES:"):
 				enemy_json = json.loads(msg[14:])
 				gamestate.insert_enemies(enemy_json)
-				draw_gamestate(offset)
+				draw_gamestate()
 				pygame.display.flip()
 			if msg.startswith("ASSIGN:"):
 				interpret_assign(gamestate, msg[7:])
@@ -225,6 +225,11 @@ def play(players):
 						assigning += 1
 						if assigning == len(selected.weapons): assigning = 0
 						# TODO: Maybe play SFX_ERROR if it has no weapons?
+					# Q is the unique action key.
+					elif event.key == pygame.K_q:
+						# Shield Generators can turn off to save power (I would have them activate like a normal component but you almost always want them on).
+						if selected.type == "Shield Generator": selected.actions.append(False)
+						else: SFX_ERROR.play()
 					elif selected.moves_left():
 						if event.key == pygame.K_UP:
 							selected.actions.append([0, -1])
@@ -296,8 +301,8 @@ def fill_panel(object):
 	if not object: return
 	draw_text(window, object.type, TEXT_COLOR, PANEL_NAME_RECT, font)
 	draw_text(window, str(object.hull)+"/"+str(object.maxhull), TEXT_COLOR, PANEL_HULL_RECT, font)
-	if hasattr(object, 'hull'): draw_bar(window, PANEL_HULL_BAR_RECT, TEXT_COLOR, HULL_COLOR, HULL_DAMAGE_COLOR, object.maxhull, object.hull)
-	if hasattr(object, 'shield') and object.maxshield > 0:
+	draw_bar(window, PANEL_HULL_BAR_RECT, TEXT_COLOR, HULL_COLOR, HULL_DAMAGE_COLOR, object.maxhull, object.hull)
+	if object.maxshield > 0:
 		draw_text(window, shield_repr(object), TEXT_COLOR, PANEL_SHIELD_RECT, font)
 		draw_bar(window, PANEL_SHIELD_BAR_RECT, TEXT_COLOR, SHIELD_COLOR, SHIELD_DAMAGE_COLOR, object.maxshield, object.shield)
 	y = 0
@@ -306,6 +311,11 @@ def fill_panel(object):
 		y += 20
 		for weapon in object.weapons:
 			y += draw_text(window, str(weapon)+object.desc_target(weapon,gamestate), TEXT_COLOR, pygame.Rect(PANEL_WEAPON_DESC_BEGIN.x+5, PANEL_WEAPON_DESC_BEGIN.y+y, PANEL_WEAPON_DESC_BEGIN.w-7, 60), font)
+	# Now draw special properties.
+	if object.type == "Probe":
+		rect = PANEL_SHIELD_BAR_RECT.move(0, y+20)
+		draw_text(window, "Salvage: " + str(object.load) + "/" + str(PROBE_CAPACITY), TEXT_COLOR, rect, font)
+		draw_bar(window, rect.move(0,20), TEXT_COLOR, CAPACITY_COLOR, CAPACITY_EMPTY_COLOR, PROBE_CAPACITY, object.load)
 	# Station components also display the pooled power.
 	if object in gamestate.station:
 		draw_text(window, power_repr(), TEXT_COLOR, PANEL_POWER_RECT, font)
@@ -338,7 +348,7 @@ def clear_projected_move(entity):
 	rect = pygame.Rect(entity.move_rect())
 	rect = pygame.Rect(calc_pos(rect.topleft), (rect.size[0]*TILESIZE[0], rect.size[1]*TILESIZE[1]))
 	window.fill((0,0,0), rect) # Temporary until we get a background image.
-	draw_gamestate(offset, rect.inflate_ip(1,1))
+	draw_gamestate(rect.inflate_ip(1,1))
 	pygame.display.flip()
 
 
@@ -350,7 +360,7 @@ def draw_grid(rect=None):
 	for y in range(rect.top, rect.bottom, TILESIZE[1]):
 		pygame.draw.line(window, GRID_COLOR, (rect.left, y), (rect.right, y), 1)
 
-def draw_gamestate(offset, rect=None):
+def draw_gamestate(rect=None):
 	"""The offset is where the player is scrolled to. The rect is which area of the gameboard should be updated. It's measured in logical position, not pixel position."""
 	global gamestate
 	draw_grid(rect)
@@ -400,6 +410,16 @@ def execute_move(offset, cmd):
 			erase(entity_pixel_rect(entity))
 			entity.move(action)
 			window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos))
+			# Probes pick up salvage when they walk over it.
+			if entity.type == "Probe":
+				for salvage in gamestate.salvages:
+					if salvage.pos == entity.pos:
+						entity.collect(salvage)
+						print(salvage)
+						if salvage.amount <= 0:
+							gamestate.salvages.remove(salvage)
+							draw_gamestate()
+						break
 			#draw_gamestate(gamestate, entity_pixel_rect(entity))
 			pygame.display.flip()
 			pygame.time.wait(500)

@@ -76,6 +76,13 @@ def marshal_action(entity):
 		# If it's a move.
 		if len(action) == 2:
 			entity.move(action)
+			if entity.type == "Probe":
+				for salvage in gamestate.salvages:
+					if salvage.pos == entity.pos:
+						entity.collect(salvage)
+						print(salvage.amount)
+						if salvage.amount <= 0: gamestate.salvages.remove(salvage)
+						break
 		# If it's an attack.
 		elif len(action) == 3:
 			weapon = entity.weapons[action[0]]
