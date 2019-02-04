@@ -232,15 +232,27 @@ def play(players):
 						else: SFX_ERROR.play()
 					elif selected.moves_left():
 						if event.key == pygame.K_UP:
+							if not gamestate.valid_move(selected, [0,-1]):
+								SFX_ERROR.play()
+								continue
 							selected.actions.append([0, -1])
 							project_move(selected)
 						if event.key == pygame.K_DOWN:
+							if not gamestate.valid_move(selected, [0,1]):
+								SFX_ERROR.play()
+								continue
 							selected.actions.append([0, 1])
 							project_move(selected)
 						if event.key == pygame.K_LEFT:
+							if not gamestate.valid_move(selected, [-1,0]):
+								SFX_ERROR.play()
+								continue
 							selected.actions.append([-1, 0])
 							project_move(selected)
 						if event.key == pygame.K_RIGHT:
+							if not gamestate.valid_move(selected, [1,0]):
+								SFX_ERROR.play()
+								continue
 							selected.actions.append([1, 0])
 							project_move(selected)
 			if event.type == pygame.MOUSEBUTTONDOWN:
