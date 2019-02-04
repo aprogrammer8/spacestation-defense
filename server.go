@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -52,8 +53,14 @@ func readUntilDelim(r io.Reader, delim byte) ([]byte, error) {
 
 // DELIM is a global constant used to delimit messages.
 var DELIM byte = 3
+var sockDir = "/tmp/"
 
 func main() {
+
+	var err = clearOldSockets()
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "When clearing old sockets"))
+	}
 	listener, err := net.Listen("tcp4", "0.0.0.0:1025")
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "When listening on socket"))
@@ -232,7 +239,7 @@ func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- st
 }
 
 func handleMatch(updateChan chan<- update, inputChan <-chan message, lobby string, players []string) {
-	var sockname = "/tmp/spacestation_defense_" + lobby + ".sock"
+	var sockname = sockDir + "spacestation_defense_" + lobby + ".sock"
 	// No point catching the error because if it doesn't exist, then that's what we wanted; if it can't be removed for another reason, we'll get the error on the next line anyway.
 	os.Remove(sockname)
 	var listener, err = net.Listen("unix", sockname)
@@ -277,4 +284,20 @@ func handleMatch(updateChan chan<- update, inputChan <-chan message, lobby strin
 		}
 		updateChan <- update{Game: lobby, Content: msg}
 	}
+}
+
+func clearOldSockets() error {
+	var filenames, err = ioutil.ReadDir(sockDir)
+	if err != nil {
+		return errors.Wrap(err, "When reading socket dir")
+	}
+	for _, file := range filenames {
+		if strings.HasPrefix(file.Name(), "spacestation_defense") && strings.HasSuffix(file.Name(), ".sock") {
+			err = os.Remove(sockDir + file.Name())
+			if err != nil {
+				return errors.Wrap(err, "When removing "+file.Name())
+			}
+		}
+	}
+	return nil
 }
