@@ -191,7 +191,7 @@ def play(players):
 				interpret_unassign(gamestate, msg[msg.index(':')+1:])
 			# Unit action happening commands.
 			if msg.startswith("ACTION:"):
-				execute_move(offset, msg[msg.index(':')+1:])
+				execute_move(msg[msg.index(':')+1:])
 				fill_panel(selected)
 				pygame.display.update(PANEL_RECT)
 		for event in pygame.event.get():
@@ -238,25 +238,25 @@ def play(players):
 						else: SFX_ERROR.play()
 					elif selected.moves_left():
 						if event.key == pygame.K_UP:
-							if not gamestate.valid_move(selected, [0,-1]):
+							if gamestate.invalid_move(selected, [0,-1]):
 								SFX_ERROR.play()
 								continue
 							selected.actions.append([0, -1])
 							project_move(selected)
 						if event.key == pygame.K_DOWN:
-							if not gamestate.valid_move(selected, [0,1]):
+							if gamestate.invalid_move(selected, [0,1]):
 								SFX_ERROR.play()
 								continue
 							selected.actions.append([0, 1])
 							project_move(selected)
 						if event.key == pygame.K_LEFT:
-							if not gamestate.valid_move(selected, [-1,0]):
+							if gamestate.invalid_move(selected, [-1,0]):
 								SFX_ERROR.play()
 								continue
 							selected.actions.append([-1, 0])
 							project_move(selected)
 						if event.key == pygame.K_RIGHT:
-							if not gamestate.valid_move(selected, [1,0]):
+							if gamestate.invalid_move(selected, [1,0]):
 								SFX_ERROR.play()
 								continue
 							selected.actions.append([1, 0])
@@ -270,8 +270,8 @@ def play(players):
 					pos = reverse_calc_pos(event.pos)
 					if assigning is not False and selected.weapons:
 						target = gamestate.occupied(pos)
+						# If you try to target nothing, we assume you want to deselect the unit, since that would almost never be a mistake.
 						if not target:
-							# If you try to target nothing, we assume you want to deselect the unit, since that would almost never be a mistake.
 							clear_projected_move(selected)
 							selected = None
 							assigning = False
@@ -412,9 +412,9 @@ def erase(rect):
 	window.fill((0,0,0), rect)
 	draw_grid(rect)
 
-def execute_move(offset, cmd):
+def execute_move(cmd):
 	"""Takes an ACTION command from the server and executes it. It needs the offset for graphics/animation purposes."""
-	global gamestate
+	global gamestate, offset
 	print("Executing move:", cmd)
 	parts = cmd.split(':')
 	entity = gamestate.occupied(json.loads(parts[0]))

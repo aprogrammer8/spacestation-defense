@@ -57,8 +57,7 @@ def enemies_move():
 			print(enemy.pos, "moving with ", enemy.moves_left())
 			valid_moves = []
 			for move in ([0, 1], [0, -1], [1, 0], [-1, 0]):
-				# TOOD: Make this support multi-space ships.
-				if not gamestate.occupied([enemy.pos[0]+move[0], enemy.pos[1]+move[1]]): valid_moves.append(move)
+				if not gamestate.invalid_move(enemy, move): valid_moves.append(move)
 			if not valid_moves: break
 			enemy.actions.append(random.choice(valid_moves))
 			enemy.random_targets(gamestate, enemy=True)

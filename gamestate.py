@@ -100,14 +100,13 @@ class Gamestate:
 		while True:
 			pos = [random.randint(-5,5), random.randint(5,7)]
 			if not self.occupied(pos): return pos
-	def valid_move(self, entity, move):
+	def invalid_move(self, entity, move):
 		"""Helper function that takes an Entity and a proposed move, and checks all destination spaces."""
 		for space in entity.projected_spaces():
-			print(space, space[0]+move[0], space[1]+move[1])
 			occupied = self.occupied([space[0]+move[0], space[1]+move[1]])
 			# Have to also check for equality, because big ships will overlap themselves when they move.
-			if occupied and occupied != entity: return False
-		return True
+			if occupied and occupied != entity: return occupied
+		return False
 	def in_range(self, source, type, target):
 		"""Determines whether a source is in range of a target. type is the type of attack - some might have range limits."""
 		# Try all source spaces to all target spaces.
@@ -440,7 +439,7 @@ class Mission:
 	def wave(self, num):
 		"""This method acccepts a wave number and returns a dict of enemy type:count, a reward for clearing it, and a number of turns until the next wave arrives."""
 		# Temp code:
-		return {'Kamikaze Drone':6}, None, 5
+		return {'Drone':6}, None, 5
 
 def rotate(pos, rot):
 	if rot == 0: return pos
