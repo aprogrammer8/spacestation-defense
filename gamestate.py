@@ -73,6 +73,8 @@ class Gamestate:
 		"""Inserts the given enemies into the Gamestate. Takes a sequence of dicts with enemy type names as keys and their board positions as values."""
 		for enemy in enemies:
 			if enemy['type'] == "Drone": self.enemy_ships.append(drone(enemy['pos'], enemy['rot']))
+			elif enemy['type'] == "Kamikaze Drone": self.enemy_ships.append(kamikaze_drone(enemy['pos'], enemy['rot']))
+			else: print("Unrecognized enemy type:", enemy)
 	def add_salvage(self, pos, salvage):
 		# Salvage positions have to be tuples, because they're keys in a dict. It's not a problem because they never move anyway.
 		if type(pos) != tuple: pos = tuple(pos)
@@ -434,7 +436,7 @@ class Mission:
 	def wave(self, num):
 		"""This method acccepts a wave number and returns a dict of enemy type:count, a reward for clearing it, and a number of turns until the next wave arrives."""
 		# Temp code:
-		return {'Drone':6}, None, 5
+		return {'Kamikaze Drone':6}, None, 5
 
 def rotate(pos, rot):
 	if rot == 0: return pos
@@ -467,7 +469,7 @@ def hit_chance(attack, target):
 	"""Calculates the hit rate of a given attack type against the target ship."""
 	# Station components can never be missed by anything.
 	if type(target) == Component: return 100
-	if target.type in ('Probe', 'Drone'): return {'laser':75, 'missile':25}[attack]
+	if target.type in ('Probe', 'Drone', 'Kamikaze Drone'): return {'laser':75, 'missile':25}[attack]
 	# Error message that should never get triggered.
 	print("Did not have a hit chance for", attack, "against a", target.type)
 
