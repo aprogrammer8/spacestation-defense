@@ -83,6 +83,7 @@ IMAGE_DICT = {
 	"Shield Generator": pygame.image.load("images/shield_generator.png"),
 	"Power Generator": pygame.image.load("images/power_generator.png"),
 	"Laser Turret": pygame.image.load("images/laser_turret.png"),
+	"Hangar": pygame.image.load("images/factory.png"), # Temp
 	"Factory": pygame.image.load("images/factory.png"),
 	# Misc.
 	"salvage": pygame.image.load("images/salvage1.png"),

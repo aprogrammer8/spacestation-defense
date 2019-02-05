@@ -337,6 +337,8 @@ class Component(Entity):
 		if type == "Power Generator":
 			# For now, the rule for starting power is half the max power.
 			self.station.power += POWER_GEN_CAP // 2
+		if type == "Hangar":
+			self.contents = []
 	def shield_generators(self):
 		"""Find all Shield Generators covering this Component."""
 		gens = []
@@ -434,6 +436,7 @@ class Mission:
 			(0,-2): "Power Generator",
 			(-2,0): "Laser Turret",
 			(0,0): "Connector",
+			(0,2): "Hangar",
 		}
 		self.starting_cards = 4
 	def wave(self, num):
@@ -490,7 +493,7 @@ def kamikaze_drone(pos, rot=0):
 # Player ships.
 
 def probe(pos, rot=0):
-	return Ship("Probe", pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=3)
+	return Ship("Probe", pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=3, size=1)
 
 COMPONENT_TYPES = (
 	"Connector",
@@ -498,6 +501,8 @@ COMPONENT_TYPES = (
 	'Power Generator',
 	"Laser Turret",
 	"Missile Turret",
+	"Engine",
+	"Hangar",
 	"Factory",
 )
 
@@ -512,6 +517,7 @@ COMPONENT_POWER_USAGE = 2
 ENGINE_SPEED = 2
 SALVAGE_START_TIME = 5
 PROBE_CAPACITY = 5
+HANGAR_CAPACITY = 20
 
 def interpret_assign(gamestate, cmd):
 	unit_pos = json.loads(cmd[:cmd.index(':')])

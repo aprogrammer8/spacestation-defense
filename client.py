@@ -237,30 +237,17 @@ def play(players):
 						if selected.type == "Shield Generator": selected.actions.append(False)
 						else: SFX_ERROR.play()
 					elif selected.moves_left():
-						if event.key == pygame.K_UP:
-							if gamestate.invalid_move(selected, [0,-1]):
-								SFX_ERROR.play()
-								continue
-							selected.actions.append([0, -1])
-							project_move(selected)
-						if event.key == pygame.K_DOWN:
-							if gamestate.invalid_move(selected, [0,1]):
-								SFX_ERROR.play()
-								continue
-							selected.actions.append([0, 1])
-							project_move(selected)
-						if event.key == pygame.K_LEFT:
-							if gamestate.invalid_move(selected, [-1,0]):
-								SFX_ERROR.play()
-								continue
-							selected.actions.append([-1, 0])
-							project_move(selected)
-						if event.key == pygame.K_RIGHT:
-							if gamestate.invalid_move(selected, [1,0]):
-								SFX_ERROR.play()
-								continue
-							selected.actions.append([1, 0])
-							project_move(selected)
+						if event.key == pygame.K_UP: move = [0, -1]
+						elif event.key == pygame.K_DOWN: move = [0, 1]
+						elif event.key == pygame.K_LEFT: move = [-1, 0]
+						elif event.key == pygame.K_RIGHT: move = [1, 0]
+						else: continue
+						obstacle = gamestate.invalid_move(selected, move)
+						if obstacle and hasattr(obstacle, 'type') and obstacle.type != "Hangar":
+							SFX_ERROR.play()
+							continue
+						selected.actions.append(move)
+						project_move(selected)
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				chatbar.handle_event(event)
 				if done_button.handle_event(event):
