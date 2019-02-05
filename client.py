@@ -205,6 +205,10 @@ def play(players):
 					continue
 				if event.key == pygame.K_SPACE:
 					if selected:
+						# The players can't assign actions to enemies!
+						if selected in gamestate.enemy_ships:
+							SFX_ERROR.play()
+							continue
 						# TODO: Probably play a sound and give some visual indication.
 						# Clear out old targets.
 						sock.send(encode("UNASSIGN ALL:" + json.dumps(selected.pos)))
