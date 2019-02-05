@@ -113,9 +113,9 @@ class Gamestate:
 		# Try all source spaces to all target spaces.
 		for source_space in source.projected_spaces():
 			for target_space in target.spaces():
-				if self.path(source_space, type, target_space): return True
+				if self.path(source, source_space, type, target_space): return True
 		return False
-	def path(self, source, type, target):
+	def path(self, source_entity, source, type, target):
 		dist = [abs(target[0] - source[0]), abs(target[1] - source[1])]
 		total_dist = dist[0] + dist[1]
 		# It's ugly, but it finds the distance with magnitude reduced to 1 or -1.
@@ -124,7 +124,11 @@ class Gamestate:
 		step_x, step_y = dist[0]/total_dist, dist[1]/total_dist
 		counter = [0, 0]
 		while probe != target:
-			if probe != source and self.occupied(probe): break
+			if probe[0] > 100 or probe[1] > 100: print("probe crashed, at ", probe, "from", source, "aimed at", target)
+			if probe != source:
+				block = self.occupied(probe)
+				# Make sure we don't fail if we run over another space of the same entity.
+				if block and block != source_entity: break
 			counter[0] += step_x
 			counter[1] += step_y
 			if counter[0] < 1 and counter[1] < 1: continue
@@ -133,8 +137,8 @@ class Gamestate:
 				counter[0] -= 1
 				probe[0] += dir[0]
 				dist[0] -= 1
-			# If only y has advanced enough (it should always be at one one of them).
-			elif counter[1] > 1 and counter[0] < 1:
+			# If only y has advanced enough.
+			elif counter[1] >= 1 and counter[0] < 1:
 				counter[1] -= 1
 				probe[1] += dir[1]
 				dist[1] -= 1
