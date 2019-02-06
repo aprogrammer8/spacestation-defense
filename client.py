@@ -327,6 +327,9 @@ def fill_panel(object, salvage=None):
 	if object in gamestate.station:
 		draw_text(window, power_repr(), TEXT_COLOR, PANEL_POWER_RECT, font)
 		draw_bar(window, PANEL_POWER_BAR_RECT, TEXT_COLOR, POWER_COLOR, POWER_LOW_COLOR, gamestate.station.maxpower(), gamestate.station.power)
+		if object.type == "Hangar":
+			# Temp code:
+			print(object.contents)
 
 def shield_repr(entity):
 	"""Returns a string suitable to label the shield bar on the panel."""
@@ -416,7 +419,17 @@ def execute_move(cmd):
 			rect = entity_pixel_rect(entity)
 			erase(rect)
 			entity.move(action)
-			# We redraw old stuff there, incase there was salvage or something.
+			# Handle player ships landing in Hangars.
+			if entity.team == 'player':
+				obstacle = gamestate.occupied_area(entity.spaces(), exclude=entity)
+				# We assume there's only one obstacle and that it's a hangar, because if either of those is not the case then something else is wrong.
+				if obstacle:
+					# Land it: remove it from the list of visible allied ships, and add it to the hangar's contents.
+					gamestate.allied_ships.remove(entity)
+					obstacle.contents.append(entity)
+					# Probably play a landing sound.
+					continue
+			# We redraw old stuff on the now vacated space, incase there was salvage or something.
 			draw_gamestate(rect)
 			window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos))
 			# Probes pick up salvage when they walk over it.

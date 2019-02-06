@@ -95,6 +95,11 @@ class Gamestate:
 			if pos in entity.spaces(): return entity
 		for entity in self.asteroids:
 			if pos in entity.spaces(): return entity
+	def occupied_area(self, spaces, exclude=None):
+		"""Checks if any of a sequence of spaces is occupied."""
+		for space in spaces:
+			entity = self.occupied(space)
+			if entity and entity != exclude: return entity
 	def find_open_pos(self, size=(1,1)):
 		"""Searches through all game objects and find an unoccupied position to put the enemy on."""
 		while True:
@@ -102,6 +107,7 @@ class Gamestate:
 			if not self.occupied(pos): return pos
 	def invalid_move(self, entity, move):
 		"""Helper function that takes an Entity and a proposed move, and checks all destination spaces."""
+		# Found the bug: it's projecting from the already projected space.
 		for space in entity.projected_spaces():
 			occupied = self.occupied([space[0]+move[0], space[1]+move[1]])
 			# Have to also check for equality, because big ships will overlap themselves when they move.
@@ -300,9 +306,10 @@ class Entity:
 					break
 
 class Ship(Entity):
-	def __init__(self, type, pos, shape, rot, salvage, hull, shield, shield_regen, weapons, speed, wave=0, size=0):
+	def __init__(self, type, team, pos, shape, rot, salvage, hull, shield, shield_regen, weapons, speed, wave=0, size=0):
 		Entity.__init__(self, pos=pos, shape=shape, rot=rot, salvage=salvage, hull=hull, shield=shield, shield_regen=shield_regen, weapons=weapons, speed=speed)
 		self.type = type
+		self.team = team
 		# Enemy only fields.
 		self.wave = wave
 		# Ally only fields.
@@ -485,15 +492,15 @@ def hit_chance(attack, target):
 
 def drone(pos, rot=0):
 	weapons = (Weapon('laser', 1, 1),)
-	return Ship("Drone", pos=pos, shape=(), rot=rot, salvage=1, hull=5, shield=0, shield_regen=(0,), weapons=weapons, speed=3)
+	return Ship("Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=1, hull=5, shield=0, shield_regen=(0,), weapons=weapons, speed=3)
 
 def kamikaze_drone(pos, rot=0):
-	return Ship("Kamikaze Drone", pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=5)
+	return Ship("Kamikaze Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=5)
 
 # Player ships.
 
 def probe(pos, rot=0):
-	return Ship("Probe", pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=3, size=1)
+	return Ship("Probe", team='player', pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=3, size=1)
 
 COMPONENT_TYPES = (
 	"Connector",
