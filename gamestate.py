@@ -352,7 +352,7 @@ class Component(Entity):
 		gens = []
 		for comp in self.station:
 			if comp.type != "Shield Generator": continue
-			if abs(comp.pos[0] - self.pos[0]) + abs(comp.pos[1] - self.pos[1]) < 6:
+			if abs(comp.pos[0] - self.pos[0]) + abs(comp.pos[1] - self.pos[1]) < SHIELD_GEN_RANGE:
 				gens.append(comp)
 		return gens
 	@property
@@ -535,6 +535,7 @@ COMPONENT_HULL = 50
 COMPONENT_SALVAGE = 20
 SHIELD_GEN_CAP = 100
 SHIELD_GEN_REGEN = (0, 1, 3, 8)
+SHIELD_GEN_RANGE = 6
 POWER_GEN_SPEED = 5
 POWER_GEN_CAP = 25
 COMPONENT_POWER_USAGE = 2
