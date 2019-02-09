@@ -325,6 +325,12 @@ class Ship(Entity):
 		collected = min(salvage.amount, PROBE_CAPACITY-self.load)
 		self.load += collected
 		salvage.amount -= collected
+	def hangar_describe(self):
+		"""Returns a string suitable for describing the Ship when it's in a Hangar."""
+		string = self.type + "; hull = " + str(self.hull) + "/" + str(self.maxhull) + ", shield = " + str(self.shield) + "/" + str(self.maxshield) + " (+" + str(self.shield_regen_amounts[self.shield_regen_pointer]) + ")"
+		if self.type == "Probe":
+			string += "; carrying " + str(self.load) + " salvage"
+		return string
 
 # A Station Component.
 class Component(Entity):

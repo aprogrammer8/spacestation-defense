@@ -219,6 +219,22 @@ def play(players):
 						pygame.display.update(PANEL_RECT)
 						if selected.weapons: assigning = 0
 						else: assigning = True
+				# Q, W, and E are the unique action keys.
+				elif event.key == pygame.K_q:
+					# Shield Generators can turn off to save power (I would have them activate like a normal component but you almost always want them on).
+					if selected.type == "Shield Generator": selected.actions.append(False)
+					elif selected.type == "Hangar":
+						fill_panel_hangar(selected)
+						pygame.display.update(PANEL_RECT)
+					else: SFX_ERROR.play()
+				elif event.key == pygame.K_w:
+					# Shield Generators can also consume power to regenerate, but not project their shields so they can't be damaged and interrupted.
+					if selected.type == "Shield Generator": selected.actions.append(True)
+					else: SFX_ERROR.play()
+				elif event.key == pygame.K_e:
+					# To turn the shield generator back on, we can just clear its actions.
+					if selected.type == "Shield Generator": selected.acttions = []
+					else: SFX_ERROR.play()
 				elif assigning is not False:
 					if event.key == pygame.K_RETURN:
 						# Maybe play a sound?
@@ -236,19 +252,6 @@ def play(players):
 						assigning += 1
 						if assigning == len(selected.weapons): assigning = 0
 						# TODO: Maybe play SFX_ERROR if it has no weapons?
-					# Q is the unique action key.
-					elif event.key == pygame.K_q:
-						# Shield Generators can turn off to save power (I would have them activate like a normal component but you almost always want them on).
-						if selected.type == "Shield Generator": selected.actions.append(False)
-						else: SFX_ERROR.play()
-					elif event.key == pygame.K_w:
-						# Shield Generators can also consume power to regenerate, but not project their shields so they can't be damaged and interrupted.
-						if selected.type == "Shield Generator": selected.actions.append(True)
-						else: SFX_ERROR.play()
-					elif event.key == pygame.K_e:
-						# To turn the shield generator back on, we can just clear its actions.
-						if selected.type == "Shield Generator": selected.acttions = []
-						else: SFX_ERROR.play()
 					# Movement keys.
 					elif selected.moves_left():
 						if event.key == pygame.K_UP: move = [0, -1]
@@ -355,6 +358,21 @@ def fill_panel(object, salvage=None, assigning=False):
 			# And we give it 50 extra pixels because inflate_ip expands in both directions, so it moved up by 50.
 			rect.move_ip(0, 80)
 			draw_text(window, "Contains: " + object.summarize_contents(), TEXT_COLOR, rect, font)
+
+
+def fill_panel_hangar(object):
+	"""An alternative to fill_panel called on a Hangar to show the details of its contents."""
+	#First, clear it.
+	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
+	# And I guess still bother saying it's a hangar.
+	draw_text(window, object.type, TEXT_COLOR, PANEL_NAME_RECT, font)
+	y = 50
+	# Give them more space, and move it back down to compensate.
+	rect = PANEL_NAME_RECT.inflate(0, 40).move(0, 20+y)
+	for ship in object.contents:
+		h = draw_text(window, ship.hangar_describe(), TEXT_COLOR, rect, font)
+		rect.move_ip(0, h)
+
 
 def shield_repr(entity):
 	"""Returns a string suitable to label the shield bar on the panel."""
