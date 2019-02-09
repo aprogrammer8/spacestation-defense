@@ -74,23 +74,19 @@ TILESIZE = (25, 25)
 
 IMAGE_DICT = {
 	# Enemy ships.
-	"Drone": pygame.image.load("images/drone.png"),
-	"Kamikaze Drone": pygame.image.load("images/kamikaze_drone.png"),
+	"Drone": "images/drone.png",
+	"Kamikaze Drone": "images/kamikaze_drone.png",
 	# Player ships.
-	"Probe": pygame.image.load("images/probe.png"),
+	"Probe": "images/probe.png",
 	# Station components.
-	"Connector": pygame.image.load("images/connector.png"),
-	"Shield Generator": pygame.image.load("images/shield_generator.png"),
-	"Power Generator": pygame.image.load("images/power_generator.png"),
-	"Laser Turret": pygame.image.load("images/laser_turret.png"),
-	"Hangar": pygame.image.load("images/factory.png"), # Temp
-	"Factory": pygame.image.load("images/factory.png"),
+	"Connector": "images/connector.png",
+	"Shield Generator": "images/shield_generator.png",
+	"Power Generator": "images/power_generator.png",
+	"Laser Turret": "images/laser_turret.png",
+	"Hangar": "images/factory.png", # Temp
+	"Factory": "images/factory.png",
 	# Misc.
-	"salvage": pygame.image.load("images/salvage1.png"),
+	"salvage": "images/salvage1.png",
 }
-
-# Handle transparency.
-for image_name in IMAGE_DICT:
-	IMAGE_DICT[image_name].set_colorkey((255,255,255))
 
 SFX_ERROR = pygame.mixer.Sound("sounds/error.ogg")

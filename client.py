@@ -11,7 +11,8 @@ def main():
 	pygame.init()
 	clock = pygame.time.Clock()
 	player_name = ""
-	window = pygame.display.set_mode(SCREEN_SIZE)
+	window = pygame.display.set_mode(SCREEN_SIZE, depth=24)
+	init_images()
 	font = pygame.font.Font(pygame.font.get_default_font(), 10)
 	## TODO: initialize the display with a random background image
 	# Connecting to server and starting main game code
@@ -474,5 +475,17 @@ def execute_move(cmd):
 				window.blit(IMAGE_DICT['salvage'], calc_pos(target.pos))
 				pygame.display.update(rect)
 		else: print(action, "is an invalid action to marshal")
+
+
+def init_images():
+	"""The images defined in client_config.py need to be fixed for transparency. But client_config.py can't do that, because it runs before the pygame display has been initialized. So we do it here."""
+	for entity in IMAGE_DICT:
+		image = pygame.image.load(IMAGE_DICT[entity]).convert()
+		# Shield Generator has white that's part of the image. But it also takes up the entire thing, so it doesn't need a colorkey.
+		if entity == "Shield Generator":
+			pass
+		else:
+			image.set_colorkey((255,255,255))
+		IMAGE_DICT[entity] = image
 
 if __name__ == '__main__': main()
