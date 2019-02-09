@@ -129,13 +129,14 @@ class Gamestate:
 		step_x, step_y = dist[0]/total_dist, dist[1]/total_dist
 		counter = [0, 0]
 		while probe != target:
-			if probe[0] > 100 or probe[1] > 100: print("probe crashed, at ", probe, "from", source, "aimed at", target, "; stepx=", step_x, "; step_y=", step_y, "; total_dist=", total_dist, "; dir=", dir)
 			if probe != source:
 				block = self.occupied(probe)
 				# Make sure we don't fail if we run over another space of the same entity.
 				if block and block != source_entity: break
-			counter[0] += step_x
-			counter[1] += step_y
+			# Only increment the counter if neither one is already above 1.
+			if not (counter[0] > 1 or counter[1] > 1):
+				counter[0] += step_x
+				counter[1] += step_y
 			if counter[0] < 1 and counter[1] < 1: continue
 			# If only x has advanced enough.
 			if counter[0] >= 1 and counter[1] < 1:
@@ -479,10 +480,8 @@ def rotate(pos, rot):
 
 def spaces(main_pos, shape, rot):
 	"""Takes an Entity's position, shape and rotation and returns all the positions it occupies."""
-	print("in spaces for", main_pos)
 	spaces = [main_pos]
 	for pos in shape:
-		print("spaces: in loop on", pos)
 		pos = rotate(pos, rot)
 		spaces.append([pos[0] + main_pos[0], pos[1] + main_pos[1]])
 	return spaces
