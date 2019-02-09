@@ -211,11 +211,11 @@ def play(players):
 							SFX_ERROR.play()
 							continue
 						# TODO: Probably play a sound and give some visual indication.
-						# Clear out old targets.
+						# Clear out old actions.
 						sock.send(encode("UNASSIGN ALL:" + json.dumps(selected.pos)))
 						clear_projected_move(selected)
 						selected.actions = []
-						fill_panel(selected)
+						fill_panel(selected, assigning=True)
 						pygame.display.update(PANEL_RECT)
 						if selected.weapons: assigning = 0
 						else: assigning = True
@@ -224,9 +224,13 @@ def play(players):
 						# Maybe play a sound?
 						sock.send(encode("ASSIGN:" + json.dumps(selected.pos) + ":" + json.dumps(selected.actions)))
 						assigning = False
+						fill_panel(selected, assigning=False)
+						pygame.display.update(PANEL_RECT)
 					# Esc gets out of assigning mode.
 					elif event.key == pygame.K_ESCAPE:
 						assigning = False
+						fill_panel(selected, assigning=False)
+						pygame.display.update(PANEL_RECT)
 					# Shift cycles weapons.
 					elif event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT:
 						assigning += 1
@@ -237,6 +241,15 @@ def play(players):
 						# Shield Generators can turn off to save power (I would have them activate like a normal component but you almost always want them on).
 						if selected.type == "Shield Generator": selected.actions.append(False)
 						else: SFX_ERROR.play()
+					elif event.key == pygame.K_w:
+						# Shield Generators can also consume power to regenerate, but not project their shields so they can't be damaged and interrupted.
+						if selected.type == "Shield Generator": selected.actions.append(True)
+						else: SFX_ERROR.play()
+					elif event.key == pygame.K_e:
+						# To turn the shield generator back on, we can just clear its actions.
+						if selected.type == "Shield Generator": selected.acttions = []
+						else: SFX_ERROR.play()
+					# Movement keys.
 					elif selected.moves_left():
 						if event.key == pygame.K_UP: move = [0, -1]
 						elif event.key == pygame.K_DOWN: move = [0, 1]
@@ -263,7 +276,7 @@ def play(players):
 							clear_projected_move(selected)
 							selected = None
 							assigning = False
-							pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
+							fill_panel(None)
 							pygame.display.update(PANEL_RECT)
 							continue
 						# Don't let things target themselves.
@@ -275,7 +288,7 @@ def play(players):
 							selected.target(assigning, target.pos)
 							assigning += 1
 							if assigning == len(selected.weapons): assigning = 0
-							fill_panel(selected)
+							fill_panel(selected, assigning=True)
 							pygame.display.update(PANEL_RECT)
 						else:
 							SFX_ERROR.play()
@@ -298,7 +311,7 @@ def select_pos(clickpos):
 	if entity: project_move(entity)
 	return entity
 
-def fill_panel(object, salvage=None):
+def fill_panel(object, salvage=None, assigning=False):
 	"""fills the panel with information about the given object."""
 	global gamestate
 	#First, clear it.
@@ -308,6 +321,9 @@ def fill_panel(object, salvage=None):
 	# This catch is here so we can call fill_panel(None) to blank it.
 	if not object: return
 	draw_text(window, object.type, TEXT_COLOR, PANEL_NAME_RECT, font)
+	if assigning: draw_text(window, "assigning...", ASSIGNING_TEXT_COLOR, PANEL_ASSIGNING_RECT, font)
+	else: pygame.draw.rect(window, PANEL_COLOR, PANEL_ASSIGNING_RECT, 0)
+	# Hull and shield.
 	draw_text(window, str(object.hull)+"/"+str(object.maxhull), TEXT_COLOR, PANEL_HULL_RECT, font)
 	draw_bar(window, PANEL_HULL_BAR_RECT, TEXT_COLOR, HULL_COLOR, HULL_DAMAGE_COLOR, object.maxhull, object.hull)
 	if object.maxshield > 0:

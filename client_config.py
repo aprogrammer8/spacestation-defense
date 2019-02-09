@@ -36,8 +36,17 @@ LOBBY_PLAYERLIST_RECT = pygame.Rect(CHAT_RECT.right+5, 5, 100, SCREEN_SIZE[1]-10
 
 # Gameplay.
 GAME_WINDOW_RECT = pygame.Rect(CHAT_RECT.right, 0, SCREEN_SIZE[0]-CHAT_RECT.w-SCREEN_SIZE[0]//10, SCREEN_SIZE[1])
-# Panel general.
+# Panel colors.
 PANEL_COLOR = (127, 127, 127)
+ASSIGNING_TEXT_COLOR = (255, 0, 0)
+HULL_COLOR = (255, 255, 0)
+HULL_DAMAGE_COLOR = (127, 0, 0)
+SHIELD_COLOR = (0, 0, 255)
+SHIELD_DAMAGE_COLOR = (127, 0, 0)
+CAPACITY_COLOR = (127, 63, 0)
+CAPACITY_EMPTY_COLOR = (0, 0, 0)
+POWER_COLOR = (255, 255, 0)
+POWER_LOW_COLOR = (0, 0, 0)
 # The top panel is the part that contains only the player list and the done button. It is not redrawn when the rest of the panel is.
 TOP_PANEL_RECT = pygame.Rect(GAME_WINDOW_RECT.right, 0, SCREEN_SIZE[0]-GAME_WINDOW_RECT.right, SCREEN_SIZE[1]//8)
 GAME_PLAYERLIST_RECT = pygame.Rect(TOP_PANEL_RECT.x, 0, TOP_PANEL_RECT.w, TOP_PANEL_RECT.h)
@@ -48,23 +57,15 @@ DONE_BUTTON_RECT = pygame.Rect(TOP_PANEL_RECT.x+TOP_PANEL_RECT.w//2, 2, TOP_PANE
 PANEL_RECT = pygame.Rect(TOP_PANEL_RECT.x, TOP_PANEL_RECT.bottom, TOP_PANEL_RECT.w, SCREEN_SIZE[1]-TOP_PANEL_RECT.h)
 # Selected entity info on panel.
 PANEL_NAME_RECT = pygame.Rect(PANEL_RECT.left+2, PANEL_RECT.top+3, PANEL_RECT.w-3, 16)
-PANEL_HULL_RECT = pygame.Rect(PANEL_RECT.left+1, PANEL_NAME_RECT.bottom, PANEL_RECT.w-2, 16)
+PANEL_ASSIGNING_RECT = pygame.Rect(PANEL_RECT.left+2, PANEL_NAME_RECT.bottom+2, PANEL_RECT.w-3, 16)
+PANEL_HULL_RECT = pygame.Rect(PANEL_RECT.left+1, PANEL_ASSIGNING_RECT.bottom+2, PANEL_RECT.w-2, 16)
 PANEL_HULL_BAR_RECT = pygame.Rect(PANEL_RECT.left+1, PANEL_HULL_RECT.bottom+2, PANEL_RECT.w-2, 20)
-HULL_COLOR = (255, 255, 0)
-HULL_DAMAGE_COLOR = (127, 0, 0)
 PANEL_SHIELD_RECT = pygame.Rect(PANEL_RECT.left+1, PANEL_HULL_BAR_RECT.bottom+20, PANEL_RECT.w-2, 16)
 PANEL_SHIELD_BAR_RECT = pygame.Rect(PANEL_RECT.left+1, PANEL_SHIELD_RECT.bottom+2, PANEL_RECT.w-2, 20)
-SHIELD_COLOR = (0, 0, 255)
-SHIELD_DAMAGE_COLOR = (127, 0, 0)
 PANEL_WEAPON_DESC_BEGIN = pygame.Rect(PANEL_RECT.left+1, PANEL_SHIELD_BAR_RECT.bottom+20, PANEL_RECT.w-2, 20)
-# Salvage / hangar capcity.
-CAPACITY_COLOR = (127, 63, 0)
-CAPACITY_EMPTY_COLOR = (0, 0, 0)
 # Station-wide info starts at the bottom and grows upward.
 PANEL_POWER_BAR_RECT = pygame.Rect(PANEL_RECT.left+1, PANEL_RECT.bottom-22, PANEL_RECT.w-2, 20)
 PANEL_POWER_RECT = pygame.Rect(PANEL_RECT.left+1, PANEL_POWER_BAR_RECT.top-20, PANEL_RECT.w-2, 16)
-POWER_COLOR = (255, 255, 0)
-POWER_LOW_COLOR = (0, 0, 0)
 # Salvage on space.
 PANEL_SALVAGE_RECT = pygame.Rect(PANEL_RECT.left+1, PANEL_POWER_RECT.top-40, PANEL_RECT.w-2, 20)
 
