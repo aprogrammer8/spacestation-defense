@@ -320,16 +320,24 @@ def fill_panel(object, salvage=None):
 			y += draw_text(window, str(weapon)+object.desc_target(weapon,gamestate), TEXT_COLOR, pygame.Rect(PANEL_WEAPON_DESC_BEGIN.x+5, PANEL_WEAPON_DESC_BEGIN.y+y, PANEL_WEAPON_DESC_BEGIN.w-7, 60), font)
 	# Now draw special properties.
 	if object.type == "Probe":
-		rect = PANEL_SHIELD_BAR_RECT.move(0, y+20)
+		rect = PANEL_SHIELD_BAR_RECT.move(0, y+30)
 		draw_text(window, "Salvage: " + str(object.load) + "/" + str(PROBE_CAPACITY), TEXT_COLOR, rect, font)
 		draw_bar(window, rect.move(0,20), TEXT_COLOR, CAPACITY_COLOR, CAPACITY_EMPTY_COLOR, PROBE_CAPACITY, object.load)
 	# Station components also display the pooled power.
 	if object in gamestate.station:
 		draw_text(window, power_repr(), TEXT_COLOR, PANEL_POWER_RECT, font)
 		draw_bar(window, PANEL_POWER_BAR_RECT, TEXT_COLOR, POWER_COLOR, POWER_LOW_COLOR, gamestate.station.maxpower(), gamestate.station.power)
+		# Hangars show a summary of their contents when selected.
 		if object.type == "Hangar":
-			# Temp code:
-			print(object.contents)
+			rect = PANEL_SHIELD_BAR_RECT.move(0, 30)
+			draw_text(window, "Capacity: " + str(object.current_fill()) + "/" + str(HANGAR_CAPACITY), TEXT_COLOR, rect, font)
+			rect.move_ip(0, 20)
+			draw_bar(window, rect, TEXT_COLOR, CAPACITY_COLOR, CAPACITY_EMPTY_COLOR, HANGAR_CAPACITY, object.current_fill())
+			rect.inflate_ip(0, 100)
+			# Give it more space, since we're starting from the shield bar rect and this might need to be several lines long.
+			# And we give it 50 extra pixels because inflate_ip expands in both directions, so it moved up by 50.
+			rect.move_ip(0, 80)
+			draw_text(window, "Contains: " + object.summarize_contents(), TEXT_COLOR, rect, font)
 
 def shield_repr(entity):
 	"""Returns a string suitable to label the shield bar on the panel."""

@@ -386,6 +386,24 @@ class Component(Entity):
 		if self.type == "Shield Generator": return True
 		if self.type == "Laser Turret": return bool(self.actions)
 		return False
+	def current_fill(self):
+		if self.type != "Hangar": print("Error: current_fill should not have been called on the component at", self.pos, "which is a", self.type)
+		fill = 0
+		for ship in self.contents: fill += ship.size
+		return fill
+	def summarize_contents(self):
+		if self.type != "Hangar": print("Error: summarize_contents should not have been called on the component at", self.pos, "which is a", self.type)
+		# First, make a dictionary of ship types to counts.
+		ship_dict = {}
+		for ship in self.contents:
+			if ship.type not in ship_dict: ship_dict[ship.type] = 1
+			else: ship_dict[ship.type] += 1
+		# Now format it to a (relatively) pretty string.
+		string = ''
+		for type in ship_dict:
+			if string == '': string = type + " x " + str(ship_dict[type])
+			else: string += ", " + type + " x " + str(ship_dict[type])
+		return string
 
 class Composite:
 	def __init__(self, components):
