@@ -371,7 +371,7 @@ def fill_panel_hangar(object):
 	rect = PANEL_NAME_RECT.inflate(0, 40).move(0, 20+y)
 	for ship in object.contents:
 		h = draw_text(window, ship.hangar_describe(), TEXT_COLOR, rect, font)
-		rect.move_ip(0, h)
+		rect.move_ip(0, h+5)
 
 
 def shield_repr(entity):
