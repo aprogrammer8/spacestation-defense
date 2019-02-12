@@ -31,7 +31,7 @@ def draw_text(window, text, color, rect, font, spacing=2, aa=True, bgcolor=None)
 
 # This function is used to get the height of a potentially wrapped piece of text.
 # While we could just use draw_text for that, it would be much slower since it actually draws the text.
-def get_height(text, width, spacing, font):
+def get_height(text, width, font, spacing=2):
 	y = 0
 	font_height = font.size("Tg")[1]
 	while text:
@@ -63,8 +63,11 @@ class InputBox:
 		return self.inactive_color
 	def handle_event(self, event):
 		if event.type == pygame.MOUSEBUTTONDOWN:
-			self.active = self.rect.collidepoint(event.pos)
-			self.draw()
+			active = self.rect.collidepoint(event.pos)
+			print(active, self.active)
+			if active != self.active:
+				self.active = active
+				self.draw()
 		elif event.type == pygame.KEYDOWN:
 			if self.active:
 				if event.key == pygame.K_RETURN:
@@ -99,10 +102,10 @@ class TextList:
 		self.spacing = 1
 	def add(self, message):
 		self.message_list += [message]
-		height = get_height(message, self.rect.w, 2, self.font)
+		height = get_height(message, self.rect.w, self.font)
 		# If we're overflowing the box, flush old messages until there's enough room.
 		while self.new_height + height + self.spacing > self.rect.h:
-			self.new_height -= get_height(self.message_list[0], self.rect.w, self.spacing, self.font) + self.spacing
+			self.new_height -= get_height(self.message_list[0], self.rect.w, self.font, self.spacing) + self.spacing
 			self.message_list.pop(0)
 		self.new_height += height + self.spacing
 		self.draw()

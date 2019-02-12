@@ -158,12 +158,15 @@ def play(players):
 	playerlist.draw()
 	done_button = Button(window, DONE_BUTTON_RECT, ACTIVE_DONE_BUTTON_COLOR, INACTIVE_DONE_BUTTON_COLOR, TEXT_COLOR, font, "Done")
 	done_button.draw()
+	# A list of non-static buttons on the panel that must be handled.
+	panel_buttons = []
 	gamestate = Gamestate(playerlist.message_list+[player_name])
 	gamestate.init_station(gamestate.mission.starting_station)
 	grid_size = [GAME_WINDOW_RECT.w//TILESIZE[0], GAME_WINDOW_RECT.h//TILESIZE[1]]
 	offset = [grid_size[0]//2, grid_size[1]//2]
 	selected = None
-	assigning = False # When assigning a unit that has weapons, this is set to an int instead of True.
+	# When assigning a unit that has weapons, this is set to an int instead of True.
+	assigning = False
 	draw_gamestate()
 	pygame.display.flip()
 	while True:
@@ -179,7 +182,7 @@ def play(players):
 				gamestate.upkeep(clientside=True)
 				window.fill((0,0,0), GAME_WINDOW_RECT)
 				draw_gamestate()
-				fill_panel(selected)
+				panel_buttons = fill_panel(selected)
 				pygame.display.flip()
 			if msg.startswith("SPAWN ENEMIES:"):
 				enemy_json = json.loads(msg[14:])
@@ -193,7 +196,7 @@ def play(players):
 			# Unit action happening commands.
 			if msg.startswith("ACTION:"):
 				execute_move(msg[msg.index(':')+1:])
-				fill_panel(selected)
+				panel_buttons = fill_panel(selected)
 				pygame.display.update(PANEL_RECT)
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
@@ -215,7 +218,7 @@ def play(players):
 						sock.send(encode("UNASSIGN ALL:" + json.dumps(selected.pos)))
 						clear_projected_move(selected)
 						selected.actions = []
-						fill_panel(selected, assigning=True)
+						panel_buttons = fill_panel(selected, assigning=True)
 						pygame.display.update(PANEL_RECT)
 						if selected.weapons: assigning = 0
 						else: assigning = True
@@ -224,7 +227,7 @@ def play(players):
 					# Shield Generators can turn off to save power (I would have them activate like a normal component but you almost always want them on).
 					if selected.type == "Shield Generator": selected.actions.append(False)
 					elif selected.type == "Hangar":
-						fill_panel_hangar(selected)
+						panel_buttons = fill_panel_hangar(selected)
 						pygame.display.update(PANEL_RECT)
 					else: SFX_ERROR.play()
 				elif event.key == pygame.K_w:
@@ -240,12 +243,12 @@ def play(players):
 						# Maybe play a sound?
 						sock.send(encode("ASSIGN:" + json.dumps(selected.pos) + ":" + json.dumps(selected.actions)))
 						assigning = False
-						fill_panel(selected, assigning=False)
+						panel_buttons = fill_panel(selected, assigning=False)
 						pygame.display.update(PANEL_RECT)
 					# Esc gets out of assigning mode.
 					elif event.key == pygame.K_ESCAPE:
 						assigning = False
-						fill_panel(selected, assigning=False)
+						panel_buttons = fill_panel(selected, assigning=False)
 						pygame.display.update(PANEL_RECT)
 					# Shift cycles weapons.
 					elif event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT:
@@ -267,9 +270,16 @@ def play(players):
 						project_move(selected)
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				chatbar.handle_event(event)
+				done_button.handle_event(event)
 				if done_button.handle_event(event):
 					sock.send(encode("DONE"))
 					continue
+				for button in panel_buttons:
+					if button.rect.collidepoint(event.pos):
+						button.handle_event(event)
+						# For now, the only panel buttons are Hangar launch buttons.
+						launch_ship()
+
 				if GAME_WINDOW_RECT.collidepoint(event.pos):
 					pos = reverse_calc_pos(event.pos)
 					if assigning is not False and selected.weapons:
@@ -279,7 +289,7 @@ def play(players):
 							clear_projected_move(selected)
 							selected = None
 							assigning = False
-							fill_panel(None)
+							panel_buttons = fill_panel(None)
 							pygame.display.update(PANEL_RECT)
 							continue
 						# Don't let things target themselves.
@@ -291,7 +301,7 @@ def play(players):
 							selected.target(assigning, target.pos)
 							assigning += 1
 							if assigning == len(selected.weapons): assigning = 0
-							fill_panel(selected, assigning=True)
+							panel_buttons = fill_panel(selected, assigning=True)
 							pygame.display.update(PANEL_RECT)
 						else:
 							SFX_ERROR.play()
@@ -301,8 +311,12 @@ def play(players):
 						pygame.display.update(PANEL_RECT)
 				pygame.display.update(chatbar.rect)
 			if event.type == pygame.MOUSEMOTION:
-				done_button.handle_event(event)
-				pygame.display.update(done_button.rect)
+				rects_to_update = []
+				for button in panel_buttons+[done_button]:
+					if button.rect.collidepoint(event.pos):
+						button.handle_event(event)
+						rects_to_update.append(button)
+				pygame.display.update(rects_to_update)
 
 def select_pos(clickpos):
 	"""select_pos takes a gameboard logical position and finds the object on it, then calls fill_panel and projects its planned move."""
@@ -315,16 +329,16 @@ def select_pos(clickpos):
 	return entity
 
 def fill_panel(object, salvage=None, assigning=False):
-	"""fills the panel with information about the given object."""
+	"""fills the panel with information about the given object. Returns a list of buttons on the panel that should be kept track of so they can respond."""
 	global gamestate
 	#First, clear it.
 	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
 	# Draw info of whatever salvage is here first, so that it still gets drawn if there's no object.
 	if salvage: draw_text(window, str(salvage), TEXT_COLOR, PANEL_SALVAGE_RECT, font)
 	# This catch is here so we can call fill_panel(None) to blank it.
-	if not object: return
+	if not object: return []
 	draw_text(window, object.type, TEXT_COLOR, PANEL_NAME_RECT, font)
-	if assigning: draw_text(window, "assigning...", ASSIGNING_TEXT_COLOR, PANEL_ASSIGNING_RECT, font)
+	if assigning: draw_text(window, "Assigning...", ASSIGNING_TEXT_COLOR, PANEL_ASSIGNING_RECT, font)
 	else: pygame.draw.rect(window, PANEL_COLOR, PANEL_ASSIGNING_RECT, 0)
 	# Hull and shield.
 	draw_text(window, str(object.hull)+"/"+str(object.maxhull), TEXT_COLOR, PANEL_HULL_RECT, font)
@@ -358,6 +372,7 @@ def fill_panel(object, salvage=None, assigning=False):
 			# And we give it 50 extra pixels because inflate_ip expands in both directions, so it moved up by 50.
 			rect.move_ip(0, 80)
 			draw_text(window, "Contains: " + object.summarize_contents(), TEXT_COLOR, rect, font)
+	return []
 
 
 def fill_panel_hangar(object):
@@ -366,12 +381,21 @@ def fill_panel_hangar(object):
 	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
 	# And I guess still bother saying it's a hangar.
 	draw_text(window, object.type, TEXT_COLOR, PANEL_NAME_RECT, font)
-	y = 50
+	# Prepare to return a list of Buttons. We need them to persist after the panel is drawn so play() can use them.
+	buttons = []
 	# Give them more space, and move it back down to compensate.
+	y = 50
 	rect = PANEL_NAME_RECT.inflate(0, 40).move(0, 20+y)
 	for ship in object.contents:
-		h = draw_text(window, ship.hangar_describe(), TEXT_COLOR, rect, font)
+		text = ship.hangar_describe()
+		# Subtracting 2 from the width because it also needs to fit inside the Button.
+		h = get_height(text, rect.w-2, font)
+		button = Button(window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_HANGAR_BUTTON_COLOR, INACTIVE_HANGAR_BUTTON_COLOR, TEXT_COLOR, font, text)
+		button.draw()
+		buttons.append(button)
+		#h = draw_text(window, ship.hangar_describe(), TEXT_COLOR, rect, font)
 		rect.move_ip(0, h+5)
+	return buttons
 
 
 def shield_repr(entity):
@@ -444,6 +468,10 @@ def erase(rect):
 	"""Takes a pixel rect and erases only the gameboard entities on it (by redrawing the grid.)"""
 	window.fill((0,0,0), rect)
 	draw_grid(rect)
+
+def launch_ship():
+	"""Launches a ship from a Hangar."""
+	pass
 
 def execute_move(cmd):
 	"""Takes an ACTION command from the server and executes it. It needs the offset for graphics/animation purposes."""
