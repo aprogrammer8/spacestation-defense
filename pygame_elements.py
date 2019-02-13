@@ -64,7 +64,6 @@ class InputBox:
 	def handle_event(self, event):
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			active = self.rect.collidepoint(event.pos)
-			print(active, self.active)
 			if active != self.active:
 				self.active = active
 				self.draw()
@@ -89,6 +88,7 @@ class InputBox:
 		pygame.draw.rect(self.window, self.rectcolor(), self.rect, 1)
 
 # A list of separate text items to be displayed on a pygame window, inside a specified area and with items separated.
+# The main useful feature is automatic rearrangement of the text items when new ones are inserted or deleted.
 class TextList:
 	def __init__(self, window, rect, bgcolor, bordercolor, textcolor, font):
 		self.window = window
