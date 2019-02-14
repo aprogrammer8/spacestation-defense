@@ -1,3 +1,5 @@
+# This module contains various functions and classes for commonly used UI elements, such as wrapped text, text input boxes, and buttons.
+
 import pygame
 
 # draw_text wraps text as necessary to fit within the given area, and then draws it.
@@ -79,6 +81,14 @@ class InputBox:
 				self.draw()
 				if event.key == pygame.K_RETURN:
 					return returntext
+	def handle_mousebuttondown(self, evnet):
+		"""This method specifically handles mousebuttondown events, and returns True if the InputBox redrew itself (meaning the display needs to be updated)."""
+		active = self.rect.collidepoint(event.pos)
+		if active != self.active:
+			self.active = active
+			self.draw()
+			return True
+		return False
 	def draw(self):
 		# Clear the area. Without this, the text gets blurred more and more with each re-blitting. I have no idea why.
 		pygame.draw.rect(self.window, self.bgcolor, self.textrect, 0)
@@ -90,14 +100,14 @@ class InputBox:
 # A list of separate text items to be displayed on a pygame window, inside a specified area and with items separated.
 # The main useful feature is automatic rearrangement of the text items when new ones are inserted or deleted.
 class TextList:
-	def __init__(self, window, rect, bgcolor, bordercolor, textcolor, font):
+	def __init__(self, window, rect, bgcolor, bordercolor, textcolor, font, items=[]):
 		self.window = window
 		self.rect = rect
 		self.bgcolor = bgcolor
 		self.bordercolor = bordercolor
 		self.textcolor = textcolor
 		self.font = font
-		self.message_list = []
+		self.message_list = items
 		self.new_height = 0 # The y that a new message will start at.
 		self.spacing = 1
 	def add(self, message):
@@ -145,6 +155,8 @@ class Chat:
 	def handle_event(self, event):
 		if event.type == pygame.MOUSEBUTTONDOWN: self.entry_box.handle_event(event)
 		if event.type == pygame.KEYDOWN: return self.entry_box.handle_event(event)
+	def handle_mousebuttondown(self, event):
+		return self.entry_box.handle_event(event)
 	def add_message(self, message):
 		self.log.add(message)
 		self.entry_box.draw()
@@ -154,7 +166,17 @@ class Chat:
 
 # Currently, these buttons trigger only on down-click. They have a color change for being hovered over, but don't support color changes when being pressed.
 class Button:
-	def __init__(self, window, rect, active_color, inactive_color, textcolor, font, label):
+	"""A persistent, clickable button for Pygame windows. It takes the following arguments:
+		window - the Surface to draw itself on
+		rect - the pygame.Rect it should occupy
+		active_color - the color when the button is moused over
+		inactive_color - the color when the button is not moused over
+		textcolor - the color of the button's label
+		font - the Font of the button's label
+		label - the text to label the button with
+		callback (optional) - data to be retuned when it's clicked
+	"""
+	def __init__(self, window, rect, active_color, inactive_color, textcolor, font, label, callback=True):
 		self.window = window
 		self.rect = rect
 		self.textrect = (rect.x+1, rect.y+1, rect.w-2, rect.h-2)
@@ -163,6 +185,7 @@ class Button:
 		self.textcolor = textcolor
 		self.font = font
 		self.label = label
+		self.callback = callback
 		self.active = False
 	def handle_event(self, event):
 		if event.type == pygame.MOUSEMOTION:
@@ -170,6 +193,19 @@ class Button:
 			self.draw()
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			return self.rect.collidepoint(event.pos)
+	def handle_mousemotion(self, event):
+		"""This method specifically handles mousemotion events, and returns True if the button redrew itself (and thus the display needs updating).
+		   I'm probably going to switch to this and handle_mousebuttondown and scrap handle_event.
+		"""
+		active = self.rect.collidepoint(event.pos)
+		if active != self.active:
+			self.active = active
+			self.draw()
+			return True
+		return False
+	def handle_mousebuttondown(self, event):
+		if self.rect.collidepoint(event.pos): return callback
+		return False
 	def draw(self):
 		if self.active: pygame.draw.rect(self.window, self.active_color, self.rect, 0)
 		else: pygame.draw.rect(self.window, self.inactive_color, self.rect, 0)

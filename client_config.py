@@ -1,10 +1,13 @@
 import pygame
-pygame.init()
 
 # Basics.
 server = ("127.0.0.1", 1025)
 SCREEN_SIZE = (1800, 1000)
 LOBBY_RATE = 50
+# This helps the sound delay. The 4th param defaults to 4096, which gives a huge delay.
+pygame.mixer.pre_init(22050, -16, 2, 1024)
+pygame.init()
+FONT = pygame.font.Font(pygame.font.get_default_font(), 10)
 
 # Login screen.
 LOG_RECT = pygame.Rect(SCREEN_SIZE[0]//2-50, SCREEN_SIZE[1]//2-50, 100, 100)
@@ -53,8 +56,10 @@ GAME_PLAYERLIST_RECT = pygame.Rect(TOP_PANEL_RECT.x, 0, TOP_PANEL_RECT.w, TOP_PA
 ACTIVE_DONE_BUTTON_COLOR = (255, 255, 0)
 INACTIVE_DONE_BUTTON_COLOR = (170, 170, 0)
 DONE_BUTTON_RECT = pygame.Rect(TOP_PANEL_RECT.x+TOP_PANEL_RECT.w//2, 2, TOP_PANEL_RECT.w//2, 20)
-# THe main panel rect.
+# The main panel rect.
 PANEL_RECT = pygame.Rect(TOP_PANEL_RECT.x, TOP_PANEL_RECT.bottom, TOP_PANEL_RECT.w, SCREEN_SIZE[1]-TOP_PANEL_RECT.h)
+# And a shortcut for the rare cases where you want a rect for both of them.
+TOTAL_PANEL_RECT = pygame.Rect(TOP_PANEL_RECT.x, TOP_PANEL_RECT.y, TOP_PANEL_RECT.w, TOP_PANEL_RECT.h+PANEL_RECT.h)
 # Selected entity info on panel.
 PANEL_NAME_RECT = pygame.Rect(PANEL_RECT.left+2, PANEL_RECT.top+3, PANEL_RECT.w-3, 16)
 PANEL_ASSIGNING_RECT = pygame.Rect(PANEL_RECT.left+2, PANEL_NAME_RECT.bottom+2, PANEL_RECT.w-3, 16)
