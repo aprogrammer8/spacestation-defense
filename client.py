@@ -30,9 +30,8 @@ def main():
 
 
 def login_screen():
-	global player_name, font
+	global player_name
 	draw_text(window, "enter your name", TEXT_COLOR, LOG_RECT, font)
-	font = pygame.font.Font(pygame.font.get_default_font(), 10)
 	username_box = InputBox(window, NAME_ENTRY_RECT, BGCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, font)
 	username_box.draw()
 	pygame.display.flip()
@@ -303,6 +302,7 @@ def play(players):
 							if assigning == len(selected.weapons): assigning = 0
 							panel_buttons = fill_panel(selected, assigning=True)
 							pygame.display.update(PANEL_RECT)
+						# If the target is valid, but not reachable.
 						else:
 							SFX_ERROR.play()
 					else:
@@ -320,7 +320,6 @@ def play(players):
 
 def select_pos(clickpos):
 	"""select_pos takes a gameboard logical position and finds the object on it, then calls fill_panel and projects its planned move."""
-	global gamestate
 	entity = gamestate.occupied(list(clickpos))
 	if tuple(clickpos) in gamestate.salvages: salvage = gamestate.salvages[tuple(clickpos)]
 	else: salvage = None
@@ -330,8 +329,7 @@ def select_pos(clickpos):
 
 def fill_panel(object, salvage=None, assigning=False):
 	"""fills the panel with information about the given object. Returns a list of buttons on the panel that should be kept track of so they can respond."""
-	global gamestate
-	#First, clear it.
+	# First, clear it.
 	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
 	# Draw info of whatever salvage is here first, so that it still gets drawn if there's no object.
 	if salvage: draw_text(window, str(salvage), TEXT_COLOR, PANEL_SALVAGE_RECT, font)
@@ -377,7 +375,7 @@ def fill_panel(object, salvage=None, assigning=False):
 
 def fill_panel_hangar(object):
 	"""An alternative to fill_panel called on a Hangar to show the details of its contents."""
-	#First, clear it.
+	# First, clear it.
 	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
 	# And I guess still bother saying it's a hangar.
 	draw_text(window, object.type, TEXT_COLOR, PANEL_NAME_RECT, font)
@@ -438,7 +436,6 @@ def draw_grid(rect=None):
 
 def draw_gamestate(rect=None):
 	"""The offset is where the player is scrolled to. The rect is which area of the gameboard should be updated. It's measured in logical position, not pixel position."""
-	global gamestate
 	draw_grid(rect)
 	for pos in gamestate.salvages:
 		window.blit(IMAGE_DICT['salvage'], calc_pos(pos))
@@ -475,7 +472,6 @@ def launch_ship():
 
 def execute_move(cmd):
 	"""Takes an ACTION command from the server and executes it. It needs the offset for graphics/animation purposes."""
-	global gamestate, offset
 	print("Executing move:", cmd)
 	parts = cmd.split(':')
 	entity = gamestate.occupied(json.loads(parts[0]))
