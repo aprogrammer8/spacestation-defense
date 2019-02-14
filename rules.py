@@ -1,0 +1,17 @@
+"""This module contains game balance parameters."""
+
+# TODO move Ship stats and hit chances into here
+
+# Constants.
+COMPONENT_HULL = 50
+COMPONENT_SALVAGE = 20
+SHIELD_GEN_CAP = 100
+SHIELD_GEN_REGEN = (0, 1, 3, 8)
+SHIELD_GEN_RANGE = 6
+POWER_GEN_SPEED = 5
+POWER_GEN_CAP = 25
+COMPONENT_POWER_USAGE = 2
+ENGINE_SPEED = 2
+SALVAGE_START_TIME = 5
+PROBE_CAPACITY = 5
+HANGAR_CAPACITY = 20

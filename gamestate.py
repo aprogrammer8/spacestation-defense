@@ -1,4 +1,6 @@
 import random, json
+from rules import *
+from util import *
 
 class Gamestate:
 	def __init__(self, players, mission='test', json=''):
@@ -200,8 +202,8 @@ class Card:
 def draw_card():
 	return Card("Repair")
 
-# An Entity is anything with a position on the board.
 class Entity:
+	"""An Entity is anything that has a position on the board, cannot be overlapped by another Entity, and can be targeted."""
 	def __init__(self, pos, shape, rot, salvage, hull, shield=0, shield_regen=(0,), weapons=(), speed=0):
 		self.pos = pos
 		# self.shape is a tuple of other positions expressed as offsets from the main pos (when rot == 0), that the Entity also occupies (used for Entities bigger than 1x1).
@@ -215,7 +217,7 @@ class Entity:
 		self.shield_regen_pointer = 0
 		self.weapons = weapons
 		self.speed = speed
-		# This field refers to salvage dropped when the ship is destroyed.
+		# This field refers to salvage dropped when the Entity is destroyed.
 		self.salvage = salvage
 		# The sequence of actions the Entity plans to make.
 		self.actions = []
@@ -226,8 +228,9 @@ class Entity:
 		"""Returns all spaces the Entity occupies."""
 		return spaces(self.pos, self.shape, self.rot)
 	def projected_spaces(self):
+		"""Like Entity.spaces, but uses the projected final position."""
 		final_pos = self.pos
-		for move in filter(lambda x: len(x)==2, self.actions):
+		for move in self.moves_planned():
 			final_pos = [final_pos[0] + move[0], final_pos[1] + move[1]]
 		return spaces(final_pos, self.shape, self.rot)
 	def rect(self):
@@ -256,7 +259,9 @@ class Entity:
 			if len(action) == 2: moves -= 1
 		return moves
 	def target(self, index, pos):
+		"""Targets the Entity's weapon at the provided index at the Entity at pos."""
 		action_index = 0
+		# Check if the requested weapon is already targeting something. If so, replace that target so the weapon isn't getting double-used.
 		for action in self.actions:
 			if len(action) > 2 and action[0] == index:
 				self.actions[action_index] = [index, *pos]
@@ -264,13 +269,17 @@ class Entity:
 			action_index += 1
 		self.actions.append([index, *pos])
 	def desc_target(self, weapon, gamestate):
-		"""Takes a weapon and returns a string describing what it's targeting, if anything."""
+		"""Takes a weapon index and returns a string describing what it's targeting, if anything."""
 		index = self.weapons.index(weapon)
 		for action in self.actions:
 			if len(action) > 2 and action[0] == index:
 				target = gamestate.occupied(action[1:3])
 				if target: return ", targeting " + target.type + " at " + str(target.pos)
 		return ""
+	def moves_planned(self):
+		"""Filters the list of planned actions and returns only the moves."""
+		# Moves are always length 2, attacks will be length 3, or 4 if they've been stamped for accuracy.
+		return [move for move in self.actions if len(move) == 2]
 	def untargeted(self):
 		"""Returns all weapons with no target."""
 		# First, construct a list of indexes of weapons.
@@ -295,7 +304,7 @@ class Entity:
 					break
 		return weapons
 	def random_targets(self, gamestate, enemy):
-		"""Randomly target all weapons at random enemies."""
+		"""Target all weapons at random enemies."""
 		if enemy: targets = gamestate.allied_ships + gamestate.station
 		else: targets = gamestate.enemy_ships + gamestate.asteroids
 		i = 0
@@ -473,35 +482,8 @@ class Mission:
 		self.starting_cards = 4
 	def wave(self, num):
 		"""This method acccepts a wave number and returns a dict of enemy type:count, a reward for clearing it, and a number of turns until the next wave arrives."""
-		# Temp code:
+		# TEMP
 		return {'Drone':6}, None, 5
-
-def rotate(pos, rot):
-	if rot == 0: return pos
-	if rot == 90: return [-pos[1], pos[0]]
-	if rot == 180: return [-pos[0], -pos[1]]
-	if rot == 270: return [pos[1], -pos[0]]
-	print("Not a valid rotation:", rot)
-	return pos
-
-def spaces(main_pos, shape, rot):
-	"""Takes an Entity's position, shape and rotation and returns all the positions it occupies."""
-	spaces = [main_pos]
-	for pos in shape:
-		pos = rotate(pos, rot)
-		spaces.append([pos[0] + main_pos[0], pos[1] + main_pos[1]])
-	return spaces
-
-def rect(spaces):
-	"""Takes a sequence of spaces and returns the inputs for a Rect containing them."""
-	left = right = spaces[0][0]
-	top = bottom = spaces[0][1]
-	for space in spaces[1:]:
-		if space[0] < left: left = space[0]
-		if space[0] > right: right = space[0]
-		if space[1] < top: top = space[1]
-		if space[1] > bottom: bottom = space[1]
-	return left, top, right-left+1, bottom-top+1
 
 def hit_chance(attack, target):
 	"""Calculates the hit rate of a given attack type against the target ship."""
@@ -510,6 +492,17 @@ def hit_chance(attack, target):
 	if target.type in ('Probe', 'Drone', 'Kamikaze Drone'): return {'laser':75, 'missile':25}[attack]
 	# Error message that should never get triggered.
 	print("Did not have a hit chance for", attack, "against a", target.type)
+
+COMPONENT_TYPES = (
+	"Connector",
+	'Shield Generator',
+	'Power Generator',
+	"Laser Turret",
+	"Missile Turret",
+	"Engine",
+	"Hangar",
+	"Factory",
+)
 
 # The functions below initialize entity types.
 
@@ -524,39 +517,3 @@ def kamikaze_drone(pos, rot=0):
 
 def probe(pos, rot=0):
 	return Ship("Probe", team='player', pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=3, size=1)
-
-COMPONENT_TYPES = (
-	"Connector",
-	'Shield Generator',
-	'Power Generator',
-	"Laser Turret",
-	"Missile Turret",
-	"Engine",
-	"Hangar",
-	"Factory",
-)
-
-# Game rule constants.
-COMPONENT_HULL = 50
-COMPONENT_SALVAGE = 20
-SHIELD_GEN_CAP = 100
-SHIELD_GEN_REGEN = (0, 1, 3, 8)
-SHIELD_GEN_RANGE = 6
-POWER_GEN_SPEED = 5
-POWER_GEN_CAP = 25
-COMPONENT_POWER_USAGE = 2
-ENGINE_SPEED = 2
-SALVAGE_START_TIME = 5
-PROBE_CAPACITY = 5
-HANGAR_CAPACITY = 20
-
-def interpret_assign(gamestate, cmd):
-	unit_pos = json.loads(cmd[:cmd.index(':')])
-	unit = gamestate.occupied(unit_pos)
-	unit.actions = json.loads(cmd[cmd.index(':')+1:])
-
-# Unassign commands clear all actions for a ship, both movement and targeting.
-def interpret_unassign(gamestate, cmd):
-	unit_pos = json.loads(cmd)
-	unit = gamestate.occupied(unit_pos)
-	unit.actions = []

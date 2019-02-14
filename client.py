@@ -1,3 +1,5 @@
+"""The main client module. Run this to start the game."""
+
 import pygame, socket, selectors, random, json, sys
 from pygame_elements import *
 from client_config import *
@@ -186,123 +188,6 @@ def play(players):
 				elif response[0] == "CHAT":
 					sock.send(encode(response[1]))
 
-def select_pos(clickpos):
-	"""select_pos takes a gameboard logical position and finds the object on it, then calls fill_panel and projects its planned move."""
-	entity = gamestate.occupied(list(clickpos))
-	if tuple(clickpos) in gamestate.salvages: salvage = gamestate.salvages[tuple(clickpos)]
-	else: salvage = None
-	fill_panel(entity, salvage)
-	if entity: project_move(entity)
-	return entity
-
-def fill_panel(object, salvage=None, assigning=False):
-	"""fills the panel with information about the given object. Returns a list of buttons on the panel that should be kept track of so they can respond."""
-	# First, clear it.
-	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
-	# Draw info of whatever salvage is here first, so that it still gets drawn if there's no object.
-	if salvage: draw_text(window, str(salvage), TEXT_COLOR, PANEL_SALVAGE_RECT, FONT)
-	# This catch is here so we can call fill_panel(None) to blank it.
-	if not object: return []
-	draw_text(window, object.type, TEXT_COLOR, PANEL_NAME_RECT, FONT)
-	if assigning: draw_text(window, "Assigning...", ASSIGNING_TEXT_COLOR, PANEL_ASSIGNING_RECT, FONT)
-	else: pygame.draw.rect(window, PANEL_COLOR, PANEL_ASSIGNING_RECT, 0)
-	# Hull and shield.
-	draw_text(window, str(object.hull)+"/"+str(object.maxhull), TEXT_COLOR, PANEL_HULL_RECT, FONT)
-	draw_bar(window, PANEL_HULL_BAR_RECT, TEXT_COLOR, HULL_COLOR, HULL_DAMAGE_COLOR, object.maxhull, object.hull)
-	if object.maxshield > 0:
-		draw_text(window, shield_repr(object), TEXT_COLOR, PANEL_SHIELD_RECT, FONT)
-		draw_bar(window, PANEL_SHIELD_BAR_RECT, TEXT_COLOR, SHIELD_COLOR, SHIELD_DAMAGE_COLOR, object.maxshield, object.shield)
-	y = 0
-	if object.weapons:
-		draw_text(window, "Weapons:", TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN, FONT)
-		y += 20
-		for weapon in object.weapons:
-			y += draw_text(window, str(weapon)+object.desc_target(weapon,gamestate), TEXT_COLOR, pygame.Rect(PANEL_WEAPON_DESC_BEGIN.x+5, PANEL_WEAPON_DESC_BEGIN.y+y, PANEL_WEAPON_DESC_BEGIN.w-7, 60), FONT)
-	# Now draw special properties.
-	if object.type == "Probe":
-		rect = PANEL_SHIELD_BAR_RECT.move(0, y+30)
-		draw_text(window, "Salvage: " + str(object.load) + "/" + str(PROBE_CAPACITY), TEXT_COLOR, rect, FONT)
-		draw_bar(window, rect.move(0,20), TEXT_COLOR, CAPACITY_COLOR, CAPACITY_EMPTY_COLOR, PROBE_CAPACITY, object.load)
-	# Station components also display the pooled power.
-	if object in gamestate.station:
-		draw_text(window, power_repr(), TEXT_COLOR, PANEL_POWER_RECT, FONT)
-		draw_bar(window, PANEL_POWER_BAR_RECT, TEXT_COLOR, POWER_COLOR, POWER_LOW_COLOR, gamestate.station.maxpower(), gamestate.station.power)
-		# Hangars show a summary of their contents when selected.
-		if object.type == "Hangar":
-			rect = PANEL_SHIELD_BAR_RECT.move(0, 30)
-			draw_text(window, "Capacity: " + str(object.current_fill()) + "/" + str(HANGAR_CAPACITY), TEXT_COLOR, rect, FONT)
-			rect.move_ip(0, 20)
-			draw_bar(window, rect, TEXT_COLOR, CAPACITY_COLOR, CAPACITY_EMPTY_COLOR, HANGAR_CAPACITY, object.current_fill())
-			rect.inflate_ip(0, 100)
-			# Give it more space, since we're starting from the shield bar rect and this might need to be several lines long.
-			# And we give it 50 extra pixels because inflate_ip expands in both directions, so it moved up by 50.
-			rect.move_ip(0, 80)
-			draw_text(window, "Contains: " + object.summarize_contents(), TEXT_COLOR, rect, FONT)
-	return []
-
-
-def fill_panel_hangar(object):
-	"""An alternative to fill_panel called on a Hangar to show the details of its contents."""
-	# First, clear it.
-	pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
-	# And I guess still bother saying it's a hangar.
-	draw_text(window, object.type, TEXT_COLOR, PANEL_NAME_RECT, FONT)
-	# Prepare to return a list of Buttons. We need them to persist after the panel is drawn so play() can use them.
-	buttons = []
-	# Give them more space, and move it back down to compensate.
-	y = 50
-	rect = PANEL_NAME_RECT.inflate(0, 40).move(0, 20+y)
-	for ship in object.contents:
-		text = ship.hangar_describe()
-		# Subtracting 2 from the width because it also needs to fit inside the Button.
-		h = get_height(text, rect.w-2, FONT)
-		button = Button(window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_HANGAR_BUTTON_COLOR, INACTIVE_HANGAR_BUTTON_COLOR, TEXT_COLOR, FONT, text)
-		button.draw()
-		buttons.append(button)
-		#h = draw_text(window, ship.hangar_describe(), TEXT_COLOR, rect, FONT)
-		rect.move_ip(0, h+5)
-	return buttons
-
-
-def shield_repr(entity):
-	"""Returns a string suitable to label the shield bar on the panel."""
-	string = str(entity.shield)+"/"+str(entity.maxshield)+"    + "+str(entity.shield_regen_amounts[entity.shield_regen_pointer])+" / "
-	for amount in entity.shield_regen_amounts:
-		string += str(amount) + "->"
-	return string[:-2]
-
-def power_repr():
-	"""Returns a string suitable to label the power bar on a Station component."""
-	string = str(gamestate.station.power) + "(" + str(gamestate.station.projected_power()) + ") / " + str(gamestate.station.maxpower()) + "    + " + str(POWER_GEN_SPEED * len(gamestate.station.power_generators()))
-	return string
-
-def project_move(entity):
-	"""Show a yellow path from a selected Entity projecting the moves it's going to make."""
-	pos = (entity.pos[0]+offset[0], entity.pos[1]+offset[1])
-	for move in entity.actions:
-		# Skip non-moves.
-		if len(move) != 2: continue
-		pos = (pos[0]+move[0], pos[1]+move[1])
-		pygame.draw.rect(window, (255,255,0), (GAME_WINDOW_RECT.left+TILESIZE[0]*pos[0], GAME_WINDOW_RECT.top+TILESIZE[1]*pos[1], TILESIZE[0], TILESIZE[1]), 2)
-	pygame.display.flip()
-
-def clear_projected_move(entity):
-	"""Clears the yellow projected path from an Entity while assigning move commands to it."""
-	rect = pygame.Rect(entity.move_rect())
-	rect = pygame.Rect(calc_pos(rect.topleft), (rect.size[0]*TILESIZE[0], rect.size[1]*TILESIZE[1]))
-	window.fill((0,0,0), rect) # Temporary until we get a background image.
-	draw_gamestate(rect.inflate_ip(1,1))
-	pygame.display.flip()
-
-def entity_pixel_rect(entity):
-	"""Finds the rectangle that an Entity is occupying (in terms of pixels)."""
-	rect = entity.rect()
-	return pygame.Rect(calc_pos(rect[0:2]), (rect[2]*TILESIZE[0], rect[3]*TILESIZE[1]))
-
-def erase(rect):
-	"""Takes a pixel rect and erases only the gameboard entities on it (by redrawing the grid.)"""
-	window.fill((0,0,0), rect)
-	draw_grid(rect)
 
 def launch_ship():
 	"""Launches a ship from a Hangar."""
