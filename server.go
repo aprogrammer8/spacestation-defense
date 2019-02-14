@@ -87,7 +87,6 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 		select {
 		// Player joining.
 		case player := <-entryChan:
-			log.Println("Player joining:", player.Name)
 			players = append(players, &player)
 			// Find all the open lobbies, and send them to the new player.
 			for i := range players {
@@ -105,7 +104,6 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 			}(playerMux, &player, exitChan)
 		// Playser leaving.
 		case username := <-exitChan:
-			log.Println("Player leaving:", username)
 			// We only got the name, so use it to find the player in order to delete them.
 			for i := range players {
 				if players[i].Name == username {
@@ -115,7 +113,6 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 			}
 		// Player sending a message.
 		case msg := <-playerMux:
-			log.Println("Got message:", msg)
 			var msgStr = string(msg.Content)
 			if strings.HasPrefix(msgStr, "GLOBAL:") {
 				for _, player := range players {
