@@ -10,7 +10,6 @@ class Player:
 
 
 def collect_input():
-	global sock, players, gamestate
 	while True:
 		msg = recv_message(sock)
 		print(msg)
@@ -20,10 +19,6 @@ def collect_input():
 		if msg.startswith("ASSIGN:"):
 			sock.send(encode(msg))
 			interpret_assign(gamestate, msg[msg.index(':')+1:])
-		# Clear an assignment.
-		if msg.startswith("UNASSIGN ALL:"):
-			sock.send(encode(msg))
-			interpret_unassign(gamestate, msg[msg.index(':')+1:])
 		# Playing a card.
 		elif msg.startswith("PLAY:"):
 			pass
@@ -43,13 +38,11 @@ def collect_input():
 
 def players_move():
 	# This one is very simple since no AI is necessary.
-	global sock, players, gamestate
 	for component in gamestate.station: marshal_action(component)
 	for ship in gamestate.allied_ships: marshal_action(ship)
 
 
 def enemies_move():
-	global sock, players, gamestate
 	for enemy in gamestate.enemy_ships:
 		enemy.random_targets(gamestate, enemy=True)
 		while enemy.untargeted() and enemy.moves_left():
@@ -63,7 +56,6 @@ def enemies_move():
 		marshal_action(enemy)
 
 def marshal_action(entity):
-	global sock, players, gamestate
 	"""Takes an Entity with all its actions set, reflects them in the gamestate, and then encodes them as JSON so the clients can do the same."""
 	# We'll need the original at the end.
 	orig_pos = entity.pos[:]

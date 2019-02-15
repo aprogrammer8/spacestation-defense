@@ -15,6 +15,7 @@ class GameDisplay:
 		self.gamestate = gamestate
 		self.draw_gamestate()
 		self.chatbar = Chat(window, CHAT_RECT, CHAT_ENTRY_HEIGHT, BGCOLOR, CHAT_BORDERCOLOR, TEXT_COLOR, ACTIVE_INPUTBOX_COLOR, INACTIVE_INPUTBOX_COLOR, FONT, player_name)
+		self.chatbar.draw()
 		# Blank the panel to begin.
 		pygame.draw.rect(window, PANEL_COLOR, TOP_PANEL_RECT, 0)
 		pygame.draw.rect(window, PANEL_COLOR, PANEL_RECT, 0)
@@ -31,6 +32,7 @@ class GameDisplay:
 		self.selected = None
 		# When assigning a unit that has weapons, this is set to an int instead of True.
 		self.assigning = False
+
 	def event_respond(self, event):
 		"""The basic method for receiving an event from pygame and reacting to it."""
 		# In the case of mousemotion, all we need to do is check all the buttons to see if they need to be redrawn.
@@ -74,6 +76,7 @@ class GameDisplay:
 						self.assigning += 1
 						if self.assigning == len(self.selected.weapons): self.assigning = 0
 						self.fill_panel(self.selected, assigning=True)
+						return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions)
 					# If the target is valid, but not reachable.
 					else:
 						SFX_ERROR.play()
@@ -94,15 +97,15 @@ class GameDisplay:
 			# If the chatbar is active, just pass it the input and don't bother with gamestate commands.
 			if self.chatbar.entry_box.active:
 				entry = self.chatbar.handle_event(event)
-				pygame.display.update(chatbar.rect)
-				if entry: return "CHAT", "LOCAL:" + player_name + ":" + entry
+				pygame.display.update(self.chatbar.rect)
+				if entry: return "LOCAL:" + self.player_name + ":" + entry
 
 			# Entering assignment mode (if anything is selected).
 			elif event.key == pygame.K_SPACE and self.selected:
 					# The players can't assign actions to enemies or to asteroids!
 					if self.selected in self.gamestate.enemy_ships or self.selected in self.gamestate.asteroids:
 						SFX_ERROR.play()
-						return None
+						return
 					# TODO: Probably play a sound and give some visual indication.
 					self.clear_projected_move(self.selected)
 					self.selected.actions = []
@@ -135,13 +138,15 @@ class GameDisplay:
 					return
 				self.selected.actions.append(move)
 				self.project_move(self.selected)
+				return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions)
 
 		# Closing the game. We handle this last because it's the rarest.
 		elif event.type == pygame.QUIT: sys.exit()
 
-	def msg_respond(self, msg):
-		"""The method for responding to a message from the server."""
-		pass
+	def add_chat(self, msg):
+		"""Add a message to the chat bar and automatically update the display."""
+		self.chatbar.add_message(msg)
+		pygame.display.update(self.chatbar.rect)
 
 	def calc_pos(self, pos):
 		"""calc_pos converts a gameboard logical position to a pixel position on screen."""
@@ -274,7 +279,7 @@ class GameDisplay:
 		if not rect: rect = GAME_WINDOW_RECT
 		self.draw_grid(rect)
 		for pos in self.gamestate.salvages:
-			#if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)):
+			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(self.gamestate.salvages[pos])):
 				self.window.blit(IMAGE_DICT['salvage'], self.calc_pos(pos))
 		for entity in self.gamestate.station:
 			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)):
@@ -288,3 +293,9 @@ class GameDisplay:
 		for entity in self.gamestate.asteroids:
 			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)):
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
+
+	def full_redraw(self):
+		"""Redraw the entire game window, blanking it first."""
+		self.window.fill((0,0,0), GAME_WINDOW_RECT)
+		self.draw_gamestate()
+		pygame.display.flip()

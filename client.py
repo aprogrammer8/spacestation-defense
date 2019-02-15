@@ -13,7 +13,7 @@ def main():
 	player_name = ""
 	window = pygame.display.set_mode(SCREEN_SIZE, depth=24)
 	init_images()
-	## TODO: initialize the display with a random background image
+	# TODO: initialize the display with a random background image
 	# Connecting to server and starting main game code
 	print("connecting to server at "+repr(server)+"...")
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -153,39 +153,25 @@ def play(players):
 			msg = recv_message(key.fileobj)
 			print(msg)
 			if msg.startswith("LOCAL:"):
-				display.chatbar.add_message(msg[6:])
-				pygame.display.update(chatbar.rect)
+				display.add_chat(msg[6:])
 			if msg == "ROUND":
 				gamestate.upkeep(clientside=True)
-				window.fill((0,0,0), GAME_WINDOW_RECT)
-				display.draw_gamestate()
-				panel_buttons = fill_panel(selected)
-				pygame.display.flip()
+				display.full_redraw()
 			if msg.startswith("SPAWN ENEMIES:"):
 				enemy_json = json.loads(msg[14:])
 				gamestate.insert_enemies(enemy_json)
-				display.draw_gamestate()
-				pygame.display.flip()
+				display.full_redraw()
 			if msg.startswith("ASSIGN:"):
 				interpret_assign(gamestate, msg[7:])
-			if msg.startswith("UNASSIGN ALL:"):
-				interpret_unassign(gamestate, msg[msg.index(':')+1:])
+				# TODO: need a solution for notifying the Display.
 			# Unit action happening commands.
 			if msg.startswith("ACTION:"):
 				execute_move(msg[msg.index(':')+1:])
-				panel_buttons = fill_panel(selected)
-				pygame.display.update(PANEL_RECT)
+				# TODO: need a solution for involving the Display in this.
 		for event in pygame.event.get():
 			response = display.event_respond(event)
-			# The respose from the display module (if not None) is always a tuple: (type, data)
-			if response:
-				if response[0] == "BUTTON":
-					if response[1] == "done": sock.send(encode("DONE"))
-				elif response[0] == "CHAT":
-					sock.send(encode(response[1]))
-				elif response[0] == "ASSIGN":
-					sock.send(encode(response[1]))
-				# This might end up just reducing to "if response: sock.send(encode(response))".
+			# The repsonse is always a message to be sent to the server.
+			if response: sock.send(encode(response))
 
 
 def launch_ship():

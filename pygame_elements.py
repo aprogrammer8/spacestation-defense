@@ -81,7 +81,7 @@ class InputBox:
 				self.draw()
 				if event.key == pygame.K_RETURN:
 					return returntext
-	def handle_mousebuttondown(self, evnet):
+	def handle_mousebuttondown(self, event):
 		"""This method specifically handles mousebuttondown events, and returns True if the InputBox redrew itself (meaning the display needs to be updated)."""
 		active = self.rect.collidepoint(event.pos)
 		if active != self.active:
@@ -156,7 +156,7 @@ class Chat:
 		if event.type == pygame.MOUSEBUTTONDOWN: self.entry_box.handle_event(event)
 		if event.type == pygame.KEYDOWN: return self.entry_box.handle_event(event)
 	def handle_mousebuttondown(self, event):
-		return self.entry_box.handle_event(event)
+		return self.entry_box.handle_mousebuttondown(event)
 	def add_message(self, message):
 		self.log.add(message)
 		self.entry_box.draw()
