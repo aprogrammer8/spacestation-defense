@@ -47,6 +47,7 @@ class Gamestate:
 		for asteroid in self.asteroids: asteroid.actions = []
 
 	def upkeep(self, clientside=False):
+		"""Do every-round tasks, like regenerating everyone's shields and stuff."""
 		self.clear()
 		# Regen everyone's shields.
 		for ship in self.allied_ships: ship.shield_regen()
@@ -97,7 +98,7 @@ class Gamestate:
 			self.salvages[pos].time = max(self.salvages[pos].time, salvage.time)
 
 	def occupied(self, pos):
-		"""Checks if a gameboard space is occupied."""
+		"""Returns the Entity occupying a gameboard space."""
 		for entity in self.station:
 			if pos in entity.spaces(): return entity
 		for entity in self.allied_ships:
@@ -108,19 +109,19 @@ class Gamestate:
 			if pos in entity.spaces(): return entity
 
 	def occupied_area(self, spaces, exclude=None):
-		"""Checks if any of a sequence of spaces is occupied."""
+		"""Returns an Entity occupying any of a sequence of spaces."""
 		for space in spaces:
 			entity = self.occupied(space)
 			if entity and entity != exclude: return entity
 
 	def find_open_pos(self, size=(1,1)):
-		"""Searches through all game objects and find an unoccupied position to put the enemy on."""
+		"""Searches through all game objects and finds an unoccupied position to put the enemy on."""
 		while True:
 			pos = [random.randint(-5,5), random.randint(5,7)]
 			if not self.occupied(pos): return pos
 
 	def invalid_move(self, entity, move):
-		"""Helper function that takes an Entity and a proposed move, and checks all destination spaces."""
+		"""Helper function that takes an Entity and a proposed move, and checks all destination spaces for obstructions."""
 		# Found the bug: it's projecting from the already projected space.
 		for space in entity.projected_spaces():
 			occupied = self.occupied([space[0]+move[0], space[1]+move[1]])
@@ -137,6 +138,7 @@ class Gamestate:
 		return False
 
 	def path(self, source_entity, source, type, target):
+		"""Attempts to find a path for an attack to get from one space to a target space. The source_entity is needed so we don't count it as an obstacle."""
 		dist = [abs(target[0] - source[0]), abs(target[1] - source[1])]
 		total_dist = dist[0] + dist[1]
 		# It's ugly, but it finds the distance with magnitude reduced to 1 or -1.
@@ -178,6 +180,7 @@ class Gamestate:
 		return False
 
 	def remove(self, entity):
+		"""Remove an Entity."""
 		for e in self.station:
 			if e == entity:
 				self.station.remove(e)
@@ -238,6 +241,7 @@ class Entity:
 		self.actions = []
 
 	def move(self, change):
+		"""Apply a tuple of (x, y) as a move to be made."""
 		self.pos[0] += change[0]
 		self.pos[1] += change[1]
 
@@ -261,6 +265,7 @@ class Entity:
 		return rect(self.spaces()+self.projected_spaces())
 
 	def take_damage(self, dmg, type):
+		"""This method internally accounts for switching from shields to hull, resetting the shield regen pointer, etc."""
 		# For now, we ignore type.
 		dealt = min(dmg, self.shield)
 		# Taking shield damage always resets the regen pointer.
@@ -374,8 +379,8 @@ class Ship(Entity):
 		return string
 
 
-# A Station Component.
 class Component(Entity):
+	"""A Station Component."""
 	def __init__(self, pos, station, type, rot, hull):
 		Entity.__init__(self, pos, shape=((1,0),(0,1),(1,1)), rot=rot, salvage=COMPONENT_SALVAGE, hull=hull, shield=0, shield_regen=(0,))
 		if type not in COMPONENT_TYPES: raise TypeException("Not a valid station component type: " + type)
@@ -448,6 +453,7 @@ class Component(Entity):
 		return fill
 
 	def summarize_contents(self):
+		"""Return a string suitable for describing the Hangar's contents on the panel."""
 		if self.type != "Hangar": print("Error: summarize_contents should not have been called on the component at", self.pos, "which is a", self.type)
 		# First, make a dictionary of ship types to counts.
 		ship_dict = {}
@@ -467,6 +473,7 @@ class Composite:
 		self.compoments = components
 
 class Station(list):
+	"""Station is an extension of a list, and its methods basically just propagate the calls down to each Component."""
 	def __init__(self, li=[]):
 		list.__init__(self, li)
 		self.power = 0
@@ -505,6 +512,7 @@ class Weapon:
 
 	def __str__(self):
 		return self.type + ": " + str(self.power)
+
 
 class Salvage:
 	def __init__(self, amount):
