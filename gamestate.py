@@ -24,10 +24,13 @@ class Gamestate:
 			# The draw pointer is used to keep track of who will get the next card the players draw.
 			self.draw_pointer = 0
 			self.mission = Mission("missions/"+mission)
+
 	def init_station(self, data):
 		for pos in data: self.station.append(Component(list(pos), self.station, data[pos], 0, COMPONENT_HULL))
+
 	#def encode(self):
 	#	"""Encodes the Gamestate into a JSON object that can be sent over the network."""
+
 	def draw_cards(self, num):
 		draws = []
 		for i in range(num):
@@ -35,12 +38,14 @@ class Gamestate:
 			self.draw_pointer += 1
 			if self.draw_pointer >= len(self.players): self.draw_pointer = 0
 		return draws
+
 	def clear(self):
 		"""Clears the stored actions and moves of all gamestate objects."""
 		for ship in self.allied_ships: ship.actions = []
 		for ship in self.enemy_ships: ship.actions = []
 		for component in self.station: component.actions = []
 		for asteroid in self.asteroids: asteroid.actions = []
+
 	def upkeep(self, clientside=False):
 		self.clear()
 		# Regen everyone's shields.
@@ -62,6 +67,7 @@ class Gamestate:
 				wave, self.rewards[self.nextwave], self.time = self.mission.wave(self.nextwave)
 				self.nextwave += 1
 				return self.send_enemies(wave)
+
 	def send_enemies(self, enemies):
 		"Accepts enemies to send as passed by the mission's wave method and returns the changes that must be made to the gamestate."
 		inserts = []
@@ -71,12 +77,14 @@ class Gamestate:
 				inserts.append({'type':enemy_type, 'pos':self.find_open_pos(), 'rot':0})
 				self.insert_enemies((inserts[-1],))
 		return inserts
+
 	def insert_enemies(self, enemies):
 		"""Inserts the given enemies into the Gamestate. Takes a sequence of dicts with enemy type names as keys and their board positions as values."""
 		for enemy in enemies:
 			if enemy['type'] == "Drone": self.enemy_ships.append(drone(enemy['pos'], enemy['rot']))
 			elif enemy['type'] == "Kamikaze Drone": self.enemy_ships.append(kamikaze_drone(enemy['pos'], enemy['rot']))
 			else: print("Unrecognized enemy type:", enemy)
+
 	def add_salvage(self, pos, salvage):
 		# Salvage positions have to be tuples, because they're keys in a dict. It's not a problem because they never move anyway.
 		if type(pos) != tuple: pos = tuple(pos)
@@ -87,6 +95,7 @@ class Gamestate:
 			# If there's already one, it stacks.
 			self.salvages[pos].amount += salvage.amount
 			self.salvages[pos].time = max(self.salvages[pos].time, salvage.time)
+
 	def occupied(self, pos):
 		"""Checks if a gameboard space is occupied."""
 		for entity in self.station:
@@ -97,16 +106,19 @@ class Gamestate:
 			if pos in entity.spaces(): return entity
 		for entity in self.asteroids:
 			if pos in entity.spaces(): return entity
+
 	def occupied_area(self, spaces, exclude=None):
 		"""Checks if any of a sequence of spaces is occupied."""
 		for space in spaces:
 			entity = self.occupied(space)
 			if entity and entity != exclude: return entity
+
 	def find_open_pos(self, size=(1,1)):
 		"""Searches through all game objects and find an unoccupied position to put the enemy on."""
 		while True:
 			pos = [random.randint(-5,5), random.randint(5,7)]
 			if not self.occupied(pos): return pos
+
 	def invalid_move(self, entity, move):
 		"""Helper function that takes an Entity and a proposed move, and checks all destination spaces."""
 		# Found the bug: it's projecting from the already projected space.
@@ -115,6 +127,7 @@ class Gamestate:
 			# Have to also check for equality, because big ships will overlap themselves when they move.
 			if occupied and occupied != entity: return occupied
 		return False
+
 	def in_range(self, source, type, target):
 		"""Determines whether a source is in range of a target. type is the type of attack - some might have range limits."""
 		# Try all source spaces to all target spaces.
@@ -122,6 +135,7 @@ class Gamestate:
 			for target_space in target.spaces():
 				if self.path(source, source_space, type, target_space): return True
 		return False
+
 	def path(self, source_entity, source, type, target):
 		dist = [abs(target[0] - source[0]), abs(target[1] - source[1])]
 		total_dist = dist[0] + dist[1]
@@ -162,6 +176,7 @@ class Gamestate:
 					dist[1] -= 1
 		if probe == target: return True
 		return False
+
 	def remove(self, entity):
 		for e in self.station:
 			if e == entity:
@@ -221,24 +236,30 @@ class Entity:
 		self.salvage = salvage
 		# The sequence of actions the Entity plans to make.
 		self.actions = []
+
 	def move(self, change):
 		self.pos[0] += change[0]
 		self.pos[1] += change[1]
+
 	def spaces(self):
 		"""Returns all spaces the Entity occupies."""
 		return spaces(self.pos, self.shape, self.rot)
+
 	def projected_spaces(self):
 		"""Like Entity.spaces, but uses the projected final position."""
 		final_pos = self.pos
 		for move in self.moves_planned():
 			final_pos = [final_pos[0] + move[0], final_pos[1] + move[1]]
 		return spaces(final_pos, self.shape, self.rot)
+
 	def rect(self):
 		"""Returns the top-left space of the Entity and the bottom right."""
 		return rect(self.spaces())
+
 	def move_rect(self):
 		"""Like Entity.rect, but encompasses both current position and projected position."""
 		return rect(self.spaces()+self.projected_spaces())
+
 	def take_damage(self, dmg, type):
 		# For now, we ignore type.
 		dealt = min(dmg, self.shield)
@@ -249,15 +270,18 @@ class Entity:
 		if dmg == 0: return
 		# Now it goes through to hull.
 		self.hull -= dmg
+
 	def shield_regen(self):
 		self.shield += self.shield_regen_amounts[self.shield_regen_pointer]
 		if self.shield_regen_pointer < len(self.shield_regen_amounts) - 1: self.shield_regen_pointer += 1
+
 	def moves_left(self):
 		moves = self.speed
 		for action in self.actions:
 			# Moves are always length 2.
 			if len(action) == 2: moves -= 1
 		return moves
+
 	def target(self, index, pos):
 		"""Targets the Entity's weapon at the provided index at the Entity at pos."""
 		action_index = 0
@@ -268,6 +292,7 @@ class Entity:
 				return
 			action_index += 1
 		self.actions.append([index, *pos])
+
 	def desc_target(self, weapon, gamestate):
 		"""Takes a weapon index and returns a string describing what it's targeting, if anything."""
 		index = self.weapons.index(weapon)
@@ -276,10 +301,12 @@ class Entity:
 				target = gamestate.occupied(action[1:3])
 				if target: return ", targeting " + target.type + " at " + str(target.pos)
 		return ""
+
 	def moves_planned(self):
 		"""Filters the list of planned actions and returns only the moves."""
 		# Moves are always length 2, attacks will be length 3, or 4 if they've been stamped for accuracy.
 		return [move for move in self.actions if len(move) == 2]
+
 	def untargeted(self):
 		"""Returns all weapons with no target."""
 		# First, construct a list of indexes of weapons.
@@ -292,6 +319,7 @@ class Entity:
 		for action in self.actions:
 			if len(action) > 2: weapons.remove(action[0])
 		return weapons
+
 	def all_in_range(self, gamestate, enemy):
 		"""Returns all weapons that can hit something from the opposing team from our current position. enemy is a bool saying which team this Entity is on."""
 		weapons = []
@@ -303,6 +331,7 @@ class Entity:
 					weapons.append(self.index[weapon])
 					break
 		return weapons
+
 	def random_targets(self, gamestate, enemy):
 		"""Target all weapons at random enemies."""
 		if enemy: targets = gamestate.allied_ships + gamestate.station
@@ -315,6 +344,7 @@ class Entity:
 					self.actions.append([i, *target.pos])
 					break
 
+
 class Ship(Entity):
 	def __init__(self, type, team, pos, shape, rot, salvage, hull, shield, shield_regen, weapons, speed, wave=0, size=0):
 		Entity.__init__(self, pos=pos, shape=shape, rot=rot, salvage=salvage, hull=hull, shield=shield, shield_regen=shield_regen, weapons=weapons, speed=speed)
@@ -326,6 +356,7 @@ class Ship(Entity):
 		self.size = size
 		# Probes can carry salvage.
 		if self.type == "Probe": self.load = 0
+
 	def collect(self, salvage):
 		"""The Ship picks up a piece of salvage. Only Probes can do this."""
 		if self.type != "Probe":
@@ -334,12 +365,14 @@ class Ship(Entity):
 		collected = min(salvage.amount, PROBE_CAPACITY-self.load)
 		self.load += collected
 		salvage.amount -= collected
+
 	def hangar_describe(self):
 		"""Returns a string suitable for describing the Ship when it's in a Hangar."""
 		string = self.type + "; hull = " + str(self.hull) + "/" + str(self.maxhull) + ", shield = " + str(self.shield) + "/" + str(self.maxshield) + " (+" + str(self.shield_regen_amounts[self.shield_regen_pointer]) + ")"
 		if self.type == "Probe":
 			string += "; carrying " + str(self.load) + " salvage"
 		return string
+
 
 # A Station Component.
 class Component(Entity):
@@ -362,6 +395,7 @@ class Component(Entity):
 			self.station.power += POWER_GEN_CAP // 2
 		if type == "Hangar":
 			self.contents = []
+
 	def shield_generators(self):
 		"""Find all Shield Generators covering this Component."""
 		gens = []
@@ -370,17 +404,20 @@ class Component(Entity):
 			if abs(comp.pos[0] - self.pos[0]) + abs(comp.pos[1] - self.pos[1]) < SHIELD_GEN_RANGE:
 				gens.append(comp)
 		return gens
+
 	@property
 	def shield(self):
 		# Calculate which shield generators are applying to it, and use their underlying fields.
 		shield = 0
 		for comp in self.shield_generators(): shield += comp.__shield
 		return shield
+
 	@property
 	def maxshield(self):
 		shield = 0
 		for comp in self.shield_generators(): shield += comp.__maxshield
 		return shield
+
 	@shield.setter
 	def shield(self, new):
 		diff = self.shield - new
@@ -397,16 +434,19 @@ class Component(Entity):
 					gen.__shield -= 1
 					gen.shield_regen_pointer = 0
 					diff -= 1
+
 	def powered(self):
 		"""Returns whether the Component is currently using power."""
 		if self.type == "Shield Generator": return True
 		if self.type == "Laser Turret": return bool(self.actions)
 		return False
+
 	def current_fill(self):
 		if self.type != "Hangar": print("Error: current_fill should not have been called on the component at", self.pos, "which is a", self.type)
 		fill = 0
 		for ship in self.contents: fill += ship.size
 		return fill
+
 	def summarize_contents(self):
 		if self.type != "Hangar": print("Error: summarize_contents should not have been called on the component at", self.pos, "which is a", self.type)
 		# First, make a dictionary of ship types to counts.
@@ -421,6 +461,7 @@ class Component(Entity):
 			else: string += ", " + type + " x " + str(ship_dict[type])
 		return string
 
+
 class Composite:
 	def __init__(self, components):
 		self.compoments = components
@@ -429,32 +470,39 @@ class Station(list):
 	def __init__(self, li=[]):
 		list.__init__(self, li)
 		self.power = 0
+
 	def shield_regen(self):
 		for comp in self:
 			if comp.type == "Shield Generator": comp.shield_regen()
+
 	def power_regen(self):
 		for comp in self.power_generators(): self.power += POWER_GEN_SPEED
 		self.power = min(self.power, self.maxpower())
+
 	def power_generators(self):
 		gens = []
 		for comp in self:
 			if comp.type == "Power Generator": gens.append(comp)
 		return gens
+
 	def maxpower(self):
 		cap = 0
 		for comp in self.power_generators(): cap += POWER_GEN_CAP
 		return cap
+
 	def projected_power(self):
 		used = 0
 		for comp in self:
 			if comp.powered(): used += COMPONENT_POWER_USAGE
 		return self.power - used
 
+
 class Weapon:
 	def __init__(self, type, power, tier=1):
 		self.type = type
 		self.tier = tier
 		self.power = power
+
 	def __str__(self):
 		return self.type + ": " + str(self.power)
 
@@ -462,12 +510,15 @@ class Salvage:
 	def __init__(self, amount):
 		self.amount = amount
 		self.time = SALVAGE_START_TIME
+
 	def decay(self):
 		self.time -= 1
 		if self.time < 0: self.amount -= 1
+
 	def __str__(self):
 		if self.time > 0: return str(self.amount) + " salvage, " + str(self.time) + " turns until decay"
 		return str(self.amount) + " salvage, decaying"
+
 
 class Mission:
 	def __init__(self, filename):
@@ -480,10 +531,12 @@ class Mission:
 			(0,2): "Hangar",
 		}
 		self.starting_cards = 4
+
 	def wave(self, num):
 		"""This method acccepts a wave number and returns a dict of enemy type:count, a reward for clearing it, and a number of turns until the next wave arrives."""
 		# TEMP
 		return {'Drone':6}, None, 5
+
 
 def hit_chance(attack, target):
 	"""Calculates the hit rate of a given attack type against the target ship."""
