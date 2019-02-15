@@ -146,10 +146,6 @@ def play(players):
 	gamestate = Gamestate(players)
 	gamestate.init_station(gamestate.mission.starting_station)
 	display = GameDisplay(window, player_name, gamestate)
-	### Redoing
-	#selected = None
-	# When assigning a unit that has weapons, this is set to an int instead of True.
-	#assigning = False
 	while True:
 		clock.tick(LOBBY_RATE)
 		events = selector.select(0)
@@ -187,6 +183,9 @@ def play(players):
 					if response[1] == "done": sock.send(encode("DONE"))
 				elif response[0] == "CHAT":
 					sock.send(encode(response[1]))
+				elif response[0] == "ASSIGN":
+					sock.send(encode(response[1]))
+				# This might end up just reducing to "if response: sock.send(encode(response))".
 
 
 def launch_ship():

@@ -204,7 +204,7 @@ class Button:
 			return True
 		return False
 	def handle_mousebuttondown(self, event):
-		if self.rect.collidepoint(event.pos): return callback
+		if self.rect.collidepoint(event.pos): return self.callback
 		return False
 	def draw(self):
 		if self.active: pygame.draw.rect(self.window, self.active_color, self.rect, 0)

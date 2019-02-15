@@ -35,6 +35,7 @@ def interpret_assign(gamestate, cmd):
 	unit.actions = json.loads(cmd[cmd.index(':')+1:])
 
 # Unassign commands clear all actions for a ship, both movement and targeting.
+# This is probbaly going to be removed, since I think ASSIGN:[...]:[] can do the same thing.
 def interpret_unassign(gamestate, cmd):
 	unit_pos = json.loads(cmd)
 	unit = gamestate.occupied(unit_pos)
