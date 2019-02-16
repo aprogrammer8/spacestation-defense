@@ -30,17 +30,11 @@ def rect(spaces):
 		if space[1] > bottom: bottom = space[1]
 	return left, top, right-left+1, bottom-top+1
 
-def interpret_assign(gamestate, cmd):
+def interpret_assign(gamestate, cmd, display=None):
 	unit_pos = json.loads(cmd[:cmd.index(':')])
 	unit = gamestate.occupied(unit_pos)
 	unit.actions = json.loads(cmd[cmd.index(':')+1:])
-
-# Unassign commands clear all actions for a ship, both movement and targeting.
-# This is probbaly going to be removed, since I think ASSIGN:[...]:[] can do the same thing.
-def interpret_unassign(gamestate, cmd):
-	unit_pos = json.loads(cmd)
-	unit = gamestate.occupied(unit_pos)
-	unit.actions = []
+	if display and display.selected == unit: display.fill_panel()
 
 def shield_repr(entity):
 	"""Returns a string suitable to label the shield bar on the panel."""

@@ -162,11 +162,11 @@ def play(players):
 				gamestate.insert_enemies(enemy_json)
 				display.full_redraw()
 			if msg.startswith("ASSIGN:"):
-				interpret_assign(gamestate, msg[7:])
+				interpret_assign(gamestate, msg[7:], display)
 				# TODO: need a solution for notifying the Display.
 			# Unit action happening commands.
 			if msg.startswith("ACTION:"):
-				execute_move(msg[msg.index(':')+1:])
+				execute_move(msg[msg.index(':')+1:], display)
 				# TODO: need a solution for involving the Display in this.
 		for event in pygame.event.get():
 			response = display.event_respond(event)
@@ -178,35 +178,34 @@ def launch_ship():
 	"""Launches a ship from a Hangar."""
 	pass
 
-def execute_move(cmd):
+def execute_move(cmd, display):
 	"""Takes an ACTION command from the server and executes it. It needs the offset for graphics/animation purposes."""
 	print("Executing move:", cmd)
 	parts = cmd.split(':')
 	entity = gamestate.occupied(json.loads(parts[0]))
 	actions = json.loads(parts[1])
 	# Subtract power for used components.
-	if type(entity) == Component and entity.powered(): gamestate.station.power -= COMPONENT_POWER_USAGE
+	if type(entity) == Component and entity.powered():
+		gamestate.station.power -= COMPONENT_POWER_USAGE
+		# If a station component was selected, then this needs to be reflected on the panel.
+		if type(display.selected) == Component: display.select()
+
 	for action in actions:
 		# Moves.
 		if len(action) == 2:
-			# TODO: This should be smoothly animated
-			# TODO: Need to make sure stuff won't get overwritten.
-			rect = entity_pixel_rect(entity)
-			erase(rect)
+			# Could I maybe encapsulate the checking of hangar landing and picking up salvage into entity.move?
 			entity.move(action)
 			# Handle player ships landing in Hangars.
+			# XXX Animating landing will be hard.
 			if entity.team == 'player':
 				obstacle = gamestate.occupied_area(entity.spaces(), exclude=entity)
-				# We assume there's only one obstacle and that it's a hangar, because if either of those is not the case then something else is wrong.
+				# If there's an obstacle other than a Hangar, then the server sent an invalid move and that's not the client's responsibility.
 				if obstacle:
 					# Land it: remove it from the list of visible allied ships, and add it to the hangar's contents.
 					gamestate.allied_ships.remove(entity)
 					obstacle.contents.append(entity)
 					# Probably play a landing sound.
 					continue
-			# We redraw old stuff on the now vacated space, incase there was salvage or something.
-			draw_gamestate(rect)
-			window.blit(IMAGE_DICT[entity.type], calc_pos(entity.pos))
 			# Probes pick up salvage when they walk over it.
 			if entity.type == "Probe":
 				for pos in gamestate.salvages:
@@ -215,32 +214,30 @@ def execute_move(cmd):
 						entity.collect(salvage)
 						if salvage.amount <= 0:
 							del gamestate.salvages[pos]
-							draw_gamestate()
+							# TODO Make it disappear from display
 						break
-			#draw_gamestate(gamestate, entity_pixel_rect(entity))
-			pygame.display.flip()
-			pygame.time.wait(500)
+
 		# Attacks.
 		elif len(action) == 4:
+			# TODO Need to start some animation of some kind in a thread
 			weapon = entity.weapons[action[0]]
 			target = gamestate.occupied(action[1:3])
 			# This should happen if we killed the target in a previous attack.
 			if not target: continue
-			# TODO: Do some animation
 			# Nothing is changed in the gamestate if the attack misses.
 			if not action[3]: continue
 			target.take_damage(weapon.power, weapon.type)
 			# Remove dead targets.
 			if target.hull <= 0:
-				rect = entity_pixel_rect(target)
-				erase(rect)
-				# TODO: Animate.
 				gamestate.remove(target)
 				# Spawn salvage pile.
 				gamestate.add_salvage(target.pos, Salvage(target.salvage))
-				window.blit(IMAGE_DICT['salvage'], calc_pos(target.pos))
-				pygame.display.update(rect)
+				display.draw_gamestate()
 		else: print(action, "is an invalid action to marshal")
+
+	# These hopefully won't be necessary in the end.
+	display.full_redraw()
+	display.select()
 
 
 def init_images():
