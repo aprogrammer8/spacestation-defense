@@ -64,23 +64,8 @@ def marshal_action(entity):
 	for action in entity.actions:
 		# If it's a move.
 		if len(action) == 2:
-			entity.move(action)
-			# First, handle player ships landing in Hangars.
-			if entity.team == "player":
-				obstacle = gamestate.occupied_area(entity.spaces(), exclude=entity)
-				# We assume there's only one obstacle and that it's a hangar, because if either of those is not the case then something else is wrong.
-				if obstacle:
-					# Land it: remove it from the list of visible allied ships, and add it to the hangar's contents.
-					gamestate.allied_ships.remove(entity)
-					obstacle.contents.append(entity)
-				# Handle Probes picking up salvage.
-				elif entity.type == "Probe":
-					for pos in gamestate.salvages:
-						if pos == tuple(entity.pos):
-							salvage = gamestate.salvages[pos]
-							entity.collect(salvage)
-							if salvage.amount <= 0: del gamestate.salvages[pos]
-							break
+			entity.move(action, gamestate)
+
 		# If it's an attack.
 		elif len(action) == 3:
 			weapon = entity.weapons[action[0]]
@@ -96,10 +81,12 @@ def marshal_action(entity):
 				if target.hull <= 0:
 					gamestate.remove(target)
 					# Spawn the salvage pile.
-					gamestate.add_salvage(target.pos, Salvage(target.salvage))
+					gamestate.add_salvage(Salvage(target.pos, target.salvage))
 			else:
 				action.append(False)
+
 		else: print(action, "is an invalid action to marshal")
+
 	sock.send(encode("ACTION:" + json.dumps(orig_pos) + ':' + json.dumps(entity.actions)))
 
 def main():

@@ -12,7 +12,7 @@ class Gamestate:
 			self.enemy_ships = []
 			self.allied_ships = [probe([0, 5])]
 			self.asteroids = []
-			self.salvages = {}
+			self.salvages = []
 			self.nextwave = 0
 			self.round = 0
 			# Number of turns left before the next wave should come.
@@ -54,12 +54,11 @@ class Gamestate:
 		for ship in self.enemy_ships: ship.shield_regen()
 		self.station.shield_regen()
 		self.station.power_regen()
-		# Salvage decay. We make a new dict to avoid messings things up by changing the size during iteration.
-		new_salvages = {}
-		for pos in self.salvages:
-			salvage = self.salvages[tuple(pos)]
+		# Salvage decay. We make a new list to avoid messings things up by changing the size during iteration.
+		new_salvages = []
+		for salvage in self.salvages:
 			salvage.decay()
-			if salvage.amount > 0: new_salvages[tuple(pos)] = salvage
+			if salvage.amount > 0: new_salvages.append(salvage)
 		self.salvages = new_salvages
 		if not clientside:
 			# Advance the mission track.
@@ -86,16 +85,15 @@ class Gamestate:
 			elif enemy['type'] == "Kamikaze Drone": self.enemy_ships.append(kamikaze_drone(enemy['pos'], enemy['rot']))
 			else: print("Unrecognized enemy type:", enemy)
 
-	def add_salvage(self, pos, salvage):
-		# Salvage positions have to be tuples, because they're keys in a dict. It's not a problem because they never move anyway.
-		if type(pos) != tuple: pos = tuple(pos)
-		if pos not in self.salvages:
-			# Easy case, we just add it.
-			self.salvages[pos] = salvage
-		else:
-			# If there's already one, it stacks.
-			self.salvages[pos].amount += salvage.amount
-			self.salvages[pos].time = max(self.salvages[pos].time, salvage.time)
+	def add_salvage(self, salvage):
+		# If there's already one on the space, it stacks for simplicity.
+		for s in self.salvages:
+			if s.pos == salvage.pos:
+				s.amount += salvage.amount
+				s.time = max(s.time, salvage.time)
+				return
+		# Otherwise, we just add it.
+		self.salvages.append(salvage)
 
 	def occupied(self, pos):
 		"""Returns the Entity occupying a gameboard space."""
@@ -240,10 +238,30 @@ class Entity:
 		# The sequence of actions the Entity plans to make.
 		self.actions = []
 
-	def move(self, change):
+	def move(self, change, gamestate=None):
 		"""Apply a tuple of (x, y) as a move to be made."""
 		self.pos[0] += change[0]
 		self.pos[1] += change[1]
+
+		# The landing in Hangars is encapsulated in here, so client and server don't have to copy as much code.
+		if self.team == 'player':
+			obstacle = gamestate.occupied_area(self.spaces(), exclude=self)
+			# If there's an obstacle other than a Hangar, then the server sent an invalid move and that's not the client's responsibility.
+			if obstacle:
+				# Land it: remove it from the list of visible allied ships, and add it to the hangar's contents.
+				gamestate.allied_ships.remove(self)
+				obstacle.contents.append(self)
+				# These return signals are so the client can know whether to play a sound.
+				return "LANDED"
+		# Probes picking up salvage is also encapsulated.
+		if self.type == "Probe":
+			for salvage in gamestate.salvages:
+				if salvage.pos == self.pos:
+					self.collect(salvage)
+					if salvage.amount <= 0: gamestate.salvages.remove(salvage)
+					return "COLLECTED"
+
+
 
 	def spaces(self):
 		"""Returns all spaces the Entity occupies."""
@@ -515,13 +533,17 @@ class Weapon:
 
 
 class Salvage:
-	def __init__(self, amount):
+	def __init__(self, pos, amount):
+		self.pos = pos
 		self.amount = amount
 		self.time = SALVAGE_START_TIME
 
 	def decay(self):
 		self.time -= 1
 		if self.time < 0: self.amount -= 1
+
+	def rect(self):
+		return rect((self.pos,))
 
 	def __str__(self):
 		if self.time > 0: return str(self.amount) + " salvage, " + str(self.time) + " turns until decay"

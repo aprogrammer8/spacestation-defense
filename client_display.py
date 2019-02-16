@@ -145,11 +145,11 @@ class GameDisplay:
 
 	def calc_pos(self, pos):
 		"""calc_pos converts a gameboard logical position to a pixel position on screen."""
-		return ((pos[0]+self.offset[0])*TILESIZE[0]+GAME_WINDOW_RECT.left, (pos[1]+self.offset[1])*TILESIZE[1])
+		return ((pos[0] + self.offset[0]) * TILESIZE[0]+GAME_WINDOW_RECT.left, (pos[1] + self.offset[1]) * TILESIZE[1])
 
 	def reverse_calc_pos(self, pos):
 		"""reverse_calc_pos converts a pixel position on screen to a gameboard logical position."""
-		return [int(pos[0]-GAME_WINDOW_RECT.left)//TILESIZE[0]-self.offset[0], pos[1]//TILESIZE[1]-self.offset[1]]
+		return [int(pos[0] - GAME_WINDOW_RECT.left) // TILESIZE[0] - self.offset[0], pos[1] // TILESIZE[1] - self.offset[1]]
 
 	def fill_panel(self, salvage=None):
 		"""fills the panel with information about the given object."""
@@ -229,8 +229,6 @@ class GameDisplay:
 		# First clear the currently projected move if we're selecting away from sonething else.
 		if self.selected: self.clear_projected_move()
 		entity = self.gamestate.occupied(list(pos))
-		if tuple(pos) in self.gamestate.salvages: salvage = self.gamestate.salvages[tuple(pos)]
-		else: salvage = None
 		if entity:
 			self.selected = entity
 			self.project_move()
@@ -239,16 +237,18 @@ class GameDisplay:
 			self.selected = entity
 			# If we're clearing self.selected, we should get out of assigning mode too.
 			self.assigning = False
-		self.select()
+		self.select(pos)
 
 	def select(self, pos=None):
 		"""An envelope around fill_panel that also finds the salvage under the selected Entity.
 		   If pos is not provided, select will pass whatever salvage is under the selected Entity to fill_panel.
-		   If pos is provided, select will check that pos for salvage instead. This is useful to selected a space with no Entity on it.
+		   If pos is provided, select will check that pos for salvage instead. This is useful to selecte a space with no Entity on it.
 		"""
+		if not pos: pos = self.selected.pos
 		# FIXME This is an imperfect method, as it makes it impossible to see salvage that's under a big ship but not under its central pos.
-		if pos: salvage = self.gamestate.salvages.get(tuple(pos))
-		else: salvage = self.gamestate.salvages.get(tuple(self.selected.pos))
+		salvage = None
+		for s in self.gamestate.salvages:
+			if s.pos == pos: salvage = s
 		self.fill_panel(salvage)
 
 	def project_move(self):
@@ -270,8 +270,8 @@ class GameDisplay:
 
 	def entity_pixel_rect(self, entity):
 		"""Finds the rectangle that an Entity is occupying (in terms of pixels)."""
-		# FIXME Salvage doesn't have rect and needs it
 		rect = entity.rect()
+		print(rect, entity.pos)
 		return pygame.Rect(self.calc_pos(rect[0:2]), (rect[2]*TILESIZE[0], rect[3]*TILESIZE[1]))
 
 	def erase(self, rect):
@@ -291,9 +291,9 @@ class GameDisplay:
 		"""Draw the game window within the specified Rect. It's measured in logical position, not pixel position."""
 		if not rect: rect = GAME_WINDOW_RECT
 		self.draw_grid(rect) # self.reverse_calc_pos?
-		for pos in self.gamestate.salvages:
-			#if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(self.gamestate.salvages[pos])):
-				self.window.blit(IMAGE_DICT['salvage'], self.calc_pos(pos))
+		for salvage in self.gamestate.salvages:
+			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(salvage)):
+				self.window.blit(IMAGE_DICT['salvage'], self.calc_pos(salvage.pos))
 		for entity in self.gamestate.station:
 			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)):
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))

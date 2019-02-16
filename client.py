@@ -193,29 +193,8 @@ def execute_move(cmd, display):
 	for action in actions:
 		# Moves.
 		if len(action) == 2:
-			# Could I maybe encapsulate the checking of hangar landing and picking up salvage into entity.move?
-			entity.move(action)
-			# Handle player ships landing in Hangars.
-			# XXX Animating landing will be hard.
-			if entity.team == 'player':
-				obstacle = gamestate.occupied_area(entity.spaces(), exclude=entity)
-				# If there's an obstacle other than a Hangar, then the server sent an invalid move and that's not the client's responsibility.
-				if obstacle:
-					# Land it: remove it from the list of visible allied ships, and add it to the hangar's contents.
-					gamestate.allied_ships.remove(entity)
-					obstacle.contents.append(entity)
-					# Probably play a landing sound.
-					continue
-			# Probes pick up salvage when they walk over it.
-			if entity.type == "Probe":
-				for pos in gamestate.salvages:
-					if pos == tuple(entity.pos):
-						salvage = gamestate.salvages[pos]
-						entity.collect(salvage)
-						if salvage.amount <= 0:
-							del gamestate.salvages[pos]
-							# TODO Make it disappear from display
-						break
+			# Notify Display.
+			entity.move(action, gamestate)
 
 		# Attacks.
 		elif len(action) == 4:
@@ -231,8 +210,9 @@ def execute_move(cmd, display):
 			if target.hull <= 0:
 				gamestate.remove(target)
 				# Spawn salvage pile.
-				gamestate.add_salvage(target.pos, Salvage(target.salvage))
+				gamestate.add_salvage(Salvage(target.pos, target.salvage))
 				display.draw_gamestate()
+
 		else: print(action, "is an invalid action to marshal")
 
 	# These hopefully won't be necessary in the end.
