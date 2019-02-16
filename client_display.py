@@ -1,6 +1,6 @@
 # A client-side module that handles the display during game.
 
-import pygame, sys
+import pygame, sys, threading
 from pygame_elements import *
 from client_config import *
 from gamestate import *
@@ -9,6 +9,10 @@ class GameDisplay:
 	"""An object that handles the screen during a game of Spacestation Defense. It abstracts so that the main module won't have to worry about pygame at all - theoretically the game could support a text-based version by only replacing this class."""
 	def __init__(self, window, player_name, gamestate):
 		self.window = window
+		# Current running animation.
+		self.anim = None
+		# For concurrency.
+		self.lock = threading.Lock()
 		grid_size = [GAME_WINDOW_RECT.w//TILESIZE[0], GAME_WINDOW_RECT.h//TILESIZE[1]]
 		self.offset = [grid_size[0]//2, grid_size[1]//2]
 		self.player_name = player_name
@@ -38,6 +42,8 @@ class GameDisplay:
 		# In the case of mousemotion, all we need to do is check all the buttons to see if they need to be redrawn.
 		# For now, mousemotion outside of the panel doesn't do anything.
 		if event.type == pygame.MOUSEMOTION and TOTAL_PANEL_RECT.collidepoint(event.pos):
+			# Buttons don't highlight on mouesover during an animation, because they can't be clicked anyway.
+			if self.animating(): return
 			rects_to_update = []
 			for button in self.panel_buttons + [self.done_button]:
 				if button.handle_mousemotion(event):
@@ -48,7 +54,9 @@ class GameDisplay:
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			# Recolor chatbar entry box if necesary.
 			if self.chatbar.handle_mousebuttondown(event):
+				self.lock.acquire()
 				pygame.display.update(self.chatbar.entry_box.rect)
+				self.lock.release()
 
 			# Game widow click events.
 			if GAME_WINDOW_RECT.collidepoint(event.pos):
@@ -91,15 +99,17 @@ class GameDisplay:
 		elif event.type == pygame.KEYDOWN:
 			# If the chatbar is active, just pass it the input and don't bother with gamestate commands.
 			if self.chatbar.entry_box.active:
+				self.lock.acquire()
 				entry = self.chatbar.handle_event(event)
 				pygame.display.update(self.chatbar.rect)
+				self.lock.release()
 				if entry: return "LOCAL:" + self.player_name + ":" + entry
 
 			# Everything else depends on something being selected, so instead of adding the condition everywhere, I just put a return here.
 			elif not self.selected: return
 
 			# Entering assignment mode.
-			elif event.key == pygame.K_SPACE:
+			elif event.key == pygame.K_SPACE and not self.animating():
 				# The players can't assign actions to enemies or to asteroids, or to units that don't have any abilities.
 				if self.selected in self.gamestate.enemy_ships or self.selected in self.gamestate.asteroids or (not self.selected.weapons and not self.selected.speed):
 					SFX_ERROR.play()
@@ -109,12 +119,12 @@ class GameDisplay:
 				self.selected.actions = []
 				if self.selected.weapons: self.assigning = 0
 				else: self.assigning = True
-				# TODO This needs to update the panel
 				# Clear out old actions.
 				return "ASSIGN:" + json.dumps(self.selected.pos) + ":[]"
+				# We don't need to update the panel ourselves here because the ASSIGN command will get sent to the server and come back, and a different case here will update the display.
 
 			# Esc gets out of assignment mode.
-			elif event.key == pygame.K_ESCAPE:
+			elif event.key == pygame.K_ESCAPE and not self.animating():
 				self.assigning = False
 				self.select()
 
@@ -129,7 +139,10 @@ class GameDisplay:
 				if self.selected.type == "Shield Generator":
 					self.selected.actions.append(False)
 					# TODO
-				elif self.selected.type == "Hangar": self.fill_panel_hangar()
+				elif self.selected.type == "Hangar":
+					self.lock.acquire()
+					self.fill_panel_hangar()
+					self.lock.release()
 				else: SFX_ERROR.play()
 			elif event.key == pygame.K_w:
 				# Shield Generators can also consume power to regenerate, but not project their shields so they can't be damaged and interrupted.
@@ -142,11 +155,14 @@ class GameDisplay:
 				if self.selected.type == "Shield Generator":
 					self.selected.actions = []
 					#TODO
-				elif self.selected.type == "Hangar": self.select()
+				elif self.selected.type == "Hangar":
+					self.lock.acquire()
+					self.select()
+					self.lock.release()
 				else: SFX_ERROR.play()
 
 			# Movement keys.
-			elif self.selected.moves_left():
+			elif self.selected.moves_left() and not self.animating():
 				if event.key == pygame.K_UP: move = [0, -1]
 				elif event.key == pygame.K_DOWN: move = [0, 1]
 				elif event.key == pygame.K_LEFT: move = [-1, 0]
@@ -165,8 +181,10 @@ class GameDisplay:
 
 	def add_chat(self, msg):
 		"""Add a message to the chat bar and automatically update the display."""
+		self.lock.acquire()
 		self.chatbar.add_message(msg)
 		pygame.display.update(self.chatbar.rect)
+		self.lock.release()
 
 	def calc_pos(self, pos):
 		"""calc_pos converts a gameboard logical position to a pixel position on screen."""
@@ -175,6 +193,10 @@ class GameDisplay:
 	def reverse_calc_pos(self, pos):
 		"""reverse_calc_pos converts a pixel position on screen to a gameboard logical position."""
 		return [int(pos[0] - GAME_WINDOW_RECT.left) // TILESIZE[0] - self.offset[0], pos[1] // TILESIZE[1] - self.offset[1]]
+
+	def calc_rect(self, rect):
+		"""calc_rect converts a gameboard logical rect to a pixel rect on screen."""
+		return pygame.Rect(self.calc_pos((rect[0], rect[1])), (rect[2]*TILESIZE[0], rect[3] * TILESIZE[1]))
 
 	def fill_panel(self, salvage=None):
 		"""fills the panel with information about the given object."""
@@ -300,15 +322,21 @@ class GameDisplay:
 	def erase(self, rect):
 		"""Takes a pixel rect and erases only the gameboard entities on it (by redrawing the grid.)"""
 		self.window.fill((0,0,0), rect)
-		draw_grid(rect)
+		self.draw_grid(rect)
 
 	def draw_grid(self, rect=None):
 		"""Draw the game window grid within the specified Rect."""
-		if not rect: rect = GAME_WINDOW_RECT
+		if rect:
+			# Make sure the lines aren't misaligned.
+			xoffset = (rect.x - GAME_WINDOW_RECT.x) % TILESIZE[0]
+			yoffset = (rect.y - GAME_WINDOW_RECT.y) % TILESIZE[1]
+		else:
+			rect = GAME_WINDOW_RECT
+			xoffset = yoffset = 0
 		for x in range(rect.left, rect.right, TILESIZE[0]):
-			pygame.draw.line(self.window, GRID_COLOR, (x, rect.top), (x, rect.bottom), 1)
+			pygame.draw.line(self.window, GRID_COLOR, (x - xoffset, rect.top), (x - xoffset, rect.bottom), 1)
 		for y in range(rect.top, rect.bottom, TILESIZE[1]):
-			pygame.draw.line(self.window, GRID_COLOR, (rect.left, y), (rect.right, y), 1)
+			pygame.draw.line(self.window, GRID_COLOR, (rect.left, y - yoffset), (rect.right, y - yoffset), 1)
 
 	def draw_gamestate(self, rect=None):
 		"""Draw the game window within the specified Rect. It's measured in logical position, not pixel position."""
@@ -335,3 +363,29 @@ class GameDisplay:
 		"""Blank and redraw the entire game window."""
 		self.window.fill((0,0,0), GAME_WINDOW_RECT)
 		self.draw_gamestate()
+
+	def move(self, entity, move):
+		self.anim = threading.Thread(target=self.animate_move, name="move animation", args=(entity, move))
+		self.anim.start()
+
+	def animate_move(self, entity, move):
+		pos = list(self.calc_pos(entity.pos))
+		dest = list(self.calc_pos((entity.pos[0] + move[0], entity.pos[1] + move[1])))
+		while pos != dest:
+			# Moves should always be just one space at a time, so they can only be one direction.
+			if move[0]: pos[0] += move[0]
+			else: pos[1] += move[1]
+			# This is run concurrently, so it's important to lock the display.
+			self.lock.acquire()
+			# TODO This probably only works with one-space ships.
+			self.erase(self.calc_rect(entity.move_rect()))
+			#self.erase(pygame.Rect(pos[0], pos[1], TILESIZE[0], TILESIZE[1]))
+			self.window.blit(IMAGE_DICT[entity.type], pos)
+			pygame.display.flip()
+			self.lock.release()
+			pygame.time.wait(10)
+
+	def animating(self):
+		"""Returns whether the Display is currently running an animation thread."""
+		if self.anim and self.anim.is_alive(): return True
+		return False

@@ -146,15 +146,20 @@ def play(players):
 	gamestate = Gamestate(players)
 	gamestate.init_station(gamestate.mission.starting_station)
 	display = GameDisplay(window, player_name, gamestate)
+	# This buffer is used to store all actions the server transmits before the "ROUND" message. We want to catch them all before we go into execute_move so that await_animation won't intercept them.
+	actions = []
 	while True:
 		clock.tick(LOBBY_RATE)
 		events = selector.select(0)
 		for key, _ in events:
 			msg = recv_message(key.fileobj)
-			print(msg)
 			if msg.startswith("LOCAL:"):
 				display.add_chat(msg[6:])
 			if msg == "ROUND":
+				# First, play out all the actions received.
+				for action in actions: execute_move(action, display)
+				actions = []
+				# Now prepare the next round.
 				gamestate.upkeep(clientside=True)
 				display.full_redraw()
 			if msg.startswith("SPAWN ENEMIES:"):
@@ -163,11 +168,9 @@ def play(players):
 				display.full_redraw()
 			if msg.startswith("ASSIGN:"):
 				interpret_assign(gamestate, msg[7:], display)
-				# TODO: need a solution for notifying the Display.
 			# Unit action happening commands.
 			if msg.startswith("ACTION:"):
-				execute_move(msg[msg.index(':')+1:], display)
-				# TODO: need a solution for involving the Display in this.
+				actions.append(msg[msg.index(':')+1:])
 		for event in pygame.event.get():
 			response = display.event_respond(event)
 			# The repsonse is always a message to be sent to the server.
@@ -183,6 +186,8 @@ def execute_move(cmd, display):
 	print("Executing move:", cmd)
 	parts = cmd.split(':')
 	entity = gamestate.occupied(json.loads(parts[0]))
+	if not entity:
+		print("Entity dead already: ", entity.pos, entity.type)
 	actions = json.loads(parts[1])
 	# Subtract power for used components.
 	if type(entity) == Component and entity.powered():
@@ -193,12 +198,12 @@ def execute_move(cmd, display):
 	for action in actions:
 		# Moves.
 		if len(action) == 2:
-			# Notify Display.
+			display.move(entity, action)
+			await_animation(display)
 			entity.move(action, gamestate)
 
 		# Attacks.
 		elif len(action) == 4:
-			# TODO Need to start some animation of some kind in a thread
 			weapon = entity.weapons[action[0]]
 			target = gamestate.occupied(action[1:3])
 			# This should happen if we killed the target in a previous attack.
@@ -217,8 +222,24 @@ def execute_move(cmd, display):
 
 	# These hopefully won't be necessary in the end.
 	display.full_redraw()
-	display.select()
+	if display.selected: display.select()
 
+
+
+def await_animation(display):
+	"""This function is used to ensure that chat and selection can still take place during animation."""
+	while display.anim.is_alive():
+		clock.tick(LOBBY_RATE)
+		events = selector.select(0)
+		for key, _ in events:
+			msg = recv_message(key.fileobj)
+			print(msg)
+			if msg.startswith("LOCAL:"):
+				display.add_chat(msg[6:])
+		for event in pygame.event.get():
+			response = display.event_respond(event)
+			# The repsonse is always a message to be sent to the server.
+			if response: sock.send(encode(response))
 
 def init_images():
 	"""The images defined in client_config.py need to be fixed for transparency. But client_config.py can't do that, because it runs before the pygame display has been initialized. So we do it here."""
