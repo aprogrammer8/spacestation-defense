@@ -187,7 +187,8 @@ def execute_move(cmd, display):
 	parts = cmd.split(':')
 	entity = gamestate.occupied(json.loads(parts[0]))
 	if not entity:
-		print("Entity dead already: ", entity.pos, entity.type)
+		print("Entity dead already: ", entity.pos, entity.type, ", planned actions =", actions)
+		return
 	actions = json.loads(parts[1])
 	# Subtract power for used components.
 	if type(entity) == Component and entity.powered():
@@ -200,7 +201,8 @@ def execute_move(cmd, display):
 		if len(action) == 2:
 			display.move(entity, action)
 			await_animation(display)
-			entity.move(action, gamestate)
+			# Don't process remaining actions if the ship lands in a Hangar.
+			if entity.move(action, gamestate) == "LANDED": break
 
 		# Attacks.
 		elif len(action) == 4:

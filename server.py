@@ -38,8 +38,8 @@ def collect_input():
 
 def players_move():
 	# This one is very simple since no AI is necessary.
-	for component in gamestate.station: marshal_action(component)
-	for ship in gamestate.allied_ships: marshal_action(ship)
+	for component in gamestate.station: process_actions(component)
+	for ship in gamestate.allied_ships: process_actions(ship)
 
 
 def enemies_move():
@@ -53,9 +53,9 @@ def enemies_move():
 			enemy.actions.append(random.choice(valid_moves))
 			enemy.random_targets(gamestate, enemy=True)
 		# Now make it happen.
-		marshal_action(enemy)
+		process_actions(enemy)
 
-def marshal_action(entity):
+def process_actions(entity):
 	"""Takes an Entity with all its actions set, reflects them in the gamestate, and then encodes them as JSON so the clients can do the same."""
 	# We'll need the original at the end.
 	orig_pos = entity.pos[:]
@@ -64,7 +64,8 @@ def marshal_action(entity):
 	for action in entity.actions:
 		# If it's a move.
 		if len(action) == 2:
-			entity.move(action, gamestate)
+			# If a ship lands in a Hangar, it's important that we don't process the remaining actions.
+			if entity.move(action, gamestate) == "LANDED": break
 
 		# If it's an attack.
 		elif len(action) == 3:
