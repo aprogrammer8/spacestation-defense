@@ -239,7 +239,7 @@ class ButtonList:
 		self.spacing = 2
 		self.button_height = font.size('Tg')[1] + 4
 	def add(self, message):
-		self.button_list.append(Button(self.window, pygame.Rect(self.rect.x+2, self.rect.y+self.new_height+1, self.rect.w, self.button_height), self.active_color, self.inactive_color, self.textcolor, self.font, message))
+		self.button_list.append(Button(self.window, pygame.Rect(self.rect.x+2, self.rect.y+self.new_height+1, self.rect.w-2, self.button_height), self.active_color, self.inactive_color, self.textcolor, self.font, message))
 		self.draw()
 	def remove_by_content(self, msg):
 		i = 0
