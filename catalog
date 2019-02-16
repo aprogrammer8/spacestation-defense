@@ -45,10 +45,13 @@ Enemy ships:
  Leviathan
 
 Stats:
+
 All station components can activate once per turn, requiring 2 power to do so.
 To turn the station 90 degrees, you need 2 thrust for each component (you can't accumulate more thrust than this).
 All lasers, against probes or drones, have a 75% chance to hit. Against bigger, they always hit.
 All missiles, against probes or drones, have a 25% chance to hit. Against fighters and bombers, they have a 35% chance to hit. Against corvettes, they have a 75% chance to hit. Against bigger, they always hit.
 All lightning always hits everything and does 5 times damage to shields.
 All antimatter, against probes or drones, has a 35% chance to hit. Against fighters and bombers, it has a 60% chance to hit. Against bigger, it always hits. Antimatter penetrates shields.
-All plasma ? and . Plasma does enormous damage, but is completely stopped by shields.
+Plasma weapons?
+
+Asteroids have a 1/3 chance to move 1 space in a random direction.
