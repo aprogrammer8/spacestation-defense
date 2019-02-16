@@ -95,8 +95,11 @@ class GameDisplay:
 				pygame.display.update(self.chatbar.rect)
 				if entry: return "LOCAL:" + self.player_name + ":" + entry
 
-			# Entering assignment mode (if anything is selected).
-			elif event.key == pygame.K_SPACE and self.selected:
+			# Everything else depends on something being selected, so instead of adding the condition everywhere, I just put a return here.
+			elif not self.selected: return
+
+			# Entering assignment mode.
+			elif event.key == pygame.K_SPACE:
 				# The players can't assign actions to enemies or to asteroids, or to units that don't have any abilities.
 				if self.selected in self.gamestate.enemy_ships or self.selected in self.gamestate.asteroids or (not self.selected.weapons and not self.selected.speed):
 					SFX_ERROR.play()
@@ -116,7 +119,7 @@ class GameDisplay:
 				self.select()
 
 			# Shift cycles weapons.
-			elif event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT:
+			elif self.assigning is not False and (event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT):
 				self.assigning += 1
 				if self.assigning == len(self.selected.weapons): self.assigning = 0
 
