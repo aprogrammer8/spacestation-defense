@@ -120,6 +120,28 @@ class GameDisplay:
 				self.assigning += 1
 				if self.assigning == len(self.selected.weapons): self.assigning = 0
 
+			# Q, W, and E are the unique action keys.
+			elif event.key == pygame.K_q:
+				# Shield Generators can turn off to save power (I would have them activate like a normal component but you almost always want them on).
+				if self.selected.type == "Shield Generator":
+					self.selected.actions.append(False)
+					# TODO
+				elif self.selected.type == "Hangar": self.fill_panel_hangar()
+				else: SFX_ERROR.play()
+			elif event.key == pygame.K_w:
+				# Shield Generators can also consume power to regenerate, but not project their shields so they can't be damaged and interrupted.
+				if self.selected.type == "Shield Generator":
+					self.selected.actions.append(True)
+					# TODO
+				else: SFX_ERROR.play()
+			elif event.key == pygame.K_e:
+				# To turn the shield generator back on, we can just clear its actions.
+				if self.selected.type == "Shield Generator":
+					self.selected.actions = []
+					#TODO
+				elif self.selected.type == "Hangar": self.select()
+				else: SFX_ERROR.play()
+
 			# Movement keys.
 			elif self.selected.moves_left():
 				if event.key == pygame.K_UP: move = [0, -1]
@@ -199,8 +221,8 @@ class GameDisplay:
 				# And we give it 50 extra pixels because inflate_ip expands in both directions, so it moved up by 50.
 				rect.move_ip(0, 80)
 				draw_text(self.window, "Contains: " + self.selected.summarize_contents(), TEXT_COLOR, rect, FONT)
+
 		pygame.display.update(PANEL_RECT)
-		return
 
 	def fill_panel_hangar(self):
 		"""An alternative to fill_panel called on a Hangar to show the details of its contents."""
@@ -209,7 +231,7 @@ class GameDisplay:
 		# And I guess still bother saying it's a hangar.
 		draw_text(self.window, self.selected.type, TEXT_COLOR, PANEL_NAME_RECT, FONT)
 		# Prepare to return a list of Buttons. We need them to persist after the panel is drawn so play() can use them.
-		buttons = []
+		self.panel_buttons = []
 		# Give them more space, and move it back down to compensate.
 		y = 50
 		rect = PANEL_NAME_RECT.inflate(0, 40).move(0, 20+y)
@@ -219,22 +241,21 @@ class GameDisplay:
 			h = get_height(text, rect.w-2, FONT)
 			button = Button(self.window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_HANGAR_BUTTON_COLOR, INACTIVE_HANGAR_BUTTON_COLOR, TEXT_COLOR, FONT, text)
 			button.draw()
-			buttons.append(button)
+			self.panel_buttons.append(button)
 			#h = draw_text(self.window, ship.hangar_describe(), TEXT_COLOR, rect, FONT)
 			rect.move_ip(0, h+5)
-		return buttons
+
+		pygame.display.update(PANEL_RECT)
 
 	def select_pos(self, pos):
 		"""Takes a gameboard logical position and finds the object on it, then calls fill_panel and projects its planned move."""
 		# First clear the currently projected move if we're selecting away from sonething else.
 		if self.selected: self.clear_projected_move()
 		entity = self.gamestate.occupied(list(pos))
+		self.selected = entity
 		if entity:
-			self.selected = entity
 			self.project_move()
 		else:
-			self.clear_projected_move()
-			self.selected = entity
 			# If we're clearing self.selected, we should get out of assigning mode too.
 			self.assigning = False
 		self.select(pos)
@@ -271,7 +292,6 @@ class GameDisplay:
 	def entity_pixel_rect(self, entity):
 		"""Finds the rectangle that an Entity is occupying (in terms of pixels)."""
 		rect = entity.rect()
-		print(rect, entity.pos)
 		return pygame.Rect(self.calc_pos(rect[0:2]), (rect[2]*TILESIZE[0], rect[3]*TILESIZE[1]))
 
 	def erase(self, rect):
