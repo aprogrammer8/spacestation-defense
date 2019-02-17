@@ -73,8 +73,19 @@ class GameDisplay:
 			# Game widow click events.
 			if GAME_WINDOW_RECT.collidepoint(event.pos):
 				self.lock.acquire()
-				# This must be checked with "is False", because 0 would mean True for this purpose.
+				# Handle the case of launching a ship from a Hangar.
+				if self.placing:
+					# Find the index of the ship in the Hangar's contents.
+					index = self.selected.contents.index(self.placing['ship'])
+					# Form the return string ahead of time, since we have some things we need to do inbetween that and returning.
+					string = "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[index, *self.placing['pos'], self.placing['rot']]])
+					self.placing = None
+					self.select()
+					# This case has to release the lock separately since we're returning before we reach the end of the block.
+					self.lock.release()
+					return string
 				pos = self.reverse_calc_pos(event.pos)
+				# This must be checked with "is False", because 0 would mean True for this purpose.
 				if self.assigning is False or not self.selected: self.select_pos(pos)
 				# The only things that can be assigned by clicking are weapons, because movement is always done with the arrow keys.
 				elif self.selected.weapons:
