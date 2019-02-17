@@ -72,9 +72,10 @@ class GameDisplay:
 
 			# Game widow click events.
 			if GAME_WINDOW_RECT.collidepoint(event.pos):
+				self.lock.acquire()
 				# This must be checked with "is False", because 0 would mean True for this purpose.
 				pos = self.reverse_calc_pos(event.pos)
-				if self.assigning is False: self.select_pos(pos)
+				if self.assigning is False or not self.selected: self.select_pos(pos)
 				# The only things that can be assigned by clicking are weapons, because movement is always done with the arrow keys.
 				elif self.selected.weapons:
 					target = self.gamestate.occupied(pos)
@@ -91,10 +92,13 @@ class GameDisplay:
 						self.assigning += 1
 						if self.assigning == len(self.selected.weapons): self.assigning = 0
 						self.select()
+						# This case has to release the lock separately since we're returning before we reach the end of the block.
+						self.lock.release()
 						return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions)
 					# If the target is valid, but not reachable.
 					else:
 						SFX_ERROR.play()
+				self.lock.release()
 
 			# Panel click events.
 			else:
@@ -420,3 +424,14 @@ class GameDisplay:
 		"""Returns whether the Display is currently running an animation thread."""
 		if self.anim and self.anim.is_alive(): return True
 		return False
+
+	def deselect(self):
+		"""An envelope that clears selected, assigning, placing, and clears both the panel and the ."""
+		if self.selected:
+			self.clear_projected_move()
+			self.selected = None
+		self.assigning = False
+		self.fill_panel()
+		if self.placing:
+			self.clear_projected_placement()
+			self.placing = None
