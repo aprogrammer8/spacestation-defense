@@ -4,6 +4,7 @@ import pygame, sys, threading
 from pygame_elements import *
 from client_config import *
 from gamestate import *
+from util import *
 
 class GameDisplay:
 	"""An object that handles the screen during a game of Spacestation Defense. It abstracts so that the main module won't have to worry about pygame at all - theoretically the game could support a text-based version by only replacing this class."""
@@ -36,19 +37,30 @@ class GameDisplay:
 		self.selected = None
 		# When assigning a unit that has weapons, this is set to an int instead of True.
 		self.assigning = False
+		# When placing something (such as launching a ship from a Hangar), this holds the pos, rot, and shape.
+		self.placing = None
 
 	def event_respond(self, event):
 		"""The basic method for receiving an event from pygame and reacting to it."""
 		# In the case of mousemotion, all we need to do is check all the buttons to see if they need to be redrawn.
 		# For now, mousemotion outside of the panel doesn't do anything.
-		if event.type == pygame.MOUSEMOTION and TOTAL_PANEL_RECT.collidepoint(event.pos):
-			# Buttons don't highlight on mouesover during an animation, because they can't be clicked anyway.
+		if event.type == pygame.MOUSEMOTION:
+			# None of this stuff is supposed to work during an animation.
 			if self.animating(): return
-			rects_to_update = []
-			for button in self.panel_buttons + [self.done_button]:
-				if button.handle_mousemotion(event):
-					rects_to_update.append(button.rect)
-			pygame.display.update(rects_to_update)
+			# If the mouse is over the panel, we just need to check if any buttons need to be updated.
+			if TOTAL_PANEL_RECT.collidepoint(event.pos):
+				rects_to_update = []
+				for button in self.panel_buttons + [self.done_button]:
+					if button.handle_mousemotion(event):
+						rects_to_update.append(button.rect)
+				pygame.display.update(rects_to_update)
+			# This happens while placing something.
+			elif GAME_WINDOW_RECT.collidepoint(event.pos) and self.placing:
+				pos = self.reverse_calc_pos(event.pos)
+				if pos != self.placing['pos']:
+					self.clear_projected_placement()
+					self.placing['pos'] = pos
+					self.project_placement()
 
 		# Clicks are a little more complicated. We have to handle the callbacks of any buttons clicked, and account for clicks on the rest of the screen.
 		if event.type == pygame.MOUSEBUTTONDOWN:
@@ -92,8 +104,9 @@ class GameDisplay:
 				for button in self.panel_buttons:
 					callback = button.handle_mousebuttondown(event)
 					if callback:
-						print("Display returning button callback:", callback)
-						return callback
+						print("Display receiving button callback:", callback)
+						self.placing = {'ship': callback, 'pos': callback.pos, 'shape': callback.shape, 'rot': callback.rot}
+						self.project_placement()
 
 		# Keypresses.
 		elif event.type == pygame.KEYDOWN:
@@ -259,12 +272,12 @@ class GameDisplay:
 		self.panel_buttons = []
 		# Give them more space, and move it back down to compensate.
 		y = 50
-		rect = PANEL_NAME_RECT.inflate(0, 40).move(0, 20+y)
+		rect = PANEL_NAME_RECT.inflate(0, 40).move(0, 20 + y)
 		for ship in self.selected.contents:
 			text = ship.hangar_describe()
 			# Subtracting 2 from the width because it also needs to fit inside the Button.
 			h = get_height(text, rect.w-2, FONT)
-			button = Button(self.window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_HANGAR_BUTTON_COLOR, INACTIVE_HANGAR_BUTTON_COLOR, TEXT_COLOR, FONT, text)
+			button = Button(self.window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_HANGAR_BUTTON_COLOR, INACTIVE_HANGAR_BUTTON_COLOR, TEXT_COLOR, FONT, text, ship)
 			button.draw()
 			self.panel_buttons.append(button)
 			#h = draw_text(self.window, ship.hangar_describe(), TEXT_COLOR, rect, FONT)
@@ -302,17 +315,33 @@ class GameDisplay:
 		pos = (self.selected.pos[0]+self.offset[0], self.selected.pos[1]+self.offset[1])
 		for move in self.selected.moves_planned():
 			pos = (pos[0]+move[0], pos[1]+move[1])
-			pygame.draw.rect(self.window, (255,255,0), (GAME_WINDOW_RECT.left+TILESIZE[0]*pos[0], GAME_WINDOW_RECT.top+TILESIZE[1]*pos[1], TILESIZE[0], TILESIZE[1]), 2)
+			pygame.draw.rect(self.window, MOVE_PROJECTION_COLOR, (GAME_WINDOW_RECT.left+TILESIZE[0]*pos[0], GAME_WINDOW_RECT.top+TILESIZE[1]*pos[1], TILESIZE[0], TILESIZE[1]), 2)
 		pygame.display.flip()
 
 	def clear_projected_move(self):
-		"""Clears the yellow projected path from an Entity while assigning move commands to it."""
+		"""Clears the yellow projected path from a selected Entity."""
 		rect = pygame.Rect(self.selected.move_rect())
 		rect = pygame.Rect(self.calc_pos(rect.topleft), (rect.size[0]*TILESIZE[0], rect.size[1]*TILESIZE[1]))
 		self.window.fill((0,0,0), rect)
 		# Redraw the other gamestate entities clobbered when we erased.
 		# It seems like rounding requires a +1,+1 expansion.
 		self.draw_gamestate(rect.inflate_ip(1,1))
+
+	def project_placement(self):
+		"""Shows an outline of where the object will be during placement."""
+		for space in spaces(self.placing['pos'], self.placing['shape'], self.placing['rot']):
+			pygame.draw.rect(self.window, PLACEMENT_PROJECTION_COLOR, (*self.calc_pos(space), TILESIZE[0], TILESIZE[1]), 2)
+		pygame.display.flip()
+
+	def clear_projected_placement(self):
+		"""Clears the outline of where the object will be during placement."""
+		p_rect = pygame.Rect(rect(spaces(self.placing['pos'], self.placing['shape'], self.placing['rot'])))
+		p_rect = pygame.Rect(self.calc_pos(p_rect.topleft), (p_rect.size[0]*TILESIZE[0], p_rect.size[1]*TILESIZE[1]))
+		self.window.fill((0,0,0), p_rect)
+		# Redraw the other gamestate entities clobbered when we erased.
+		# It seems like rounding requires a +1,+1 expansion.
+		self.draw_gamestate(p_rect.inflate_ip(1,1))
+
 
 	def entity_pixel_rect(self, entity):
 		"""Finds the rectangle that an Entity is occupying (in terms of pixels)."""

@@ -166,7 +166,9 @@ class Chat:
 
 # Currently, these buttons trigger only on down-click. They have a color change for being hovered over, but don't support color changes when being pressed.
 class Button:
-	"""A persistent, clickable button for Pygame windows. It takes the following arguments:
+	"""A persistent, clickable button for Pygame windows."""
+	def __init__(self, window, rect, active_color, inactive_color, textcolor, font, label, callback=True):
+		"""
 		window - the Surface to draw itself on
 		rect - the pygame.Rect it should occupy
 		active_color - the color when the button is moused over
@@ -175,8 +177,7 @@ class Button:
 		font - the Font of the button's label
 		label - the text to label the button with
 		callback (optional) - data to be retuned when it's clicked
-	"""
-	def __init__(self, window, rect, active_color, inactive_color, textcolor, font, label, callback=True):
+		"""
 		self.window = window
 		self.rect = rect
 		self.textrect = (rect.x+1, rect.y+1, rect.w-2, rect.h-2)
