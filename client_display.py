@@ -348,7 +348,6 @@ class GameDisplay:
 		# It seems like rounding requires a +1,+1 expansion.
 		self.draw_gamestate(p_rect.inflate_ip(1,1))
 
-
 	def entity_pixel_rect(self, entity):
 		"""Finds the rectangle that an Entity is occupying (in terms of pixels)."""
 		rect = entity.rect()
@@ -404,6 +403,8 @@ class GameDisplay:
 		self.anim.start()
 
 	def animate_move(self, entity, move):
+		# Precalculate the rect we'll need to erase.
+		move_rect = self.calc_rect(rect((entity.pos, (entity.pos[0] + move[0], entity.pos[1] + move[1]))))
 		pos = list(self.calc_pos(entity.pos))
 		dest = list(self.calc_pos((entity.pos[0] + move[0], entity.pos[1] + move[1])))
 		while pos != dest:
@@ -413,8 +414,7 @@ class GameDisplay:
 			# This is run concurrently, so it's important to lock the display.
 			self.lock.acquire()
 			# TODO This probably only works with one-space ships.
-			self.erase(self.calc_rect(entity.move_rect()))
-			#self.erase(pygame.Rect(pos[0], pos[1], TILESIZE[0], TILESIZE[1]))
+			self.erase(move_rect)
 			self.window.blit(IMAGE_DICT[entity.type], pos)
 			pygame.display.flip()
 			self.lock.release()
