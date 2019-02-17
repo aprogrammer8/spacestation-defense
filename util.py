@@ -34,7 +34,7 @@ def interpret_assign(gamestate, cmd, display=None):
 	unit_pos = json.loads(cmd[:cmd.index(':')])
 	unit = gamestate.occupied(unit_pos)
 	unit.actions = json.loads(cmd[cmd.index(':')+1:])
-	if display and display.selected == unit: display.fill_panel()
+	if display and display.selected == unit: display.select()
 
 def shield_repr(entity):
 	"""Returns a string suitable to label the shield bar on the panel."""
