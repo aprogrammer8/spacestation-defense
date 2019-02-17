@@ -102,8 +102,6 @@ class GameDisplay:
 						self.selected.target(self.assigning, target.pos)
 						self.assigning += 1
 						if self.assigning == len(self.selected.weapons): self.assigning = 0
-						self.select()
-						# This case has to release the lock separately since we're returning before we reach the end of the block.
 						self.lock.release()
 						return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions)
 					# If the target is valid, but not reachable.
