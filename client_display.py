@@ -79,8 +79,8 @@ class GameDisplay:
 					index = self.selected.contents.index(self.placing['ship'])
 					# Form the return string ahead of time, since we have some things we need to do inbetween that and returning.
 					string = "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[index, *self.placing['pos'], self.placing['rot']]])
+					self.clear_projected_placement()
 					self.placing = None
-					self.select()
 					# This case has to release the lock separately since we're returning before we reach the end of the block.
 					self.lock.release()
 					return string
