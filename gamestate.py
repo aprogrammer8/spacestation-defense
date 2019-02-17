@@ -209,6 +209,8 @@ class Gamestate:
 			del hangar.contents[index]
 			ship.pos = pos
 			ship.rot = rot
+			# Clear actions so the ship won't come out with moves.
+			ship.actions = []
 			# TODO check Salvage collection
 			if ship.team == 'player':
 				self.allied_ships.append(ship)
