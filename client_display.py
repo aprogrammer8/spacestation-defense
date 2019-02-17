@@ -104,7 +104,6 @@ class GameDisplay:
 				for button in self.panel_buttons:
 					callback = button.handle_mousebuttondown(event)
 					if callback:
-						print("Display receiving button callback:", callback)
 						self.placing = {'ship': callback, 'pos': callback.pos, 'shape': callback.shape, 'rot': callback.rot}
 						self.project_placement()
 
@@ -136,10 +135,13 @@ class GameDisplay:
 				return "ASSIGN:" + json.dumps(self.selected.pos) + ":[]"
 				# We don't need to update the panel ourselves here because the ASSIGN command will get sent to the server and come back, and a different case here will update the display.
 
-			# Esc gets out of assignment mode.
+			# Esc gets out of assignment or placement mode.
 			elif event.key == pygame.K_ESCAPE and not self.animating():
 				self.assigning = False
 				self.select()
+				if self.placing:
+					self.clear_projected_placement()
+					self.placing = None
 
 			# Shift cycles weapons.
 			elif self.assigning is not False and (event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT):
