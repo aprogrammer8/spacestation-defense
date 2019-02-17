@@ -196,6 +196,26 @@ class Gamestate:
 				self.asteroids.remove(e)
 				return
 
+	def hangar_launch(self, hangar, index, pos, rot, test=False):
+		"""Launch a ship from a Hangar. Returns True if the launch is legal. If test is True, it will return the legality of the launch but won't do it."""
+		try: ship = hangar.contents[index]
+		except IndexError:
+			print("Hangar at", hangar.pos, "could not launch due to IndexError, contents:", hangar.contents)
+			return False
+		launch_spaces = spaces(pos, ship.shape, rot)
+		if self.occupied_area(launch_spaces): return False
+		# THe launch is legal.
+		if not test:
+			del hangar.contents[index]
+			ship.pos = pos
+			ship.rot = rot
+			# TODO check Salvage collection
+			if ship.team == 'player':
+				self.allied_ships.append(ship)
+			else:
+				self.enemy_ships.append(ship)
+		return True
+
 
 def slope(p1, p2):
 	"""Returns the slope between two points, handling division by zero with a high value if the numerator is not also zero, or 1 if it is."""

@@ -207,21 +207,31 @@ def execute_move(cmd, display):
 				if display.selected == entity: display.deselect()
 				break
 
-		# Attacks.
+		# Attacks or Hangar lauches.
 		elif len(action) == 4:
-			weapon = entity.weapons[action[0]]
-			target = gamestate.occupied(action[1:3])
-			# This should happen if we killed the target in a previous attack.
-			if not target: continue
-			# Nothing is changed in the gamestate if the attack misses.
-			if not action[3]: continue
-			target.take_damage(weapon.power, weapon.type)
-			# Remove dead targets.
-			if target.hull <= 0:
-				gamestate.remove(target)
-				# Spawn salvage pile.
-				gamestate.add_salvage(Salvage(target.pos, target.salvage))
-				display.draw_gamestate()
+
+			# Attacks.
+			if type(action[3]) == bool:
+				weapon = entity.weapons[action[0]]
+				target = gamestate.occupied(action[1:3])
+				# This should happen if we killed the target in a previous attack.
+				if not target: continue
+				# Nothing is changed in the gamestate if the attack misses.
+				if not action[3]: continue
+				target.take_damage(weapon.power, weapon.type)
+				# Remove dead targets.
+				if target.hull <= 0:
+					gamestate.remove(target)
+					# Spawn salvage pile.
+					gamestate.add_salvage(Salvage(target.pos, target.salvage))
+					display.draw_gamestate()
+
+			# Hangar launches.
+			else:
+
+				gamestate.hangar_launch(entity, action[0], action[1:3], action[3])
+				# Placeholder - we should have an animation for this.
+				display.full_redraw()
 
 		else: print(action, "is an invalid action to marshal")
 

@@ -86,6 +86,11 @@ def process_actions(entity):
 			else:
 				action.append(False)
 
+		# If it's a Hangar launch.
+		elif len(action) == 4:
+			# TODO handle the illegal case
+			gamestate.hangar_launch(entity, action[0], action[1:3], action[3])
+
 		else: print(action, "is an invalid action to marshal")
 
 	sock.send(encode("ACTION:" + json.dumps(orig_pos) + ':' + json.dumps(entity.actions)))

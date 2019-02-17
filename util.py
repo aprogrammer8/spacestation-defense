@@ -1,7 +1,7 @@
+"""This module contains helper functions."""
+
 import json
 from rules import *
-
-"""This module contains helper functions."""
 
 def rotate(pos, rot):
 	if rot == 0: return pos
@@ -31,6 +31,7 @@ def rect(spaces):
 	return left, top, right-left+1, bottom-top+1
 
 def interpret_assign(gamestate, cmd, display=None):
+	"""Interprets a JSON-formatted ASSIGN command, sets the unit's actions, and updates the Display if necessary."""
 	unit_pos = json.loads(cmd[:cmd.index(':')])
 	unit = gamestate.occupied(unit_pos)
 	unit.actions = json.loads(cmd[cmd.index(':')+1:])
