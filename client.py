@@ -12,6 +12,8 @@ def main():
 	clock = pygame.time.Clock()
 	player_name = ""
 	window = pygame.display.set_mode(SCREEN_SIZE, depth=24)
+	pygame.display.set_caption("Spacestation Defense")
+	pygame.key.set_repeat(KEY_REPEAT_DELAY, KEY_REPEAT_INTERVAL)
 	init_images()
 	# TODO: initialize the display with a random background image
 	# Connecting to server and starting main game code

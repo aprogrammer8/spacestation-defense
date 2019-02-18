@@ -4,6 +4,9 @@ import pygame
 server = ("127.0.0.1", 1025)
 SCREEN_SIZE = (1800, 1000)
 LOBBY_RATE = 50
+# Key repeat settings.
+KEY_REPEAT_DELAY = 200
+KEY_REPEAT_INTERVAL = 30
 # This helps the sound delay. The 4th param defaults to 4096, which gives a huge delay.
 pygame.mixer.pre_init(22050, -16, 2, 1024)
 pygame.init()
