@@ -406,6 +406,7 @@ class GameDisplay:
 		"""Blank and redraw the entire game window."""
 		self.window.fill((0,0,0), GAME_WINDOW_RECT)
 		self.draw_gamestate()
+		if self.selected: self.select()
 
 	def move(self, entity, move):
 		self.anim = threading.Thread(target=self.animate_move, name="move animation", args=(entity, move))

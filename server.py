@@ -88,8 +88,9 @@ def process_actions(entity):
 
 		# If it's a Hangar launch.
 		elif len(action) == 4:
-			# TODO handle the illegal case
-			gamestate.hangar_launch(entity, action[0], action[1:3], action[3])
+			if not gamestate.hangar_launch(entity, action[0], action[1:3], action[3]):
+				# If the launch is illegal, we need to not send it back out to the clients.
+				return
 
 		else: print(action, "is an invalid action to marshal")
 

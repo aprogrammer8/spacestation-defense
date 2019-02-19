@@ -239,8 +239,6 @@ def execute_move(cmd, display):
 
 	# These hopefully won't be necessary in the end.
 	display.full_redraw()
-	if display.selected: display.select()
-
 
 
 def await_animation(display):
