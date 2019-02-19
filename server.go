@@ -41,10 +41,7 @@ func readUntilDelim(r io.Reader, delim byte) ([]byte, error) {
 	var b = []byte{0}
 	for {
 		_, err := r.Read(b)
-		if b[0] == DELIM {
-			return buf.Bytes(), nil
-		}
-		if err != nil {
+		if b[0] == DELIM || err != nil {
 			return buf.Bytes(), err
 		}
 		buf.Write(b)
@@ -52,7 +49,7 @@ func readUntilDelim(r io.Reader, delim byte) ([]byte, error) {
 }
 
 // DELIM is a global constant used to delimit messages.
-var DELIM byte = 3
+var DELIM byte = 0
 var sockDir = "/tmp/"
 
 func main() {
