@@ -124,6 +124,9 @@ def lobby(host_name):
 			if msg.startswith("JOIN:"):
 				playerlist.add(msg[5:])
 				pygame.display.update(playerlist.rect)
+			if msg.startswith("LEAVE:"):
+				playerlist.remove_by_content(msg[6:])
+				pygame.display.update(playerlist.rect)
 			elif msg.startswith("-LOBBY:"+host_name):
 				# The lobby closed :(
 				window.fill((0,0,0))

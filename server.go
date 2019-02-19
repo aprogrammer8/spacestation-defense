@@ -49,7 +49,7 @@ func readUntilDelim(r io.Reader, delim byte) ([]byte, error) {
 }
 
 // DELIM is a global constant used to delimit messages.
-var DELIM byte = 0
+var DELIM byte
 var sockDir = "/tmp/"
 
 func main() {
@@ -64,19 +64,19 @@ func main() {
 	}
 	defer listener.Close()
 	entryChan := make(chan client)
-	exitChan := make(chan string)
+	exitChan := make(chan *client)
 	go lobby(entryChan, exitChan)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Println(errors.Wrap(err, "When accepting connection"))
 		}
-		go handleConnection(conn, entryChan, exitChan)
+		go handleConnection(conn, entryChan)
 	}
 
 }
 
-func lobby(entryChan <-chan client, exitChan chan string) {
+func lobby(entryChan <-chan client, exitChan chan *client) {
 	var players []*client
 	var playerMux = make(chan message)
 	var gameMux = make(chan update)
@@ -93,18 +93,24 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 				}
 			}
 			// Start a goroutine to multiplex the chat messages.
-			go func(mux chan<- message, player *client, exit chan<- string) {
+			go func(mux chan<- message, player *client, exit chan<- *client) {
 				for msg := range player.Inbound {
 					mux <- message{User: player, Content: msg}
 				}
-				exit <- player.Name
+				exit <- player
 			}(playerMux, &player, exitChan)
-		// Playser leaving.
-		case username := <-exitChan:
+		// Player leaving.
+		case player := <-exitChan:
 			// We only got the name, so use it to find the player in order to delete them.
 			for i := range players {
-				if players[i].Name == username {
+				if players[i] == player {
 					players = append(players[:i], players[i+1:]...)
+					// If they were in a lobby, notify the others.
+					for j := range players {
+						if players[j].Lobby == player.Lobby {
+							players[j].Outbound <- "LEAVE:" + player.Name
+						}
+					}
 					break
 				}
 			}
@@ -192,7 +198,7 @@ func lobby(entryChan <-chan client, exitChan chan string) {
 }
 
 // handleConnection is spawned in a goroutine for each player that connects. It listens for input from the player, as well as server messages back to them.
-func handleConnection(conn net.Conn, entryChan chan<- client, exitChan chan<- string) {
+func handleConnection(conn net.Conn, entryChan chan<- client) {
 	// When the player first connects, they're expected to choose a username.
 	// TODO: handle the case of repeat names
 	var msg, err = readUntilDelim(conn, DELIM)

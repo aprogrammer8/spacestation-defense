@@ -119,7 +119,7 @@ class TextList:
 			self.message_list.pop(0)
 		self.new_height += height + self.spacing
 		self.draw()
-	def remove_by_content(eslf, message):
+	def remove_by_content(self, message):
 		i = 0
 		for msg in self.message_list:
 			if msg == message: return self.remove_by_index(i)
