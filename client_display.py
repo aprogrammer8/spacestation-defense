@@ -77,11 +77,19 @@ class GameDisplay:
 				if self.placing:
 					# Find the index of the ship in the Hangar's contents.
 					index = self.selected.contents.index(self.placing['ship'])
+					# Make sure the launch is legal.
+					if not self.gamestate.hangar_launch(self.selected, index, self.placing['pos'], self.placing['rot'], test=True):
+						# If not, check for the override keys.
+						pressed = pygame.key.get_pressed()
+						if not pressed[pygame.K_LSHIFT] and not pressed[pygame.K_RSHIFT]:
+							SFX_ERROR.play()
+							# This case has to release the lock separately since we're returning before we reach the end of the block.
+							self.lock.release()
+							return
 					# Form the return string ahead of time, since we have some things we need to do inbetween that and returning.
 					string = "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[index, *self.placing['pos'], self.placing['rot']]])
 					self.clear_projected_placement()
 					self.placing = None
-					# This case has to release the lock separately since we're returning before we reach the end of the block.
 					self.lock.release()
 					return string
 				pos = self.reverse_calc_pos(event.pos)
@@ -157,7 +165,7 @@ class GameDisplay:
 					self.placing = None
 
 			# Shift cycles weapons.
-			elif self.assigning is not False and (event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT):
+			elif self.assigning is not False and event.key == pygame.K_TAB:
 				self.assigning += 1
 				if self.assigning == len(self.selected.weapons): self.assigning = 0
 
