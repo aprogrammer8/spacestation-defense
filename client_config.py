@@ -99,7 +99,7 @@ IMAGE_DICT = {
 	"Shield Generator": "images/shield_generator.png",
 	"Power Generator": "images/power_generator.png",
 	"Laser Turret": "images/laser_turret.png",
-	"Hangar": "images/factory.png", # Temp
+	"Hangar": "images/hangar.png",
 	"Factory": "images/factory.png",
 	# Misc.
 	"salvage": "images/salvage1.png",
