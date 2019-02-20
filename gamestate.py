@@ -177,6 +177,29 @@ class Gamestate:
 		if probe == target: return True
 		return False
 
+	def move(self, entity, change):
+		"""Apply a tuple of (x, y) as a move to be made."""
+		entity.pos[0] += change[0]
+		entity.pos[1] += change[1]
+
+		# The landing in Hangars is encapsulated in here, so client and server don't have to copy as much code.
+		if entity.team == 'player':
+			obstacle = self.occupied_area(entity.spaces(), exclude=entity)
+			# If there's an obstacle other than a Hangar, then the server sent an invalid move and that's not the client's responsibility.
+			if obstacle:
+				# Land it: remove it from the list of visible allied ships, and add it to the hangar's contents.
+				self.allied_ships.remove(entity)
+				obstacle.contents.append(entity)
+				# These return signals are so the client can know whether to play a sound.
+				return "LANDED"
+		# Probes picking up salvage is also encapsulated.
+		if entity.type == "Probe":
+			for salvage in self.salvages:
+				if salvage.pos == entity.pos:
+					entity.collect(salvage)
+					if salvage.amount <= 0: self.salvages.remove(salvage)
+					return "COLLECTED"
+
 	def remove(self, entity):
 		"""Remove an Entity."""
 		for e in self.station:
@@ -261,31 +284,6 @@ class Entity:
 		self.salvage = salvage
 		# The sequence of actions the Entity plans to make.
 		self.actions = []
-
-	def move(self, change, gamestate=None):
-		"""Apply a tuple of (x, y) as a move to be made."""
-		self.pos[0] += change[0]
-		self.pos[1] += change[1]
-
-		# The landing in Hangars is encapsulated in here, so client and server don't have to copy as much code.
-		if self.team == 'player':
-			obstacle = gamestate.occupied_area(self.spaces(), exclude=self)
-			# If there's an obstacle other than a Hangar, then the server sent an invalid move and that's not the client's responsibility.
-			if obstacle:
-				# Land it: remove it from the list of visible allied ships, and add it to the hangar's contents.
-				gamestate.allied_ships.remove(self)
-				obstacle.contents.append(self)
-				# These return signals are so the client can know whether to play a sound.
-				return "LANDED"
-		# Probes picking up salvage is also encapsulated.
-		if self.type == "Probe":
-			for salvage in gamestate.salvages:
-				if salvage.pos == self.pos:
-					self.collect(salvage)
-					if salvage.amount <= 0: gamestate.salvages.remove(salvage)
-					return "COLLECTED"
-
-
 
 	def spaces(self):
 		"""Returns all spaces the Entity occupies."""

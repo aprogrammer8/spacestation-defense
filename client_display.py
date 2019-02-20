@@ -1,4 +1,4 @@
-# A client-side module that handles the display during game.
+"""A client-side module that handles the display during game. It never changes the gamestate."""
 
 import pygame, sys, threading
 from pygame_elements import *

@@ -207,7 +207,7 @@ def execute_move(cmd, display):
 			display.move(entity, action)
 			await_animation(display)
 			# Don't process remaining actions if the ship lands in a Hangar.
-			if entity.move(action, gamestate) == "LANDED":
+			if gamestate.move(entity, action) == "LANDED":
 				# But we still have to deselect it. If the player could retain selection of a ship landed in a Hangar, that could cause a lot of problems.
 				if display.selected == entity: display.deselect()
 				break

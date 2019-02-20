@@ -65,7 +65,7 @@ def process_actions(entity):
 		# If it's a move.
 		if len(action) == 2:
 			# If a ship lands in a Hangar, it's important that we don't process the remaining actions.
-			if entity.move(action, gamestate) == "LANDED": break
+			if gamestate.move(entity, action) == "LANDED": break
 
 		# If it's an attack.
 		elif len(action) == 3:
