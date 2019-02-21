@@ -177,11 +177,10 @@ class Gamestate:
 		if probe == target: return True
 		return False
 
-	def move(self, entity, change):
-		"""Apply a tuple of (x, y) as a move to be made."""
-		entity.pos[0] += change[0]
-		entity.pos[1] += change[1]
-
+	def jump(self, entity, pos, rot=-1):
+		"""Jump an Entity to a position. A rot value of -1 means to not change it."""
+		entity.pos = pos
+		if rot != -1: entity.rot = rot
 		# The landing in Hangars is encapsulated in here, so client and server don't have to copy as much code.
 		if entity.team == 'player':
 			obstacle = self.occupied_area(entity.spaces(), exclude=entity)
@@ -192,13 +191,17 @@ class Gamestate:
 				obstacle.contents.append(entity)
 				# These return signals are so the client can know whether to play a sound.
 				return "LANDED"
-		# Probes picking up salvage is also encapsulated.
-		if entity.type == "Probe":
-			for salvage in self.salvages:
-				if salvage.pos == entity.pos:
-					entity.collect(salvage)
-					if salvage.amount <= 0: self.salvages.remove(salvage)
-					return "COLLECTED"
+			# Probes picking up salvage is also encapsulated.
+			if entity.type == "Probe":
+				for salvage in self.salvages:
+					if salvage.pos == entity.pos:
+						entity.collect(salvage)
+						if salvage.amount <= 0: self.salvages.remove(salvage)
+						return "COLLECTED"
+
+	def move(self, entity, change):
+		"""A wrapper around Gamestate.jump that takes a tuple of (x, y) as a move to be made from the Entity's current position, and calculates the position to jump it to."""
+		self.jump(entity, [entity.pos[0] + change[0], entity.pos[1] + change[1]])
 
 	def remove(self, entity):
 		"""Remove an Entity."""
@@ -232,8 +235,6 @@ class Gamestate:
 		# THe launch is legal.
 		if not test:
 			del hangar.contents[index]
-			ship.pos = pos
-			ship.rot = rot
 			# Clear actions so the ship won't come out with moves.
 			ship.actions = []
 			# TODO check Salvage collection
@@ -241,6 +242,7 @@ class Gamestate:
 				self.allied_ships.append(ship)
 			else:
 				self.enemy_ships.append(ship)
+			self.jump(ship, pos, rot)
 		return True
 
 
