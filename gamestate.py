@@ -578,11 +578,14 @@ class Mission:
 	def __init__(self, filename):
 		# There should be a shitton of tunable parameters in here. For now, just give them all placeholder values.
 		self.starting_station = {
-			(2,0): "Shield Generator",
-			(0,-2): "Power Generator",
-			(-2,0): "Laser Turret",
 			(0,0): "Connector",
-			(0,2): "Hangar",
+			(-2,0): "Connector",
+			(2,0): "Connector",
+			(2,-2): "Shield Generator",
+			(0,-2): "Power Generator",
+			(0,2): "Laser Turret",
+			(-4,0): "Hangar",
+			(-2,-2): "Factory",
 		}
 		self.starting_cards = 4
 
