@@ -51,7 +51,7 @@ SHIELD_COLOR = (0, 0, 255)
 SHIELD_DAMAGE_COLOR = (127, 0, 0)
 CAPACITY_COLOR = (127, 63, 0)
 CAPACITY_EMPTY_COLOR = (0, 0, 0)
-POWER_COLOR = (255, 255, 0)
+POWER_COLOR = (255, 191, 0)
 POWER_LOW_COLOR = (0, 0, 0)
 # The top panel is the part that contains only the player list and the done button. It is not redrawn when the rest of the panel is.
 TOP_PANEL_RECT = pygame.Rect(GAME_WINDOW_RECT.right, 0, SCREEN_SIZE[0]-GAME_WINDOW_RECT.right, SCREEN_SIZE[1]//8)
