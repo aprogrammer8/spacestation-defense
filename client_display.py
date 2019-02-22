@@ -5,6 +5,7 @@ from pygame_elements import *
 from client_config import *
 from gamestate import *
 from util import *
+from rules import *
 
 class GameDisplay:
 	"""An object that handles the screen during a game of Spacestation Defense. It abstracts so that the main module won't have to worry about pygame at all - theoretically the game could support a text-based version by only replacing this class."""
@@ -168,35 +169,48 @@ class GameDisplay:
 				self.assigning += 1
 				if self.assigning == len(self.selected.weapons): self.assigning = 0
 
-			# Q, W, and E are the unique action keys.
+			# Q, W, E and R are the unique action keys.
 			elif event.key == pygame.K_q:
-				# Shield Generators can turn off to save power (I would have them activate like a normal component but you almost always want them on).
+				# Shield Generators hide shields.
 				if self.selected.type == "Shield Generator":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[False]])
-				# Hangar details page.
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[True]])
+				# Hangar/Factory details page.
 				elif self.selected.type == "Hangar":
 					self.lock.acquire()
 					self.fill_panel_hangar()
 					self.lock.release()
-				# Turns off the Factory to save power and salvage.
 				elif self.selected.type == "Factory":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[False]])
+					self.lock.acquire()
+					self.fill_panel_factory()
+					self.lock.release()
 				else: SFX_ERROR.play()
 			elif event.key == pygame.K_w:
-				# Shield Generators can also consume power to regenerate, but not project their shields so they can't be damaged and interrupted.
-				if self.selected.type == "Shield Generator":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[None]])
-				else: SFX_ERROR.play()
-			elif event.key == pygame.K_e:
-				# To turn the shield generator back on, we can just clear its actions.
-				if self.selected.type == "Shield Generator":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
-				# Normal Hangar panel page.
-				elif self.selected.type == "Hangar":
+				# Normal Hangar/Hangar panel page.
+				if self.selected.type == "Hangar":
+					self.lock.acquire()
+					self.select()
+					self.lock.release()
+				elif self.selected.type == "Factory":
 					self.lock.acquire()
 					self.select()
 					self.lock.release()
 				else: SFX_ERROR.play()
+			elif event.key == pygame.K_e:
+				# Shield Generators can turn off to save power.
+				if self.selected.type == "Shield Generator":
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[False]])
+				# Turns off the Factory to save power and salvage.
+				elif self.selected.type == "Factory":
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[False]])
+				else: SFX_ERROR.play()
+			elif event.key == pygame.K_r:
+				# To turn the shield generator or Factory back on, we can just clear its actions.
+				if self.selected.type == "Shield Generator":
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
+				elif self.selected.type == "Factory":
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
+				else: SFX_ERROR.play()
+
 
 			# Movement keys.
 			elif self.selected.moves_left() and not self.animating():
@@ -290,7 +304,7 @@ class GameDisplay:
 		"""An alternative to fill_panel called on a Hangar to show the details of its contents."""
 		# First, clear it.
 		pygame.draw.rect(self.window, PANEL_COLOR, PANEL_RECT, 0)
-		# And I guess still bother saying it's a hangar.
+		# And I guess still bother saying it's a Hangar.
 		draw_text(self.window, self.selected.type, TEXT_COLOR, PANEL_NAME_RECT, FONT)
 		# Prepare to return a list of Buttons. We need them to persist after the panel is drawn so play() can use them.
 		self.panel_buttons = []
@@ -312,8 +326,31 @@ class GameDisplay:
 
 		pygame.display.update(PANEL_RECT)
 
+	def fill_panel_factory(self):
+		"""An alternative to fill_panel called on a Factory to show the production menu."""
+		# First, clear it.
+		pygame.draw.rect(self.window, PANEL_COLOR, PANEL_RECT, 0)
+		# And I guess still bother saying it's a Factory.
+		draw_text(self.window, self.selected.type, TEXT_COLOR, PANEL_NAME_RECT, FONT)
+		# Prepare to return a list of Buttons. We need them to persist after the panel is drawn so play() can use them.
+		self.panel_buttons = []
+		# Give them more space, and move it back down to compensate.
+		y = 50
+		rect = PANEL_NAME_RECT.inflate(0, 40).move(0, 20 + y)
+		for ship in SHIP_CONSTRUCTION_COSTS:
+			text = SHIP_DESCRIPTIONS[ship]
+			# Subtracting 2 from the width because it also needs to fit inside the Button.
+			h = get_height(text, rect.w-2, FONT)
+			# Check whether the current button is for a ship scheduled to launch. If so, the button should be different colors.
+			button = Button(self.window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_FACTORY_PROJECT_BUTTON_COLOR, INACTIVE_FACTORY_PROJECT_BUTTON_COLOR, TEXT_COLOR, FONT, text, ship)
+			button.draw()
+			self.panel_buttons.append(button)
+			rect.move_ip(0, h+5)
+
+		pygame.display.update(PANEL_RECT)
+
 	def select_pos(self, pos):
-		"""Takes a gameboard logical position and finds the object on it, then calls fill_panel and projects its planned move."""
+		"""Takes a gameboard logical position and finds the object on it, then calls select."""
 		# First clear the currently projected move if we're selecting away from sonething else.
 		if self.selected: self.clear_projected_move()
 		entity = self.gamestate.occupied(list(pos))

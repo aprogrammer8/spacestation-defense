@@ -17,3 +17,4 @@ FACTORY_SPEED = 2
 SALVAGE_START_TIME = 5
 PROBE_CAPACITY = 5
 SHIP_CONSTRUCTION_COSTS = {"Probe": 5}
+SHIP_DESCRIPTIONS = {"Probe": "10 hull, 3 speed, 1 size, can carry up to 5 Salvage. 5 Salvage to build."}
