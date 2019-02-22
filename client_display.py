@@ -122,12 +122,17 @@ class GameDisplay:
 			else:
 				# Done button.
 				if self.done_button.handle_mousebuttondown(event): return "DONE"
-				# Whatever other buttons are around. For the time being, this is just Hangar launch buttons.
+				# Whatever other buttons are around.
 				for button in self.panel_buttons:
 					callback = button.handle_mousebuttondown(event)
 					if callback:
-						self.placing = {'ship': callback, 'pos': callback.pos, 'shape': callback.shape, 'rot': callback.rot}
-						self.project_placement()
+						# Hangar launch buttons.
+						if type(callback) == dict:
+							self.placing = {'ship': callback, 'pos': callback.pos, 'shape': callback.shape, 'rot': callback.rot}
+							self.project_placement()
+						# Factory assignment buttons.
+						elif type(callback) == str:
+							return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[callback]])
 
 		# Keypresses.
 		elif event.type == pygame.KEYDOWN:
@@ -297,6 +302,19 @@ class GameDisplay:
 				# And we give it 50 extra pixels because inflate_ip expands in both directions, so it moved up by 50.
 				rect.move_ip(0, 80)
 				draw_text(self.window, "Contains: " + self.selected.summarize_contents(), TEXT_COLOR, rect, FONT)
+			# Factories show their current project and progress.
+			elif self.selected.type == "Factory":
+				# Determining the current project is a little more complicated for Factories. It might not be in the .project attribute.
+				# If the players have set a project for it to take on but it hasn't happened yet, then we need to find in .actions.
+				if self.selected.actions and type(self.selected.actions[0][0]) == str:
+					project = self.selected.actions[0][0]
+				else:
+					project = self.selected.project
+				if project:
+					rect = PANEL_SHIELD_BAR_RECT.move(0, 30)
+					draw_text(self.window, "Building " + project + ", " + str(self.selected.progress) + "/" + str(SHIP_CONSTRUCTION_COSTS[project]), TEXT_COLOR, rect, FONT)
+					rect.move_ip(0, 20)
+					draw_bar(self.window, rect, TEXT_COLOR, CONSTRUCTION_COLOR, CONSTRUCTION_EMPTY_COLOR, SHIP_CONSTRUCTION_COSTS[project], self.selected.progress)
 
 		pygame.display.update(PANEL_RECT)
 

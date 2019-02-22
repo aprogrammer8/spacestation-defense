@@ -71,6 +71,9 @@ def process_actions(entity):
 			# Unique command. Currently, only Shield Generators implement this.
 			if action[0] is True:
 				break
+			# Commands to assign a Factory.
+			if type(action[0]) is str:
+				entity.project = action[0]
 
 		# If it's a move.
 		if len(action) == 2:
@@ -102,7 +105,10 @@ def process_actions(entity):
 				# If the launch is illegal, we need to not send it back out to the clients.
 				return
 
-		else: print(action, "is an invalid action to marshal")
+		else: print(action, "is an invalid action")
+
+	# The legality checks are handled inside the method.
+	if entity.type == "Factory": entity.work()
 
 	sock.send(encode("ACTION:" + json.dumps(orig_pos) + ':' + json.dumps(entity.actions)))
 

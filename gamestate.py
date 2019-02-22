@@ -495,7 +495,7 @@ class Component(Entity):
 		"""Returns whether the Component is currently using power."""
 		if self.type == "Shield Generator": return self.actions != [[False]]
 		if self.type == "Laser Turret": return bool(self.actions)
-		if self.type == "Factory": return self.project and self.actions != [[False]]
+		if self.type == "Factory": return self.actions != [[False]] and (self.project or self.actions)
 		# Hangars don't cost power to land or launch.
 		return False
 
@@ -522,8 +522,8 @@ class Component(Entity):
 
 	def work(self):
 		"""For Factories, progresses construction."""
-		if not self.project: return
-		progress = min(HANGAR_PROGRESS, SHIP_CONSTRUCTION_COSTS[self.project], self.station.salvage)
+		if not self.project or self.actions == [[False]]: return
+		progress = min(FACTORY_SPEED, SHIP_CONSTRUCTION_COSTS[self.project], self.station.salvage)
 		self.progress += progress
 		self.station.salvage -= progress
 		if self.progress >= SHIP_CONSTRUCTION_COSTS[self.project]:

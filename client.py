@@ -210,6 +210,9 @@ def execute_move(cmd, display):
 			# Unique command. Currently, only Shield Generators implement this.
 			if action[0] is True:
 				break
+			# Commands to assign a Factory.
+			if type(action[0]) is str:
+				entity.project = action[0]
 
 		# Moves.
 		if len(action) == 2:
@@ -247,9 +250,12 @@ def execute_move(cmd, display):
 				# Placeholder - we should have an animation for this.
 				display.full_redraw()
 
-		else: print(action, "is an invalid action to marshal")
+		else: print(action, "is an invalid action")
 
-	# These hopefully won't be necessary in the end.
+	# The legality checks are handled inside the method.
+	if entity.type == "Factory": entity.work()
+
+	# This hopefully won't be necessary in the end.
 	display.full_redraw()
 
 
