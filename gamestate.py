@@ -457,7 +457,7 @@ class Component(Entity):
 		gens = []
 		for comp in self.station:
 			if comp.type != "Shield Generator": continue
-			if abs(comp.pos[0] - self.pos[0]) + abs(comp.pos[1] - self.pos[1]) < SHIELD_GEN_RANGE:
+			if abs(comp.pos[0] - self.pos[0]) + abs(comp.pos[1] - self.pos[1]) < SHIELD_GEN_RANGE and comp.powered():
 				gens.append(comp)
 		return gens
 
