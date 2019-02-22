@@ -60,8 +60,18 @@ def process_actions(entity):
 	# We'll need the original at the end.
 	orig_pos = entity.pos[:]
 	# Subtract power for used components.
-	if type(entity) == Component: gamestate.station.power -= COMPONENT_POWER_USAGE
+	if type(entity) == Component and entity.powered():
+		gamestate.station.power -= COMPONENT_POWER_USAGE
 	for action in entity.actions:
+		# If it's a power command or other unique command.
+		if len(action) == 1:
+			# Commands to turn off power to automatically functioning components.
+			if action[0] is False:
+				break
+			# Unique command. Currently, only Shield Generators implement this.
+			if action[0] is True:
+				break
+
 		# If it's a move.
 		if len(action) == 2:
 			# If a ship lands in a Hangar, it's important that we don't process the remaining actions.

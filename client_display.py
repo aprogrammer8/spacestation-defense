@@ -147,7 +147,6 @@ class GameDisplay:
 				if self.selected in self.gamestate.enemy_ships or self.selected in self.gamestate.asteroids or (not self.selected.weapons and not self.selected.speed):
 					SFX_ERROR.play()
 					return
-				# TODO: Probably play a sound and give some visual indication.
 				self.clear_projected_move()
 				self.selected.actions = []
 				if self.selected.weapons: self.assigning = 0
@@ -173,24 +172,26 @@ class GameDisplay:
 			elif event.key == pygame.K_q:
 				# Shield Generators can turn off to save power (I would have them activate like a normal component but you almost always want them on).
 				if self.selected.type == "Shield Generator":
-					self.selected.actions.append(False)
-					# TODO
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[False]])
+				# Hangar details page.
 				elif self.selected.type == "Hangar":
 					self.lock.acquire()
 					self.fill_panel_hangar()
 					self.lock.release()
+				# Turns off the Factory to save power and salvage.
+				elif self.selected.type == "Factory":
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[False]])
 				else: SFX_ERROR.play()
 			elif event.key == pygame.K_w:
 				# Shield Generators can also consume power to regenerate, but not project their shields so they can't be damaged and interrupted.
 				if self.selected.type == "Shield Generator":
-					self.selected.actions.append(True)
-					# TODO
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[None]])
 				else: SFX_ERROR.play()
 			elif event.key == pygame.K_e:
 				# To turn the shield generator back on, we can just clear its actions.
 				if self.selected.type == "Shield Generator":
-					self.selected.actions = []
-					#TODO
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
+				# Normal Hangar panel page.
 				elif self.selected.type == "Hangar":
 					self.lock.acquire()
 					self.select()

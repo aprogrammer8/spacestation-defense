@@ -191,10 +191,10 @@ def execute_move(cmd, display):
 	print("Executing move:", cmd)
 	parts = cmd.split(':')
 	entity = gamestate.occupied(json.loads(parts[0]))
-	if not entity:
-		print("Entity dead already: ", entity.pos, entity.type, ", planned actions =", actions)
-		return
 	actions = json.loads(parts[1])
+	if not entity:
+		print("Entity dead already: ", json.loads(parts[0]), ", planned actions =", actions)
+		return
 	# Subtract power for used components.
 	if type(entity) == Component and entity.powered():
 		gamestate.station.power -= COMPONENT_POWER_USAGE
@@ -202,6 +202,15 @@ def execute_move(cmd, display):
 		if type(display.selected) == Component: display.select()
 
 	for action in actions:
+		# If it's a power command or other unique command.
+		if len(action) == 1:
+			# Commands to turn off power to automatically functioning components.
+			if action[0] is False:
+				break
+			# Unique command. Currently, only Shield Generators implement this.
+			if action[0] is True:
+				break
+
 		# Moves.
 		if len(action) == 2:
 			display.move(entity, action)

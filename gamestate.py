@@ -48,12 +48,13 @@ class Gamestate:
 
 	def upkeep(self, clientside=False):
 		"""Do every-round tasks, like regenerating everyone's shields and stuff."""
-		self.clear()
 		# Regen everyone's shields.
 		for ship in self.allied_ships: ship.shield_regen()
 		for ship in self.enemy_ships: ship.shield_regen()
 		self.station.shield_regen()
 		self.station.power_regen()
+		# Clear would be called first for elegance, but it would ruin non-standard modes for special Station Components.
+		self.clear()
 		# Salvage decay. We make a new list to avoid messings things up by changing the size during iteration.
 		new_salvages = []
 		for salvage in self.salvages:
@@ -120,7 +121,6 @@ class Gamestate:
 
 	def invalid_move(self, entity, move):
 		"""Helper function that takes an Entity and a proposed move, and checks all destination spaces for obstructions."""
-		# Found the bug: it's projecting from the already projected space.
 		for space in entity.projected_spaces():
 			occupied = self.occupied([space[0]+move[0], space[1]+move[1]])
 			# Have to also check for equality, because big ships will overlap themselves when they move.
@@ -319,6 +319,8 @@ class Entity:
 		self.hull -= dmg
 
 	def shield_regen(self):
+		# Turned-off Shield Generators don't regenerate.
+		if self.actions == [[False]]: return None
 		self.shield += self.shield_regen_amounts[self.shield_regen_pointer]
 		if self.shield_regen_pointer < len(self.shield_regen_amounts) - 1: self.shield_regen_pointer += 1
 
@@ -379,8 +381,8 @@ class Entity:
 					break
 		return weapons
 
-	def random_targets(self, gamestate, enemy):
-		"""Target all weapons at random enemies."""
+	def random_targets(self, gamestate, enemy=True):
+		"""Target all weapons at random enemies (allies if the enemy param is True)."""
 		if enemy: targets = gamestate.allied_ships + gamestate.station
 		else: targets = gamestate.enemy_ships + gamestate.asteroids
 		i = 0
@@ -407,8 +409,7 @@ class Ship(Entity):
 	def collect(self, salvage):
 		"""The Ship picks up a piece of salvage. Only Probes can do this."""
 		if self.type != "Probe":
-			print("Something is wrong, this ship cannot pick up salvage:", self.type, self.pos)
-			return
+			return print("Something is wrong, this ship cannot pick up salvage:", self.type, self.pos)
 		collected = min(salvage.amount, PROBE_CAPACITY-self.load)
 		self.load += collected
 		salvage.amount -= collected
@@ -416,6 +417,7 @@ class Ship(Entity):
 	def hangar_describe(self):
 		"""Returns a string suitable for describing the Ship when it's in a Hangar."""
 		string = self.type + "; hull = " + str(self.hull) + "/" + str(self.maxhull) + ", shield = " + str(self.shield) + "/" + str(self.maxshield) + " (+" + str(self.shield_regen_amounts[self.shield_regen_pointer]) + ")"
+		# TODO remove this after we program Probes to dump their Salvage on entering a Hangar
 		if self.type == "Probe":
 			string += "; carrying " + str(self.load) + " salvage"
 		return string
@@ -442,6 +444,13 @@ class Component(Entity):
 			self.station.power += POWER_GEN_CAP // 2
 		if type == "Hangar":
 			self.contents = []
+		if type == "Factory":
+			# The ship it's currently building.
+			self.project = None
+			# How much progress toward making the ship.
+			self.progress = 0
+			# The Hangar the ship will spawn in.
+			self.hangar = None
 
 	def shield_generators(self):
 		"""Find all Shield Generators covering this Component."""
@@ -484,8 +493,10 @@ class Component(Entity):
 
 	def powered(self):
 		"""Returns whether the Component is currently using power."""
-		if self.type == "Shield Generator": return True
+		if self.type == "Shield Generator": return self.actions != [[False]]
 		if self.type == "Laser Turret": return bool(self.actions)
+		if self.type == "Factory": return self.project and self.actions != [[False]]
+		# Hangars don't cost power to land or launch.
 		return False
 
 	def current_fill(self):
@@ -509,6 +520,18 @@ class Component(Entity):
 			else: string += ", " + type + " x " + str(ship_dict[type])
 		return string
 
+	def work(self):
+		"""For Factories, progresses construction."""
+		if not self.project: return
+		progress = min(HANGAR_PROGRESS, SHIP_CONSTRUCTION_COSTS[self.project], self.station.salvage)
+		self.progress += progress
+		self.station.salvage -= progress
+		if self.progress >= SHIP_CONSTRUCTION_COSTS[self.project]:
+			# Position and rotation don't matter for ships spawning in a Hangar. They'll be set when the ship launches.
+			if self.project == "Probe": self.hangar.contents.append(probe([0,0], 0))
+			self.progress = 0
+			self.project = None
+			self.hangar = None
 
 class Composite:
 	def __init__(self, components):
@@ -519,6 +542,7 @@ class Station(list):
 	def __init__(self, li=[]):
 		list.__init__(self, li)
 		self.power = 0
+		self.salvage = 0
 
 	def shield_regen(self):
 		for comp in self:
