@@ -297,14 +297,17 @@ class GameDisplay:
 		# Give them more space, and move it back down to compensate.
 		y = 50
 		rect = PANEL_NAME_RECT.inflate(0, 40).move(0, 20 + y)
-		for ship in self.selected.contents:
+		for i, ship in enumerate(self.selected.contents):
 			text = ship.hangar_describe()
 			# Subtracting 2 from the width because it also needs to fit inside the Button.
 			h = get_height(text, rect.w-2, FONT)
-			button = Button(self.window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_HANGAR_BUTTON_COLOR, INACTIVE_HANGAR_BUTTON_COLOR, TEXT_COLOR, FONT, text, ship)
+			# Check whether the current button is for a ship scheduled to launch. If so, the button should be different colors.
+			if self.selected.actions and self.selected.actions[0][0] == i:
+				button = Button(self.window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_LAUNCH_HANGAR_BUTTON_COLOR, INACTIVE_LAUNCH_HANGAR_BUTTON_COLOR, TEXT_COLOR, FONT, text, ship)
+			else:
+				button = Button(self.window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_HANGAR_BUTTON_COLOR, INACTIVE_HANGAR_BUTTON_COLOR, TEXT_COLOR, FONT, text, ship)
 			button.draw()
 			self.panel_buttons.append(button)
-			#h = draw_text(self.window, ship.hangar_describe(), TEXT_COLOR, rect, FONT)
 			rect.move_ip(0, h+5)
 
 		pygame.display.update(PANEL_RECT)
