@@ -189,6 +189,8 @@ class Gamestate:
 				# Land it: remove it from the list of visible allied ships, and add it to the hangar's contents.
 				self.allied_ships.remove(entity)
 				obstacle.contents.append(entity)
+				# Dump any salvage the ship was carrying.
+				if hasattr(entity, 'load'): self.station.receive_salvage(entity)
 				# These return signals are so the client can know whether to play a sound.
 				return "LANDED"
 			# Probes picking up salvage is also encapsulated.
@@ -417,7 +419,6 @@ class Ship(Entity):
 	def hangar_describe(self):
 		"""Returns a string suitable for describing the Ship when it's in a Hangar."""
 		string = self.type + "; hull = " + str(self.hull) + "/" + str(self.maxhull) + ", shield = " + str(self.shield) + "/" + str(self.maxshield) + " (+" + str(self.shield_regen_amounts[self.shield_regen_pointer]) + ")"
-		# TODO remove this after we program Probes to dump their Salvage on entering a Hangar
 		if self.type == "Probe":
 			string += "; carrying " + str(self.load) + " salvage"
 		return string
@@ -568,6 +569,18 @@ class Station(list):
 		for comp in self:
 			if comp.powered(): used += COMPONENT_POWER_USAGE
 		return self.power - used
+
+	def max_salvage(self):
+		cap = 0
+		for comp in self:
+			if comp.type == "Factory": cap += FACTORY_CAP
+		return cap
+
+	def receive_salvage(self, entity):
+		"""Used when a ship docks in a Hangar to pick up the Salvage from the ship."""
+		transfer = min(entity.load, self.max_salvage() - self.salvage)
+		self.salvage += transfer
+		entity.load -= transfer
 
 
 class Weapon:

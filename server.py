@@ -77,6 +77,7 @@ def process_actions(entity):
 
 		# If it's a move.
 		if len(action) == 2:
+			#if gamestate.invalid_move(entity, action):
 			# If a ship lands in a Hangar, it's important that we don't process the remaining actions.
 			if gamestate.move(entity, action) == "LANDED": break
 
