@@ -291,6 +291,8 @@ class GameDisplay:
 		if self.selected in self.gamestate.station:
 			draw_text(self.window, power_repr(self.gamestate.station), TEXT_COLOR, PANEL_POWER_RECT, FONT)
 			draw_bar(self.window, PANEL_POWER_BAR_RECT, TEXT_COLOR, POWER_COLOR, POWER_LOW_COLOR, self.gamestate.station.maxpower(), self.gamestate.station.power)
+			draw_text(self.window, str(self.gamestate.station.salvage) + "/" + str(self.gamestate.station.max_salvage()), TEXT_COLOR, PANEL_STATION_SALVAGE_RECT, FONT)
+			draw_bar(self.window, PANEL_SALVAGE_BAR_RECT, TEXT_COLOR, SALVAGE_COLOR, SALVAGE_EMPTY_COLOR, self.gamestate.station.max_salvage(), self.gamestate.station.salvage)
 			# Hangars show a summary of their contents when selected.
 			if self.selected.type == "Hangar":
 				rect = PANEL_SHIELD_BAR_RECT.move(0, 30)
