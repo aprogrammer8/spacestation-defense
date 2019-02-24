@@ -138,7 +138,7 @@ class GameDisplay:
 					callback = button.handle_mousebuttondown(event)
 					if callback:
 						# Hangar launch buttons.
-						if type(callback) == dict:
+						if type(callback) == Ship:
 							self.placing = {'ship': callback, 'pos': callback.pos, 'shape': callback.shape, 'rot': callback.rot}
 							self.project_placement()
 						# Factory assignment buttons.
