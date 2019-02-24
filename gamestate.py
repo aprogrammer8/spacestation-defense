@@ -525,7 +525,7 @@ class Component(Entity):
 	def work(self):
 		"""For Factories, progresses construction."""
 		if not self.project or self.actions == [{'type': 'off'}]: return
-		progress = min(FACTORY_SPEED, SHIP_CONSTRUCTION_COSTS[self.project], self.station.salvage)
+		progress = min(FACTORY_SPEED, SHIP_CONSTRUCTION_COSTS[self.project] - self.progress, self.station.salvage)
 		self.progress += progress
 		self.station.salvage -= progress
 		if self.progress >= SHIP_CONSTRUCTION_COSTS[self.project]:
