@@ -524,16 +524,20 @@ class Component(Entity):
 
 	def work(self):
 		"""For Factories, progresses construction."""
-		if not self.project or self.actions == [[False]]: return
+		if not self.project or self.actions == [{'type': 'off'}]: return
 		progress = min(FACTORY_SPEED, SHIP_CONSTRUCTION_COSTS[self.project], self.station.salvage)
 		self.progress += progress
 		self.station.salvage -= progress
 		if self.progress >= SHIP_CONSTRUCTION_COSTS[self.project]:
-			# Position and rotation don't matter for ships spawning in a Hangar. They'll be set when the ship launches.
-			if self.project == "Probe": self.hangar.contents.append(probe([0,0], 0))
-			self.progress = 0
-			self.project = None
-			self.hangar = None
+			# First, make sure the Hangar is still alive. The self.station thing is a hack to get aronud needing the Gamestate.
+			for comp in self.station:
+				if comp.type == "Hangar" and comp.pos == self.hangar:
+					# Position and rotation don't matter for ships spawning in a Hangar. They'll be set when the ship launches.
+					if self.project == "Probe": comp.contents.append(probe([0,0], 0))
+					self.progress = 0
+					self.project = None
+					self.hangar = None
+					return
 
 class Composite:
 	def __init__(self, components):
@@ -544,7 +548,7 @@ class Station(list):
 	def __init__(self, li=[]):
 		list.__init__(self, li)
 		self.power = 0
-		self.salvage = 0
+		self.salvage = 6
 
 	def shield_regen(self):
 		for comp in self:

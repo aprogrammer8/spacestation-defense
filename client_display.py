@@ -94,9 +94,20 @@ class GameDisplay:
 					self.lock.release()
 					return string
 				pos = self.reverse_calc_pos(event.pos)
+				# Factory assignments need to have a Hangar specified to put the ship in when they're done.
+				if self.selected and self.selected.type == "Factory" and type(self.assigning) == str:
+					entity = self.gamestate.occupied(pos)
+					if entity and entity.type == "Hangar":
+						# Form the return string ahead of time, since we have some things we need to do inbetween that and returning.
+						string = "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'build', 'ship': self.assigning, 'hangar': entity.pos}])
+						self.assigning = False
+						self.lock.release()
+						return string
+					else:
+						SFX_ERROR.play()
 				# This must be checked with "is False", because 0 would mean True for this purpose.
 				if self.assigning is False or not self.selected: self.select_pos(pos)
-				# The only things that can be assigned by clicking are weapons, because movement is always done with the arrow keys.
+				# The only other things that can be assigned by clicking are weapons.
 				elif self.selected.weapons:
 					target = self.gamestate.occupied(pos)
 					# If you try to target nothing, we assume you want to deselect the unit, since that would almost never be a mistake.
@@ -132,7 +143,8 @@ class GameDisplay:
 							self.project_placement()
 						# Factory assignment buttons.
 						elif type(callback) == str:
-							return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'build', 'ship': callback}])
+							# Still need to select a Hangar, so we store the selected ship name in a variable that will persist.
+							self.assigning = callback
 
 		# Keypresses.
 		elif event.type == pygame.KEYDOWN:
@@ -308,8 +320,8 @@ class GameDisplay:
 			elif self.selected.type == "Factory":
 				# Determining the current project is a little more complicated for Factories. It might not be in the .project attribute.
 				# If the players have set a project for it to take on but it hasn't happened yet, then we need to find in .actions.
-				if self.selected.actions and type(self.selected.actions[0][0]) == str:
-					project = self.selected.actions[0][0]
+				if self.selected.actions and self.selected.actions[0]['type'] == "build":
+					project = self.selected.actions[0]['ship']
 				else:
 					project = self.selected.project
 				if project:
