@@ -50,7 +50,7 @@ def enemies_move():
 			for move in ([0, 1], [0, -1], [1, 0], [-1, 0]):
 				if not gamestate.invalid_move(enemy, move): valid_moves.append(move)
 			if not valid_moves: break
-			enemy.actions.append(random.choice(valid_moves))
+			enemy.actions.append({'type': 'move', 'move': random.choice(valid_moves)})
 			enemy.random_targets(gamestate, enemy=True)
 		# Now make it happen.
 		process_actions(enemy)
@@ -63,55 +63,50 @@ def process_actions(entity):
 	if type(entity) == Component and entity.powered():
 		gamestate.station.power -= COMPONENT_POWER_USAGE
 	for action in entity.actions:
-		# If it's a power command or other unique command.
-		if len(action) == 1:
-			# Commands to turn off power to automatically functioning components.
-			if action[0] is False:
-				break
-			# Unique command. Currently, only Shield Generators implement this.
-			if action[0] is True:
-				break
-			# Commands to assign a Factory.
-			if type(action[0]) is str:
-				entity.project = action[0]
-
-		# If it's a move.
-		if len(action) == 2:
-			#if gamestate.invalid_move(entity, action):
-			# If a ship lands in a Hangar, it's important that we don't process the remaining actions.
-			if gamestate.move(entity, action) == "LANDED": break
-
-		# If it's an attack.
-		elif len(action) == 3:
-			weapon = entity.weapons[action[0]]
-			target = gamestate.occupied(action[1:])
-			# This should happen if the target was already destroyed.
-			if not target: continue
-			if random.randint(1, 100) <= hit_chance(weapon.type, target):
-				# The third value in here is whether it hit.
-				action.append(True)
-				# Remember to reflect the gamestate change server-side as well.
-				target.take_damage(weapon.power, weapon.type)
-				# Remove dead targets.
-				if target.hull <= 0:
-					gamestate.remove(target)
-					# Spawn the salvage pile.
-					gamestate.add_salvage(Salvage(target.pos, target.salvage))
-			else:
-				action.append(False)
-
-		# If it's a Hangar launch.
-		elif len(action) == 4:
-			if not gamestate.hangar_launch(entity, action[0], action[1:3], action[3]):
+		# Turning off power to auto-running components.
+		if action['type'] == 'off':
+			# Nothing we need to do here.
+			continue
+		# Shield Generators hiding their shields.
+		elif action['type'] == 'hide':
+			# Not yet implemented.
+			continue
+		# Factory assignments.
+		elif action['type'] == 'build':
+			entity.project = action['ship']
+			entity.hangar = action['hangar']
+		# Hangar launches.
+		elif action['type'] == 'launch':
+			if not gamestate.hangar_launch(entity, action['index'], action['pos'], action['rot']):
 				# If the launch is illegal, we need to not send it back out to the clients.
 				return
+		# Moves.
+		elif action['type'] == 'move':
+			# Don't process remaining actions if the ship lands in a Hangar.
+			if gamestate.move(entity, action['move']) == "LANDED": break
+		# Attacks.
+		elif action['type'] == 'attack':
+			weapon = entity.weapons[action['weapon']]
+			target = gamestate.occupied(action['target'])
+			# This should happen if we killed the target in a previous attack.
+			if not target: continue
+			# Determine whether the attack hits.
+			action['hit'] = random.randint(1, 100) <= hit_chance(weapon.type, target)
+			# Nothing is changed in the gamestate if the attack misses.
+			if not action['hit']: continue
+			target.take_damage(weapon.power, weapon.type)
+			# Remove dead targets.
+			if target.hull <= 0:
+				gamestate.remove(target)
+				# Spawn salvage pile.
+				gamestate.add_salvage(Salvage(target.pos, target.salvage))
 
 		else: print(action, "is an invalid action")
 
 	# The legality checks are handled inside the method.
 	if entity.type == "Factory": entity.work()
 
-	sock.send(encode("ACTION:" + json.dumps(orig_pos) + ':' + json.dumps(entity.actions)))
+	sock.send(encode("ACTION:" + json.dumps(orig_pos) + ';' + json.dumps(entity.actions)))
 
 def main():
 	global sock, players, gamestate

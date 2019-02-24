@@ -338,25 +338,25 @@ class Entity:
 		action_index = 0
 		# Check if the requested weapon is already targeting something. If so, replace that target so the weapon isn't getting double-used.
 		for action in self.actions:
-			if len(action) > 2 and action[0] == index:
-				self.actions[action_index] = [index, *pos]
+			if action['type'] == 'attack' and action['weapon'] == index:
+				self.actions[action_index] = {'type': 'attack', 'weapon': index, 'target': pos}
 				return
 			action_index += 1
-		self.actions.append([index, *pos])
+		self.actions.append({'type': 'attack', 'weapon': index, 'target': pos})
 
 	def desc_target(self, weapon, gamestate):
 		"""Takes a weapon index and returns a string describing what it's targeting, if anything."""
 		index = self.weapons.index(weapon)
 		for action in self.actions:
-			if len(action) > 2 and action[0] == index:
-				target = gamestate.occupied(action[1:3])
+			if action['type'] == 'attack' and action['weapon'] == index:
+				target = gamestate.occupied(action['target'])
 				if target: return ", targeting " + target.type + " at " + str(target.pos)
 		return ""
 
 	def moves_planned(self):
 		"""Filters the list of planned actions and returns only the moves."""
 		# Moves are always length 2, attacks will be length 3, or 4 if they've been stamped for accuracy.
-		return [move for move in self.actions if len(move) == 2]
+		return [move['move'] for move in self.actions if move['type'] == 'move']
 
 	def untargeted(self):
 		"""Returns all weapons with no target."""
@@ -368,7 +368,7 @@ class Entity:
 			i += 1
 		# Now filter out the ones that have targets.
 		for action in self.actions:
-			if len(action) > 2: weapons.remove(action[0])
+			if action['type'] == 'attack': weapons.remove(action['weapon'])
 		return weapons
 
 	def all_in_range(self, gamestate, enemy):
@@ -392,8 +392,9 @@ class Entity:
 			# For now, we just pick out the first possible target.
 			for target in targets:
 				if gamestate.in_range(self, self.weapons[weapon], target):
-					self.actions.append([i, *target.pos])
+					self.target(i, target.pos)
 					break
+			i += 1
 
 
 class Ship(Entity):
@@ -494,9 +495,9 @@ class Component(Entity):
 
 	def powered(self):
 		"""Returns whether the Component is currently using power."""
-		if self.type == "Shield Generator": return self.actions != [[False]]
+		if self.type == "Shield Generator": return self.actions != [{'type': 'off'}]
 		if self.type == "Laser Turret": return bool(self.actions)
-		if self.type == "Factory": return self.actions != [[False]] and (self.project or self.actions)
+		if self.type == "Factory": return self.actions != [{'type': 'off'}] and (self.project or self.actions)
 		# Hangars don't cost power to land or launch.
 		return False
 

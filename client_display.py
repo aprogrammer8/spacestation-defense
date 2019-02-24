@@ -88,7 +88,7 @@ class GameDisplay:
 							self.lock.release()
 							return
 					# Form the return string ahead of time, since we have some things we need to do inbetween that and returning.
-					string = "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[index, *self.placing['pos'], self.placing['rot']]])
+					string = "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'launch', 'index': index, 'pos': self.placing['pos'], 'rot': self.placing['rot']}])
 					self.clear_projected_placement()
 					self.placing = None
 					self.lock.release()
@@ -108,7 +108,7 @@ class GameDisplay:
 						SFX_ERROR.play()
 					# Valid targets.
 					elif self.gamestate.in_range(self.selected, self.selected.weapons[self.assigning].type, target):
-						self.selected.target(self.assigning, target.pos)
+						self.selected.target(self.assigning, target.pos) # TODO this is the only one that modifies the Gamestate from inside client_display. I should look for a workaround.
 						self.assigning += 1
 						if self.assigning == len(self.selected.weapons): self.assigning = 0
 						self.lock.release()
@@ -132,7 +132,7 @@ class GameDisplay:
 							self.project_placement()
 						# Factory assignment buttons.
 						elif type(callback) == str:
-							return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[callback]])
+							return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'build', 'ship': callback}])
 
 		# Keypresses.
 		elif event.type == pygame.KEYDOWN:
@@ -154,7 +154,7 @@ class GameDisplay:
 					SFX_ERROR.play()
 					return
 				self.clear_projected_move()
-				self.selected.actions = []
+				self.selected.actions = [] # TODO remove
 				if self.selected.weapons: self.assigning = 0
 				else: self.assigning = True
 				# Clear out old actions.
@@ -178,7 +178,7 @@ class GameDisplay:
 			elif event.key == pygame.K_q:
 				# Shield Generators hide shields.
 				if self.selected.type == "Shield Generator":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[True]])
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'hide'}])
 				# Hangar/Factory details page.
 				elif self.selected.type == "Hangar":
 					self.lock.acquire()
@@ -203,10 +203,10 @@ class GameDisplay:
 			elif event.key == pygame.K_e:
 				# Shield Generators can turn off to save power.
 				if self.selected.type == "Shield Generator":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[False]])
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'off'}])
 				# Turns off the Factory to save power and salvage.
 				elif self.selected.type == "Factory":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([[False]])
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'off'}])
 				else: SFX_ERROR.play()
 			elif event.key == pygame.K_r:
 				# To turn the shield generator or Factory back on, we can just clear its actions.
@@ -228,7 +228,7 @@ class GameDisplay:
 				if obstacle and obstacle.type != "Hangar":
 					SFX_ERROR.play()
 					return
-				self.selected.actions.append(move)
+				self.selected.actions.append({'type': 'move', 'move': move}) # TODO remove
 				self.project_move()
 				return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions)
 

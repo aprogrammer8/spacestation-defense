@@ -189,7 +189,7 @@ def launch_ship():
 def execute_move(cmd, display):
 	"""Takes an ACTION command from the server and executes it. It needs the offset for graphics/animation purposes."""
 	print("Executing move:", cmd)
-	parts = cmd.split(':')
+	parts = cmd.split(';')
 	entity = gamestate.occupied(json.loads(parts[0]))
 	actions = json.loads(parts[1])
 	if not entity:
@@ -202,53 +202,46 @@ def execute_move(cmd, display):
 		if type(display.selected) == Component: display.select()
 
 	for action in actions:
-		# If it's a power command or other unique command.
-		if len(action) == 1:
-			# Commands to turn off power to automatically functioning components.
-			if action[0] is False:
-				break
-			# Unique command. Currently, only Shield Generators implement this.
-			if action[0] is True:
-				break
-			# Commands to assign a Factory.
-			if type(action[0]) is str:
-				entity.project = action[0]
-
+		# Turning off power to auto-running components.
+		if action['type'] == 'off':
+			# Nothing we need to do here.
+			continue
+		# Shield Generators hiding their shields.
+		elif action['type'] == 'hide':
+			# Not yet implemented.
+			continue
+		# Factory assignments.
+		elif action['type'] == 'build':
+			entity.project = action['ship']
+			entity.hangar = action['hangar']
+		# Hangar launches.
+		elif action['type'] == 'launch':
+			gamestate.hangar_launch(entity, action['index'], action['pos'], action['rot'])
+			display.full_redraw()
 		# Moves.
-		if len(action) == 2:
-			display.move(entity, action)
+		elif action['type'] == 'move':
+			display.move(entity, action['move'])
 			await_animation(display)
 			# Don't process remaining actions if the ship lands in a Hangar.
-			if gamestate.move(entity, action) == "LANDED":
+			if gamestate.move(entity, action['move']) == "LANDED":
 				# But we still have to deselect it. If the player could retain selection of a ship landed in a Hangar, that could cause a lot of problems.
 				if display.selected == entity: display.deselect()
 				break
-
-		# Attacks or Hangar lauches.
-		elif len(action) == 4:
-
-			# Attacks.
-			if type(action[3]) == bool:
-				weapon = entity.weapons[action[0]]
-				target = gamestate.occupied(action[1:3])
-				# This should happen if we killed the target in a previous attack.
-				if not target: continue
-				# Nothing is changed in the gamestate if the attack misses.
-				if not action[3]: continue
-				target.take_damage(weapon.power, weapon.type)
-				# Remove dead targets.
-				if target.hull <= 0:
-					gamestate.remove(target)
-					# Spawn salvage pile.
-					gamestate.add_salvage(Salvage(target.pos, target.salvage))
-					display.draw_gamestate()
-
-			# Hangar launches.
-			else:
-
-				gamestate.hangar_launch(entity, action[0], action[1:3], action[3])
-				# Placeholder - we should have an animation for this.
-				display.full_redraw()
+		# Attacks.
+		elif action['type'] == 'attack':
+			weapon = entity.weapons[action['weapon']]
+			target = gamestate.occupied(action['target'])
+			# This should happen if we killed the target in a previous attack.
+			if not target: continue
+			# Nothing is changed in the gamestate if the attack misses.
+			if not action['hit']: continue
+			target.take_damage(weapon.power, weapon.type)
+			# Remove dead targets.
+			if target.hull <= 0:
+				gamestate.remove(target)
+				# Spawn salvage pile.
+				gamestate.add_salvage(Salvage(target.pos, target.salvage))
+				display.draw_gamestate()
 
 		else: print(action, "is an invalid action")
 
