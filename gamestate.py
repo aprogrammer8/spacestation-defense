@@ -497,7 +497,7 @@ class Component(Entity):
 		"""Returns whether the Component is currently using power."""
 		if self.type == "Shield Generator": return self.actions != [{'type': 'off'}]
 		if self.type == "Laser Turret": return bool(self.actions)
-		if self.type == "Factory": return self.actions != [{'type': 'off'}] and (self.project or self.actions)
+		if self.type == "Factory": return self.actions != [{'type': 'off'}] and (self.project or self.actions) and self.station.salvage > 0
 		# Hangars don't cost power to land or launch.
 		return False
 
