@@ -147,39 +147,43 @@ def lobby(host_name):
 
 
 def play(players):
-	global gamestate, offset
+	# The missed_buffer is for server messages that this function missed because they arrived during an animation.
+	global gamestate, offset, missed_buffer
+	missed_buffer = []
 	gamestate = Gamestate(players)
 	gamestate.init_station(gamestate.mission.starting_station)
 	display = GameDisplay(window, player_name, gamestate)
-	# This buffer is used to store all actions the server transmits before the "ROUND" message. We want to catch them all before we go into execute_move so that await_animation won't intercept them.
-	actions = []
 	while True:
 		clock.tick(LOBBY_RATE)
 		events = selector.select(0)
 		for key, _ in events:
 			msg = recv_message(key.fileobj)
-			if msg.startswith("LOCAL:"):
-				display.add_chat(msg[6:])
-			if msg == "ROUND":
-				# First, play out all the actions received.
-				for action in actions: execute_move(action, display)
-				actions = []
-				# Now prepare the next round.
-				gamestate.upkeep(clientside=True)
-				display.full_redraw()
-			if msg.startswith("SPAWN ENEMIES:"):
-				enemy_json = json.loads(msg[14:])
-				gamestate.insert_enemies(enemy_json)
-				display.full_redraw()
-			if msg.startswith("ASSIGN:"):
-				interpret_assign(gamestate, msg[7:], display)
-			# Unit action happening commands.
-			if msg.startswith("ACTION:"):
-				actions.append(msg[msg.index(':')+1:])
+			handle_server_msg(msg, display)
+		# Catch missed messages.
+		for m in missed_buffer:
+			handle_server_msg(m, display)
+		missed_buffer.clear()
 		for event in pygame.event.get():
 			response = display.event_respond(event)
 			# The repsonse is always a message to be sent to the server.
 			if response: sock.send(encode(response))
+
+
+def handle_server_msg(msg, display):
+	if msg.startswith("LOCAL:"):
+		display.add_chat(msg[6:])
+	if msg == "ROUND":
+		gamestate.upkeep(clientside=True)
+		display.full_redraw()
+	if msg.startswith("SPAWN ENEMIES:"):
+		enemy_json = json.loads(msg[14:])
+		gamestate.insert_enemies(enemy_json)
+		display.full_redraw()
+	if msg.startswith("ASSIGN:"):
+		interpret_assign(gamestate, msg[7:], display)
+	# Unit action happening commands.
+	if msg.startswith("ACTION:"):
+		execute_move(msg[msg.index(':')+1:], display)
 
 
 def launch_ship():
@@ -195,12 +199,12 @@ def execute_move(cmd, display):
 	if not entity:
 		print("Entity dead already: ", json.loads(parts[0]), ", planned actions =", actions)
 		return
+	entity.shield_regen()
 	# Subtract power for used components.
 	if type(entity) == Component and entity.powered():
-		gamestate.station.power -= COMPONENT_POWER_USAGE
+		if not gamestate.station.use_power(): return
 		# If a station component was selected, then this needs to be reflected on the panel.
 		if type(display.selected) == Component: display.select()
-
 	for action in actions:
 		# Turning off power to auto-running components.
 		if action['type'] == 'off':
@@ -245,7 +249,7 @@ def execute_move(cmd, display):
 
 		else: print(action, "is an invalid action")
 
-	# The legality checks are handled inside the method.
+	# The legality checks (besides the power check) are handled inside the method.
 	if entity.type == "Factory": entity.work()
 
 	# This hopefully won't be necessary in the end.
@@ -254,6 +258,7 @@ def execute_move(cmd, display):
 
 def await_animation(display):
 	"""This function is used to ensure that chat and selection can still take place during animation."""
+	global missed_buffer
 	while display.anim.is_alive():
 		clock.tick(LOBBY_RATE)
 		events = selector.select(0)
@@ -262,6 +267,8 @@ def await_animation(display):
 			print(msg)
 			if msg.startswith("LOCAL:"):
 				display.add_chat(msg[6:])
+			else:
+				missed_buffer.append(msg)
 		for event in pygame.event.get():
 			response = display.event_respond(event)
 			# The repsonse is always a message to be sent to the server.

@@ -57,11 +57,15 @@ def enemies_move():
 
 def process_actions(entity):
 	"""Takes an Entity with all its actions set, reflects them in the gamestate, and then encodes them as JSON so the clients can do the same."""
-	# We'll need the original at the end.
-	orig_pos = entity.pos[:]
 	# Subtract power for used components.
 	if type(entity) == Component and entity.powered():
-		gamestate.station.power -= COMPONENT_POWER_USAGE
+		if not gamestate.station.use_power():
+			# Since break wouldn't be legal here and return would skip the sock.send at the end, we'll just replicate it here.
+				sock.send(encode("ACTION:" + json.dumps(entity.pos) + ';' + json.dumps(entity.actions)))
+	entity.shield_regen()
+	# We'll need the original at the end if the Entity moved.
+	orig_pos = entity.pos[:]
+
 	for action in entity.actions:
 		# Turning off power to auto-running components.
 		if action['type'] == 'off':
@@ -124,13 +128,13 @@ def main():
 	# The clients will initialize the station on their own, at least for now.
 	#sock.send(encode("SPAWN COMPONENTS:" + json.dumps(changes)))
 	while True:
-		changes = gamestate.upkeep()
-		if changes: sock.send(encode("SPAWN ENEMIES:" + json.dumps(changes)))
 		collect_input()
 		sock.send(encode("DONE"))
 		players_move()
 		enemies_move()
 		sock.send(encode("ROUND"))
+		changes = gamestate.upkeep()
+		if changes: sock.send(encode("SPAWN ENEMIES:" + json.dumps(changes)))
 		# Dump gamestate to a file so it can be restored in case of a crash.
 		#gamestate.encode()
 

@@ -47,14 +47,9 @@ class Gamestate:
 		for asteroid in self.asteroids: asteroid.actions = []
 
 	def upkeep(self, clientside=False):
-		"""Do every-round tasks, like regenerating everyone's shields and stuff."""
-		# Regen everyone's shields.
-		for ship in self.allied_ships: ship.shield_regen()
-		for ship in self.enemy_ships: ship.shield_regen()
-		self.station.shield_regen()
-		self.station.power_regen()
-		# Clear would be called first for elegance, but it would ruin non-standard modes for special Station Components.
+		"""Do every-round tasks, like regenerating power and stuff."""
 		self.clear()
+		self.station.power_regen()
 		# Salvage decay. We make a new list to avoid messings things up by changing the size during iteration.
 		new_salvages = []
 		for salvage in self.salvages:
@@ -322,9 +317,12 @@ class Entity:
 
 	def shield_regen(self):
 		# Turned-off Shield Generators don't regenerate.
-		if self.actions == [[False]]: return None
+		if self.actions == [[False]]: return False
 		self.shield += self.shield_regen_amounts[self.shield_regen_pointer]
-		if self.shield_regen_pointer < len(self.shield_regen_amounts) - 1: self.shield_regen_pointer += 1
+		# Update pointer.
+		if self.shield_regen_pointer < len(self.shield_regen_amounts) - 1:
+			self.shield_regen_pointer += 1
+		return True
 
 	def moves_left(self):
 		moves = self.speed
@@ -551,7 +549,10 @@ class Station(list):
 		self.salvage = 6
 
 	def shield_regen(self):
+		"""In experimental changes, this method is being deprecated."""
 		for comp in self:
+			# Stop if there isn't enough power left.
+			if not self.use_power(): break
 			if comp.type == "Shield Generator": comp.shield_regen()
 
 	def power_regen(self):
@@ -574,6 +575,13 @@ class Station(list):
 		for comp in self:
 			if comp.powered(): used += COMPONENT_POWER_USAGE
 		return self.power - used
+
+	def use_power(self):
+		"""Called when a Component needs to use power. If it can, this will subtract the power and return True. If there isn't enough, this will not subtract it and return False."""
+		if self.power >= COMPONENT_POWER_USAGE:
+			self.power -= COMPONENT_POWER_USAGE
+			return True
+		return False
 
 	def max_salvage(self):
 		cap = 0
