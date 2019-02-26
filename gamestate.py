@@ -457,7 +457,8 @@ class Component(Entity):
 		gens = []
 		for comp in self.station:
 			if comp.type != "Shield Generator": continue
-			if abs(comp.pos[0] - self.pos[0]) + abs(comp.pos[1] - self.pos[1]) < SHIELD_GEN_RANGE and comp.powered():
+			# We check "not comp.actions" instead of comp.powered() because Shield Generators in hide mode shouldn't count here.
+			if abs(comp.pos[0] - self.pos[0]) + abs(comp.pos[1] - self.pos[1]) < SHIELD_GEN_RANGE and not comp.actions:
 				gens.append(comp)
 		return gens
 
@@ -547,13 +548,6 @@ class Station(list):
 		list.__init__(self, li)
 		self.power = 0
 		self.salvage = 6
-
-	def shield_regen(self):
-		"""In experimental changes, this method is being deprecated."""
-		for comp in self:
-			# Stop if there isn't enough power left.
-			if not self.use_power(): break
-			if comp.type == "Shield Generator": comp.shield_regen()
 
 	def power_regen(self):
 		for comp in self.power_generators(): self.power += POWER_GEN_SPEED

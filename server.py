@@ -56,16 +56,21 @@ def enemies_move():
 		process_actions(enemy)
 
 def process_actions(entity):
-	"""Takes an Entity with all its actions set, reflects them in the gamestate, and then encodes them as JSON so the clients can do the same."""
+	"""Takes an Entity with all its actions set, plays them out, and then encodes them as JSON and sends them so the clients can do the same."""
+	skip = False
 	# Subtract power for used components.
-	if type(entity) == Component and entity.powered():
-		if not gamestate.station.use_power():
-			# Since break wouldn't be legal here and return would skip the sock.send at the end, we'll just replicate it here.
-				sock.send(encode("ACTION:" + json.dumps(entity.pos) + ';' + json.dumps(entity.actions)))
-	entity.shield_regen()
+	if type(entity) == Component:
+		if not entity.powered() or not gamestate.station.use_power():
+			skip = True
 	# We'll need the original at the end if the Entity moved.
 	orig_pos = entity.pos[:]
+	if not skip:
+		entity.shield_regen()
+		playout_actions(entity)
+	sock.send(encode("ACTION:" + json.dumps(orig_pos) + ';' + json.dumps(entity.actions)))
 
+def playout_actions(entity):
+	"""Takes an Entity and plays out its actions, reflecting the changes in the gamestate."""
 	for action in entity.actions:
 		# Turning off power to auto-running components.
 		if action['type'] == 'off':
@@ -109,8 +114,6 @@ def process_actions(entity):
 
 	# The legality checks are handled inside the method.
 	if entity.type == "Factory": entity.work()
-
-	sock.send(encode("ACTION:" + json.dumps(orig_pos) + ';' + json.dumps(entity.actions)))
 
 def main():
 	global sock, players, gamestate
