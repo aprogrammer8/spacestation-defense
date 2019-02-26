@@ -484,10 +484,10 @@ class Component(Entity):
 			return
 		# Calling this ahead of time so it doesn't incur an overhead calling it every time we loop for large amounts of damage.
 		gens = self.shield_generators()
-		while diff>0:
+		while diff > 0:
 			# Spread out the damage over all in-range generators.
 			for gen in gens:
-				if gen.shield>0:
+				if gen.shield > 0 and diff > 0:
 					gen.__shield -= 1
 					gen.shield_regen_pointer = 0
 					diff -= 1
