@@ -630,6 +630,7 @@ class Mission:
 			(0,2): "Laser Turret",
 			(-4,0): "Hangar",
 			(-2,-2): "Factory",
+			(4,0): "Engine",
 		}
 		self.starting_cards = 4
 

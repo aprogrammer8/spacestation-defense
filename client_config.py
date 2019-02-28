@@ -112,6 +112,7 @@ IMAGE_DICT = {
 	"Laser Turret": "images/laser_turret.png",
 	"Hangar": "images/hangar.png",
 	"Factory": "images/factory.png",
+	"Engine": "images/engine.png",
 	# Misc.
 	"salvage": "images/salvage1.png",
 }

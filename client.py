@@ -278,8 +278,8 @@ def init_images():
 	"""The images defined in client_config.py need to be fixed for transparency. But client_config.py can't do that, because it runs before the pygame display has been initialized. So we do it here."""
 	for entity in IMAGE_DICT:
 		image = pygame.image.load(IMAGE_DICT[entity]).convert()
-		# Shield Generator has white that's part of the image. But it also takes up the entire thing, so it doesn't need a colorkey.
-		if entity == "Shield Generator":
+		# These two have white that's part of the image. But it also takes up the entire thing, so it doesn't need a colorkey.
+		if entity == "Shield Generator" or entity == "Engine":
 			pass
 		else:
 			image.set_colorkey((255,255,255))
