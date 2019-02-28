@@ -548,6 +548,7 @@ class Station(list):
 		list.__init__(self, li)
 		self.power = 0
 		self.salvage = 6
+		self.thrust = 0
 
 	def power_regen(self):
 		for comp in self.power_generators(): self.power += POWER_GEN_SPEED
@@ -588,6 +589,9 @@ class Station(list):
 		transfer = min(entity.load, self.max_salvage() - self.salvage)
 		self.salvage += transfer
 		entity.load -= transfer
+
+	def thrust_needed(self):
+		return THRUST_PER_COMPONENT * len(self)
 
 
 class Weapon:

@@ -57,3 +57,10 @@ def power_repr(station):
 	"""Returns a string suitable to label the power bar on a Station component."""
 	string = str(station.power) + "(" + str(station.projected_power()) + ") / " + str(station.maxpower()) + "    + " + str(POWER_GEN_SPEED * len(station.power_generators()))
 	return string
+
+def thrust_repr(station):
+	"""Returns a string suitable to label the thrust bar on a Station component."""
+	string = str(abs(station.thrust)) + " / " + str(station.thrust_needed())
+	if station.thrust > 0: string += " (clockwise)"
+	elif station.thrust < 0: string += " (counterclockwise)"
+	return string
