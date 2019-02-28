@@ -229,7 +229,7 @@ class Gamestate:
 		if self.occupied_area(launch_spaces): return False
 		# The ship can only be launched to a space adjacent to the Hangar.
 		if not adjacent(launch_spaces, hangar.spaces()): return False
-		# THe launch is legal.
+		# The launch is legal.
 		if not test:
 			del hangar.contents[index]
 			# Clear actions so the ship won't come out with moves.

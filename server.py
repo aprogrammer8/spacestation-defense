@@ -58,8 +58,8 @@ def enemies_move():
 def process_actions(entity):
 	"""Takes an Entity with all its actions set, plays them out, and then encodes them as JSON and sends them so the clients can do the same."""
 	skip = False
-	# Subtract power for used components.
-	if type(entity) == Component:
+	# Subtract power for used components (except Hangars).
+	if type(entity) == Component and entity.type != "Hangar":
 		if not entity.powered() or not gamestate.station.use_power():
 			skip = True
 	# We'll need the original at the end if the Entity moved.
@@ -78,7 +78,7 @@ def playout_actions(entity):
 			continue
 		# Shield Generators hiding their shields.
 		elif action['type'] == 'hide':
-			# Not yet implemented.
+			# Nothing we need to do here.
 			continue
 		# Factory assignments.
 		elif action['type'] == 'build':
