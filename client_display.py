@@ -439,7 +439,7 @@ class GameDisplay:
 		self.window.fill((0,0,0), p_rect)
 		# Redraw the other gamestate entities clobbered when we erased.
 		# It seems like rounding requires a +1,+1 expansion.
-		self.draw_gamestate(p_rect.inflate_ip(1,1))
+		self.draw_gamestate(p_rect.inflate(1,1))
 
 	def entity_pixel_rect(self, entity):
 		"""Finds the rectangle that an Entity is occupying (in terms of pixels)."""
@@ -485,7 +485,9 @@ class GameDisplay:
 			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
 		if flip:
-			pygame.display.flip()
+			# I've heard that update the entire window is slower than flip at least on some hardawre.
+			if rect: pygame.display.update(rect)
+			else: pygame.display.flip()
 
 	def full_redraw(self):
 		"""Blank and redraw the entire game window."""
