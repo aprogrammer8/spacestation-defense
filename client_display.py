@@ -464,26 +464,27 @@ class GameDisplay:
 		for y in range(rect.top, rect.bottom, TILESIZE[1]):
 			pygame.draw.line(self.window, GRID_COLOR, (rect.left, y - yoffset), (rect.right, y - yoffset), 1)
 
-	def draw_gamestate(self, rect=None):
+	def draw_gamestate(self, rect=None, exclude=None, flip=True):
 		"""Draw the game window within the specified Rect. It's measured in logical position, not pixel position."""
 		if not rect: rect = GAME_WINDOW_RECT
 		self.draw_grid(rect) # self.reverse_calc_pos?
 		for salvage in self.gamestate.salvages:
-			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(salvage)):
+			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(salvage)) and exclude != salvage:
 				self.window.blit(IMAGE_DICT['salvage'], self.calc_pos(salvage.pos))
 		for entity in self.gamestate.station:
-			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)):
+			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
 		for entity in self.gamestate.enemy_ships:
-			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)):
+			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
 		for entity in self.gamestate.allied_ships:
-			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)):
+			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
 		for entity in self.gamestate.asteroids:
-			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)):
+			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
-		pygame.display.flip()
+		if flip:
+			pygame.display.flip()
 
 	def full_redraw(self):
 		"""Blank and redraw the entire game window."""
@@ -497,7 +498,14 @@ class GameDisplay:
 
 	def animate_move(self, entity, move):
 		# Precalculate the rect we'll need to erase.
+		# TODO This probably only works with one-space ships.
 		move_rect = self.calc_rect(rect((entity.pos, (entity.pos[0] + move[0], entity.pos[1] + move[1]))))
+		# And extract the background image so we don't have to recalculate that either.
+		# To exclude the moving ship's image from this, we'll have to draw things without it.
+		self.window.fill((0,0,0), move_rect)
+		self.draw_gamestate(move_rect, exclude=entity, flip=False)
+		bg = self.window.subsurface(move_rect).copy()
+		orig_pos = [move_rect[0], move_rect[1]]
 		pos = list(self.calc_pos(entity.pos))
 		dest = list(self.calc_pos((entity.pos[0] + move[0], entity.pos[1] + move[1])))
 		while pos != dest:
@@ -506,10 +514,9 @@ class GameDisplay:
 			else: pos[1] += move[1]
 			# This is run concurrently, so it's important to lock the display.
 			self.lock.acquire()
-			# TODO This probably only works with one-space ships.
-			self.erase(move_rect)
+			self.window.blit(bg, orig_pos)
 			self.window.blit(IMAGE_DICT[entity.type], pos)
-			pygame.display.flip()
+			pygame.display.update(move_rect)
 			self.lock.release()
 			pygame.time.wait(10)
 
@@ -519,7 +526,7 @@ class GameDisplay:
 		return False
 
 	def deselect(self):
-		"""An envelope that clears selected, assigning, placing, and clears both the panel and the ."""
+		"""An envelope that clears selected, assigning, placing, and clears both the panel and whatever stuff is onscreen from those variables."""
 		if self.selected:
 			self.clear_projected_move()
 			self.selected = None
