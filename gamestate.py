@@ -198,7 +198,7 @@ class Gamestate:
 
 	def move(self, entity, change):
 		"""A wrapper around Gamestate.jump that takes a tuple of (x, y) as a move to be made from the Entity's current position, and calculates the position to jump it to."""
-		self.jump(entity, [entity.pos[0] + change[0], entity.pos[1] + change[1]])
+		return self.jump(entity, [entity.pos[0] + change[0], entity.pos[1] + change[1]])
 
 	def remove(self, entity):
 		"""Remove an Entity."""
