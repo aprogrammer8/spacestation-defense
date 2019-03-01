@@ -427,9 +427,10 @@ class GameDisplay:
 
 	def project_placement(self):
 		"""Shows an outline of where the object will be during placement."""
-		for space in spaces(self.placing['pos'], self.placing['shape'], self.placing['rot']):
+		placement_spaces = spaces(self.placing['pos'], self.placing['shape'], self.placing['rot'])
+		for space in placement_spaces:
 			pygame.draw.rect(self.window, PLACEMENT_PROJECTION_COLOR, (*self.calc_pos(space), TILESIZE[0], TILESIZE[1]), 2)
-		pygame.display.flip()
+		pygame.display.update(self.calc_rect(rect(placement_spaces)))
 
 	def clear_projected_placement(self):
 		"""Clears the outline of where the object will be during placement."""
