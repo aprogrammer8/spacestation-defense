@@ -171,7 +171,7 @@ class GameDisplay:
 				else: self.assigning = True
 				# Clear out old actions.
 				return "ASSIGN:" + json.dumps(self.selected.pos) + ":[]"
-				# We don't need to update the panel ourselves here because the ASSIGN command will get sent to the server and come back, and a different case here will update the display.
+				# We don't need to update the panel ourselves here because the ASSIGN command will get sent to the server and come back, and the client will call us back.
 
 			# Esc gets out of assignment or placement mode.
 			elif event.key == pygame.K_ESCAPE and not self.animating():
@@ -240,9 +240,7 @@ class GameDisplay:
 				if obstacle and obstacle.type != "Hangar":
 					SFX_ERROR.play()
 					return
-				self.selected.actions.append({'type': 'move', 'move': move}) # TODO remove
-				self.project_move()
-				return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions)
+				return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions + [{'type': 'move', 'move': move}])
 
 		# Closing the game. We handle this last because it's the rarest.
 		elif event.type == pygame.QUIT: sys.exit()
@@ -401,7 +399,10 @@ class GameDisplay:
 		   If pos is not provided, select will pass whatever salvage is under the selected Entity to fill_panel.
 		   If pos is provided, select will check that pos for salvage instead. This is useful to selecte a space with no Entity on it.
 		"""
-		if not pos: pos = self.selected.pos
+		if not pos:
+			pos = self.selected.pos
+			# If we're working from the selected Entity, we project its move too.
+			self.project_move()
 		# FIXME This is an imperfect method, as it makes it impossible to see salvage that's under a big ship but not under its central pos.
 		salvage = None
 		for s in self.gamestate.salvages:
