@@ -36,7 +36,7 @@ class GameDisplay:
 		pygame.display.flip()
 		# Selected Entity.
 		self.selected = None
-		# When assigning a unit that has weapons, this is set to an int instead of True.
+		# This variable holds whatever data needs holding during a unit assignment: the index of the weapon being targeted, the name of the ship being assigned to a Factory, etc.
 		self.assigning = False
 		# When placing something (such as launching a ship from a Hangar), this holds the pos, rot, and shape.
 		self.placing = None

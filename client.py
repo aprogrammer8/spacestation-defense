@@ -186,12 +186,8 @@ def handle_server_msg(msg, display):
 		execute_move(msg[msg.index(':')+1:], display)
 
 
-def launch_ship():
-	"""Launches a ship from a Hangar."""
-	pass
-
 def execute_move(cmd, display):
-	"""Takes an ACTION command from the server and executes it. It needs the offset for graphics/animation purposes."""
+	"""Takes an ACTION command from the server and executes it."""
 	print("Executing move:", cmd)
 	parts = cmd.split(';')
 	entity = gamestate.occupied(json.loads(parts[0]))
@@ -212,7 +208,6 @@ def execute_move(cmd, display):
 			continue
 		# Shield Generators hiding their shields.
 		elif action['type'] == 'hide':
-			# Not yet implemented.
 			continue
 		# Factory assignments.
 		elif action['type'] == 'build':
