@@ -281,12 +281,14 @@ class GameDisplay:
 		if self.assigning is not False: draw_text(self.window, "Assigning...", ASSIGNING_TEXT_COLOR, PANEL_ASSIGNING_RECT, FONT)
 		else: pygame.draw.rect(self.window, PANEL_COLOR, PANEL_ASSIGNING_RECT, 0)
 		# Hull and shield.
-		draw_text(self.window, str(self.selected.hull)+"/"+str(self.selected.maxhull), TEXT_COLOR, PANEL_HULL_RECT, FONT)
+		draw_text(self.window, str(self.selected.hull) + "/" + str(self.selected.maxhull), TEXT_COLOR, PANEL_HULL_RECT, FONT)
 		draw_bar(self.window, PANEL_HULL_BAR_RECT, TEXT_COLOR, HULL_COLOR, HULL_DAMAGE_COLOR, self.selected.maxhull, self.selected.hull)
 		if self.selected.maxshield > 0:
 			draw_text(self.window, shield_repr(self.selected), TEXT_COLOR, PANEL_SHIELD_RECT, FONT)
 			draw_bar(self.window, PANEL_SHIELD_BAR_RECT, TEXT_COLOR, SHIELD_COLOR, SHIELD_DAMAGE_COLOR, self.selected.maxshield, self.selected.shield)
 		y = 0
+		if type(self.selected) == Ship:
+			draw_text(self.window, "Speed: " + str(self.selected.speed), TEXT_COLOR, PANEL_SPEED_RECT, FONT)
 		if self.selected.weapons:
 			draw_text(self.window, "Weapons:", TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN, FONT)
 			y += 20
@@ -294,7 +296,7 @@ class GameDisplay:
 				y += draw_text(self.window, str(weapon)+self.selected.desc_target(weapon,self.gamestate), TEXT_COLOR, pygame.Rect(PANEL_WEAPON_DESC_BEGIN.x+5, PANEL_WEAPON_DESC_BEGIN.y+y, PANEL_WEAPON_DESC_BEGIN.w-7, 60), FONT)
 		# Now draw special properties.
 		if self.selected.type == "Probe":
-			rect = PANEL_SHIELD_BAR_RECT.move(0, y+30)
+			rect = PANEL_SPEED_RECT.move(0, y + 30)
 			draw_text(self.window, "Salvage: " + str(self.selected.load) + "/" + str(PROBE_CAPACITY), TEXT_COLOR, rect, FONT)
 			draw_bar(self.window, rect.move(0,20), TEXT_COLOR, CAPACITY_COLOR, CAPACITY_EMPTY_COLOR, PROBE_CAPACITY, self.selected.load)
 		# Station components also display the pooled power.
@@ -307,7 +309,7 @@ class GameDisplay:
 			draw_bar(self.window, PANEL_THRUST_BAR_RECT, TEXT_COLOR, THRUST_COLOR, THRUST_EMPTY_COLOR, self.gamestate.station.thrust_needed(), abs(self.gamestate.station.thrust))
 			# Hangars show a summary of their contents when selected.
 			if self.selected.type == "Hangar":
-				rect = PANEL_SHIELD_BAR_RECT.move(0, 30)
+				rect = PANEL_SPEED_RECT.move(0, 30)
 				draw_text(self.window, "Capacity: " + str(self.selected.current_fill()) + "/" + str(HANGAR_CAPACITY), TEXT_COLOR, rect, FONT)
 				rect.move_ip(0, 20)
 				draw_bar(self.window, rect, TEXT_COLOR, CAPACITY_COLOR, CAPACITY_EMPTY_COLOR, HANGAR_CAPACITY, self.selected.current_fill())
@@ -325,7 +327,7 @@ class GameDisplay:
 				else:
 					project = self.selected.project
 				if project:
-					rect = PANEL_SHIELD_BAR_RECT.move(0, 30)
+					rect = PANEL_SPEED_RECT.move(0, 30)
 					draw_text(self.window, "Building " + project + ", " + str(self.selected.progress) + "/" + str(SHIP_CONSTRUCTION_COSTS[project]), TEXT_COLOR, rect, FONT)
 					rect.move_ip(0, 20)
 					draw_bar(self.window, rect, TEXT_COLOR, CONSTRUCTION_COLOR, CONSTRUCTION_EMPTY_COLOR, SHIP_CONSTRUCTION_COSTS[project], self.selected.progress)
