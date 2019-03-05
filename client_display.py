@@ -254,7 +254,7 @@ class GameDisplay:
 
 	def calc_pos(self, pos):
 		"""calc_pos converts a gameboard logical position to a pixel position on screen."""
-		return ((pos[0] + self.offset[0]) * TILESIZE[0]+GAME_WINDOW_RECT.left, (pos[1] + self.offset[1]) * TILESIZE[1])
+		return ((pos[0] + self.offset[0]) * TILESIZE[0] + GAME_WINDOW_RECT.left, (pos[1] + self.offset[1]) * TILESIZE[1])
 
 	def reverse_calc_pos(self, pos):
 		"""reverse_calc_pos converts a pixel position on screen to a gameboard logical position."""
@@ -262,7 +262,11 @@ class GameDisplay:
 
 	def calc_rect(self, rect):
 		"""calc_rect converts a gameboard logical rect to a pixel rect on screen."""
-		return pygame.Rect(self.calc_pos((rect[0], rect[1])), (rect[2]*TILESIZE[0], rect[3] * TILESIZE[1]))
+		return pygame.Rect(self.calc_pos((rect[0], rect[1])), (rect[2] * TILESIZE[0], rect[3] * TILESIZE[1]))
+
+	def reverse_calc_rect(self, rect):
+		"""reverse_calc_rect converts a pixel rect on screen to a gameboard logical rect."""
+		return pygame.Rect(self.reverse_calc_pos((rect[0], rect[1])), (rect[2] // TILESIZE[0], rect[3] // TILESIZE[1]))
 
 	def fill_panel(self, salvage=None):
 		"""fills the panel with information about the given object."""
@@ -385,26 +389,25 @@ class GameDisplay:
 
 	def select_pos(self, pos):
 		"""Takes a gameboard logical position and finds the object on it, then calls select."""
-		# First clear the currently projected move if we're selecting away from sonething else.
-		if self.selected: self.clear_projected_move()
 		entity = self.gamestate.occupied(list(pos))
+		# First clear the currently projected move if we're selecting away from sonething else.
+		if self.selected and entity != self.selected:
+			self.clear_projected_move()
 		self.selected = entity
-		if entity:
-			self.project_move()
-		else:
+		if not entity:
 			# If we're clearing self.selected, we should get out of assigning mode too.
 			self.assigning = False
 		self.select(pos)
 
 	def select(self, pos=None):
-		"""An envelope around fill_panel that also finds the salvage under the selected Entity.
+		"""An envelope around fill_panel that also finds the salvage under the selected Entity and projects its movement plan.
 		   If pos is not provided, select will pass whatever salvage is under the selected Entity to fill_panel.
 		   If pos is provided, select will check that pos for salvage instead. This is useful to selecte a space with no Entity on it.
 		"""
-		if not pos:
-			pos = self.selected.pos
-			# If we're working from the selected Entity, we project its move too.
+		if self.selected:
 			self.project_move()
+			pos = self.selected.pos
+		# Now find the Salvage.
 		# FIXME This is an imperfect method, as it makes it impossible to see salvage that's under a big ship but not under its central pos.
 		salvage = None
 		for s in self.gamestate.salvages:
@@ -455,7 +458,7 @@ class GameDisplay:
 		self.draw_grid(rect)
 
 	def draw_grid(self, rect=None):
-		"""Draw the game window grid within the specified Rect."""
+		"""Draw the game window grid within the specified Rect. The Rect should be measured in pixel position."""
 		if rect:
 			# Make sure the lines aren't misaligned.
 			xoffset = (rect.x - GAME_WINDOW_RECT.x) % TILESIZE[0]
@@ -469,23 +472,23 @@ class GameDisplay:
 			pygame.draw.line(self.window, GRID_COLOR, (rect.left, y - yoffset), (rect.right, y - yoffset), 1)
 
 	def draw_gamestate(self, rect=None, exclude=None, flip=True):
-		"""Draw the game window within the specified Rect. It's measured in logical position, not pixel position."""
+		"""Draw the game window within the specified Rect."""
 		if not rect: rect = GAME_WINDOW_RECT
-		self.draw_grid(rect) # self.reverse_calc_pos?
+		self.draw_grid(rect)
 		for salvage in self.gamestate.salvages:
-			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(salvage)) and exclude != salvage:
+			if rect.colliderect(self.entity_pixel_rect(salvage)) and exclude != salvage:
 				self.window.blit(IMAGE_DICT['salvage'], self.calc_pos(salvage.pos))
 		for entity in self.gamestate.station:
-			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
+			if rect.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
 		for entity in self.gamestate.enemy_ships:
-			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
+			if rect.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
 		for entity in self.gamestate.allied_ships:
-			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
+			if rect.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
 		for entity in self.gamestate.asteroids:
-			if GAME_WINDOW_RECT.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
+			if rect.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
 		if flip:
 			# I've heard that update the entire window is slower than flip at least on some hardawre.
@@ -495,8 +498,9 @@ class GameDisplay:
 	def full_redraw(self):
 		"""Blank and redraw the entire game window."""
 		self.window.fill((0,0,0), GAME_WINDOW_RECT)
-		self.draw_gamestate()
+		self.draw_gamestate(flip=False)
 		if self.selected: self.select()
+		pygame.display.flip()
 
 	def move(self, entity, move):
 		self.anim = threading.Thread(target=self.animate_move, name="move animation", args=(entity, move))
