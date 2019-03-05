@@ -122,4 +122,4 @@ IMAGE_DICT = {
 	"salvage": "images/salvage1.png",
 }
 
-SFX_ERROR = pygame.mixer.Sound("sounds/error.ogg")
+SFX_ERROR = pygame.mixer.Sound("sounds/error2.ogg")
