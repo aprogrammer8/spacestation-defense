@@ -13,7 +13,8 @@ def rotate(pos, rot):
 
 def spaces(main_pos, shape, rot):
 	"""Takes an Entity's position, shape and rotation and returns all the positions it occupies."""
-	spaces = [main_pos]
+	# Copy to avoid shared reference issues.
+	spaces = [main_pos[:]]
 	for pos in shape:
 		pos = rotate(pos, rot)
 		spaces.append([pos[0] + main_pos[0], pos[1] + main_pos[1]])

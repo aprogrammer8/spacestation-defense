@@ -300,8 +300,14 @@ class Entity:
 		return rect(self.spaces())
 
 	def move_rect(self):
-		"""Like Entity.rect, but encompasses both current position and projected position."""
-		return rect(self.spaces()+self.projected_spaces())
+		"""Like Entity.rect, but encompasses the projected spaces from all planned moves too."""
+		pos = self.pos[:]
+		total_spaces = self.spaces()
+		for move in self.moves_planned():
+			pos[0] += move[0]
+			pos[1] += move[1]
+			total_spaces += spaces(pos, self.shape, self.rot)
+		return rect(total_spaces)
 
 	def take_damage(self, dmg, type):
 		"""This method internally accounts for switching from shields to hull, resetting the shield regen pointer, etc."""
