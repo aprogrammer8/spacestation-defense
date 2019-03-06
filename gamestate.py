@@ -316,8 +316,6 @@ class Entity:
 		self.hull -= dmg
 
 	def shield_regen(self):
-		# Turned-off Shield Generators don't regenerate.
-		if self.actions == [[False]]: return False
 		self.shield += self.shield_regen_amounts[self.shield_regen_pointer]
 		# Update pointer.
 		if self.shield_regen_pointer < len(self.shield_regen_amounts) - 1:
