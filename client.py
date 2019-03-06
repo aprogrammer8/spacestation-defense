@@ -165,8 +165,9 @@ def play(players):
 		missed_buffer.clear()
 		for event in pygame.event.get():
 			response = display.event_respond(event)
-			# The repsonse is always a message to be sent to the server.
-			if response: sock.send(encode(response))
+			# The repsonse is always a list of messages to be sent to the server.
+			if response:
+				for r in response: sock.send(encode(r))
 
 
 def handle_server_msg(msg, display):

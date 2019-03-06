@@ -41,13 +41,13 @@ class GameDisplay:
 		# When placing something (such as launching a ship from a Hangar), this holds the pos, rot, and shape.
 		self.placing = None
 
-	def event_respond(self, event):
-		"""The basic method for receiving an event from pygame and reacting to it."""
+	def event_respond(self, event) -> list:
+		"""The basic method for receiving an event from pygame and reacting to it. Returns a list of commands that should be sent up to the server."""
 		# In the case of mousemotion, all we need to do is check all the buttons to see if they need to be redrawn.
 		# For now, mousemotion outside of the panel doesn't do anything.
 		if event.type == pygame.MOUSEMOTION:
 			# None of this stuff is supposed to work during an animation.
-			if self.animating(): return
+			if self.animating(): return []
 			# If the mouse is over the panel, we just need to check if any buttons need to be updated.
 			if TOTAL_PANEL_RECT.collidepoint(event.pos):
 				rects_to_update = []
@@ -86,13 +86,13 @@ class GameDisplay:
 							SFX_ERROR.play()
 							# This case has to release the lock separately since we're returning before we reach the end of the block.
 							self.lock.release()
-							return
+							return []
 					# Form the return string ahead of time, since we have some things we need to do inbetween that and returning.
 					string = "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'launch', 'index': index, 'pos': self.placing['pos'], 'rot': self.placing['rot']}])
 					self.clear_projected_placement()
 					self.placing = None
 					self.lock.release()
-					return string
+					return [string]
 				pos = self.reverse_calc_pos(event.pos)
 				# Factory assignments need to have a Hangar specified to put the ship in when they're done.
 				if self.selected and self.selected.type == "Factory" and type(self.assigning) == str:
@@ -102,7 +102,7 @@ class GameDisplay:
 						string = "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'build', 'ship': self.assigning, 'hangar': entity.pos}])
 						self.assigning = False
 						self.lock.release()
-						return string
+						return [string]
 					else:
 						SFX_ERROR.play()
 				# This must be checked with "is False", because 0 would mean True for this purpose.
@@ -123,7 +123,7 @@ class GameDisplay:
 						self.assigning += 1
 						if self.assigning == len(self.selected.weapons): self.assigning = 0
 						self.lock.release()
-						return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions)
+						return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions)]
 					# If the target is valid, but not reachable.
 					else:
 						SFX_ERROR.play()
@@ -132,7 +132,7 @@ class GameDisplay:
 			# Panel click events.
 			else:
 				# Done button.
-				if self.done_button.handle_mousebuttondown(event): return "DONE"
+				if self.done_button.handle_mousebuttondown(event): return ["DONE"]
 				# Whatever other buttons are around.
 				for button in self.panel_buttons:
 					callback = button.handle_mousebuttondown(event)
@@ -154,23 +154,23 @@ class GameDisplay:
 				entry = self.chatbar.handle_event(event)
 				pygame.display.update(self.chatbar.rect)
 				self.lock.release()
-				if entry: return "LOCAL:" + self.player_name + ":" + entry
+				if entry: return ["LOCAL:" + self.player_name + ":" + entry]
 
 			# Everything else depends on something being selected, so instead of adding the condition everywhere, I just put a return here.
-			elif not self.selected: return
+			elif not self.selected: return []
 
 			# Entering assignment mode.
 			elif event.key == pygame.K_SPACE and not self.animating():
 				# The players can't assign actions to enemies or to asteroids, or to units that don't have any abilities.
 				if self.selected in self.gamestate.enemy_ships or self.selected in self.gamestate.asteroids or (not self.selected.weapons and not self.selected.speed):
 					SFX_ERROR.play()
-					return
+					return []
 				self.clear_projected_move()
 				self.selected.actions = [] # TODO remove
 				if self.selected.weapons: self.assigning = 0
 				else: self.assigning = True
 				# Clear out old actions.
-				return "ASSIGN:" + json.dumps(self.selected.pos) + ":[]"
+				return ["ASSIGN:" + json.dumps(self.selected.pos) + ":[]"]
 				# We don't need to update the panel ourselves here because the ASSIGN command will get sent to the server and come back, and the client will call us back.
 
 			# Esc gets out of assignment or placement mode.
@@ -190,7 +190,7 @@ class GameDisplay:
 			elif event.key == pygame.K_q:
 				# Shield Generators hide shields.
 				if self.selected.type == "Shield Generator":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'hide'}])
+					return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'hide'}])]
 				# Hangar/Factory details page.
 				elif self.selected.type == "Hangar":
 					self.lock.acquire()
@@ -202,7 +202,7 @@ class GameDisplay:
 					self.lock.release()
 				# Engines boost counterclockwise.
 				elif self.selected.type == "Engine":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'boost', 'dir': -1}])
+					return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'boost', 'dir': -1}])]
 					# TODO
 				else: SFX_ERROR.play()
 			elif event.key == pygame.K_w:
@@ -217,27 +217,27 @@ class GameDisplay:
 					self.lock.release()
 				# Engines boost clockwise.
 				elif self.selected.type == "Engine":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'boost', 'dir': 1}])
+					return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'boost', 'dir': 1}])]
 					# TODO
 				else: SFX_ERROR.play()
 			elif event.key == pygame.K_e:
 				# Turn off the Component to save power.
 				if self.selected.type == "Shield Generator":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'off'}])
+					return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'off'}])]
 				elif self.selected.type == "Factory":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'off'}])
+					return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'off'}])]
 				else: SFX_ERROR.play()
 			elif event.key == pygame.K_r:
 				# To turn the shield generator or Factory back on, we can just clear its actions.
 				if self.selected.type == "Shield Generator":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
+					return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])]
 				elif self.selected.type == "Factory":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
+					return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])]
 				# Hangars and Engines cancel their launch/thrust.
 				elif self.selected.type == "Hangar":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
+					return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])]
 				elif self.selected.type == "Engine":
-					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
+					return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])]
 				else: SFX_ERROR.play()
 
 
@@ -247,12 +247,12 @@ class GameDisplay:
 				elif event.key == pygame.K_DOWN: move = [0, 1]
 				elif event.key == pygame.K_LEFT: move = [-1, 0]
 				elif event.key == pygame.K_RIGHT: move = [1, 0]
-				else: return
+				else: return []
 				obstacle = self.gamestate.invalid_move(self.selected, move)
 				if obstacle and obstacle.type != "Hangar":
 					SFX_ERROR.play()
-					return
-				return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions + [{'type': 'move', 'move': move}])
+					return []
+				return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions + [{'type': 'move', 'move': move}])]
 
 		# Closing the game. We handle this last because it's the rarest.
 		elif event.type == pygame.QUIT: sys.exit()
