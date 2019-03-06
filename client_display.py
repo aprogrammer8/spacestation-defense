@@ -226,6 +226,9 @@ class GameDisplay:
 					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
 				elif self.selected.type == "Factory":
 					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
+				# Hangars cancel their launch.
+				elif self.selected.type == "Hangar":
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
 				else: SFX_ERROR.play()
 
 
@@ -314,7 +317,7 @@ class GameDisplay:
 			draw_bar(self.window, PANEL_THRUST_BAR_RECT, TEXT_COLOR, THRUST_COLOR, THRUST_EMPTY_COLOR, self.gamestate.station.thrust_needed(), abs(self.gamestate.station.thrust))
 			# Hangars show a summary of their contents when selected.
 			if self.selected.type == "Hangar":
-				rect = PANEL_SPEED_RECT
+				rect = PANEL_SPEED_RECT.copy()
 				# We have to adjust the size because the speed rect is sized for a line of text, not a bar.
 				rect.h = BAR_HEIGHT
 				draw_text(self.window, "Capacity: " + str(self.selected.current_fill()) + "/" + str(HANGAR_CAPACITY), TEXT_COLOR, rect, FONT)
