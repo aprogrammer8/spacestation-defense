@@ -295,14 +295,15 @@ class GameDisplay:
 			draw_text(self.window, "Speed: " + str(self.selected.speed), TEXT_COLOR, PANEL_SPEED_RECT, FONT)
 		if self.selected.weapons:
 			draw_text(self.window, "Weapons:", TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN, FONT)
-			y += 20
+			y += LABEL_HEIGHT + LABEL_SPACING
 			for weapon in self.selected.weapons:
 				y += draw_text(self.window, str(weapon)+self.selected.desc_target(weapon,self.gamestate), TEXT_COLOR, pygame.Rect(PANEL_WEAPON_DESC_BEGIN.x+5, PANEL_WEAPON_DESC_BEGIN.y+y, PANEL_WEAPON_DESC_BEGIN.w-7, 60), FONT)
 		# Now draw special properties.
 		if self.selected.type == "Probe":
 			rect = PANEL_SPEED_RECT.move(0, y + 30)
 			draw_text(self.window, "Salvage: " + str(self.selected.load) + "/" + str(PROBE_CAPACITY), TEXT_COLOR, rect, FONT)
-			draw_bar(self.window, rect.move(0,20), TEXT_COLOR, CAPACITY_COLOR, CAPACITY_EMPTY_COLOR, PROBE_CAPACITY, self.selected.load)
+			rect.h = BAR_HEIGHT
+			draw_bar(self.window, rect.move(0, LABEL_HEIGHT + LABEL_SPACING), TEXT_COLOR, CAPACITY_COLOR, CAPACITY_EMPTY_COLOR, PROBE_CAPACITY, self.selected.load)
 		# Station components also display the pooled power.
 		if self.selected in self.gamestate.station:
 			draw_text(self.window, power_repr(self.gamestate.station), TEXT_COLOR, PANEL_POWER_RECT, FONT)
@@ -313,10 +314,11 @@ class GameDisplay:
 			draw_bar(self.window, PANEL_THRUST_BAR_RECT, TEXT_COLOR, THRUST_COLOR, THRUST_EMPTY_COLOR, self.gamestate.station.thrust_needed(), abs(self.gamestate.station.thrust))
 			# Hangars show a summary of their contents when selected.
 			if self.selected.type == "Hangar":
+				rect = PANEL_SPEED_RECT
 				# We have to adjust the size because the speed rect is sized for a line of text, not a bar.
-				rect = PANEL_SPEED_RECT.move(0, 30 + 2).inflate(0, 4)
+				rect.h = BAR_HEIGHT
 				draw_text(self.window, "Capacity: " + str(self.selected.current_fill()) + "/" + str(HANGAR_CAPACITY), TEXT_COLOR, rect, FONT)
-				rect.move_ip(0, 20)
+				rect.move_ip(0, LABEL_HEIGHT + LABEL_SPACING)
 				draw_bar(self.window, rect, TEXT_COLOR, CAPACITY_COLOR, CAPACITY_EMPTY_COLOR, HANGAR_CAPACITY, self.selected.current_fill())
 				rect.inflate_ip(0, 100)
 				# Give it more space, since we're starting from the shield bar rect and this might need to be several lines long.
@@ -334,7 +336,8 @@ class GameDisplay:
 				if project:
 					rect = PANEL_SPEED_RECT.move(0, 30)
 					draw_text(self.window, "Building " + project + ", " + str(self.selected.progress) + "/" + str(SHIP_CONSTRUCTION_COSTS[project]), TEXT_COLOR, rect, FONT)
-					rect.move_ip(0, 20)
+					rect.move_ip(0, LABEL_HEIGHT + LABEL_SPACING)
+					rect.h = BAR_HEIGHT
 					draw_bar(self.window, rect, TEXT_COLOR, CONSTRUCTION_COLOR, CONSTRUCTION_EMPTY_COLOR, SHIP_CONSTRUCTION_COSTS[project], self.selected.progress)
 
 		pygame.display.update(PANEL_RECT)
