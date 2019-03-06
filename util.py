@@ -35,7 +35,7 @@ def adjacent(spaces1, spaces2):
 	for space1 in spaces1:
 		for space2 in spaces2:
 			# For two spaces to be adjacent, one of their coordinates must be off by 1 and the other must match.
-			if (space1[0] - space2[0] == 1 and space1[1] == space2[1]) or (space1[0] == space2[0] and space1[1] - space2[1] == 1):
+			if (abs(space1[0] - space2[0]) == 1 and space1[1] == space2[1]) or (space1[0] == space2[0] and abs(space1[1] - space2[1]) == 1):
 				return True
 	return False
 
