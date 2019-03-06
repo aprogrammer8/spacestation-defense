@@ -500,18 +500,21 @@ class Component(Entity):
 		if self.type == "Shield Generator": return self.actions != [{'type': 'off'}]
 		if self.type == "Laser Turret": return bool(self.actions)
 		if self.type == "Factory": return self.actions != [{'type': 'off'}] and (self.project or self.actions) and self.station.salvage > 0
+		if self.type == "Engine": return bool(self.actions)
 		# Hangars don't cost power to land or launch.
 		return False
 
 	def current_fill(self):
-		if self.type != "Hangar": print("Error: current_fill should not have been called on the component at", self.pos, "which is a", self.type)
+		if self.type != "Hangar":
+			print("Error: current_fill should not have been called on the component at", self.pos, "which is a", self.type)
 		fill = 0
 		for ship in self.contents: fill += ship.size
 		return fill
 
 	def summarize_contents(self):
 		"""Return a string suitable for describing the Hangar's contents on the panel."""
-		if self.type != "Hangar": print("Error: summarize_contents should not have been called on the component at", self.pos, "which is a", self.type)
+		if self.type != "Hangar":
+			print("Error: summarize_contents should not have been called on the component at", self.pos, "which is a", self.type)
 		# First, make a dictionary of ship types to counts.
 		ship_dict = {}
 		for ship in self.contents:

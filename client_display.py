@@ -200,6 +200,10 @@ class GameDisplay:
 					self.lock.acquire()
 					self.fill_panel_factory()
 					self.lock.release()
+				# Engines boost counterclockwise.
+				elif self.selected.type == "Engine":
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'boost', 'dir': -1}])
+					# TODO
 				else: SFX_ERROR.play()
 			elif event.key == pygame.K_w:
 				# Normal Hangar/Hangar panel page.
@@ -211,12 +215,15 @@ class GameDisplay:
 					self.lock.acquire()
 					self.select()
 					self.lock.release()
+				# Engines boost clockwise.
+				elif self.selected.type == "Engine":
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'boost', 'dir': 1}])
+					# TODO
 				else: SFX_ERROR.play()
 			elif event.key == pygame.K_e:
-				# Shield Generators can turn off to save power.
+				# Turn off the Component to save power.
 				if self.selected.type == "Shield Generator":
 					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'off'}])
-				# Turns off the Factory to save power and salvage.
 				elif self.selected.type == "Factory":
 					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'off'}])
 				else: SFX_ERROR.play()
@@ -226,8 +233,10 @@ class GameDisplay:
 					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
 				elif self.selected.type == "Factory":
 					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
-				# Hangars cancel their launch.
+				# Hangars and Engines cancel their launch/thrust.
 				elif self.selected.type == "Hangar":
+					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
+				elif self.selected.type == "Engine":
 					return "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([])
 				else: SFX_ERROR.play()
 

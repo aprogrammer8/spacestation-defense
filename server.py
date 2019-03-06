@@ -76,6 +76,9 @@ def playout_actions(entity):
 		if action['type'] == 'off':
 			# Nothing we need to do here.
 			continue
+		# Engines.
+		if action['type'] == 'boost':
+			gamestate.station.thrust += ENGINE_SPEED * action['dir']
 		# Shield Generators hiding their shields.
 		elif action['type'] == 'hide':
 			# Nothing we need to do here.
