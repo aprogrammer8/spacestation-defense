@@ -635,7 +635,7 @@ class Mission:
 			(0,0): "Connector",
 			(-2,0): "Connector",
 			(2,0): "Connector",
-			(2,-2): "Shield Generator",
+			(2,-2): "Engine",
 			(0,-2): "Power Generator",
 			(0,2): "Laser Turret",
 			(-4,0): "Hangar",

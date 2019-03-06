@@ -202,8 +202,12 @@ class GameDisplay:
 					self.lock.release()
 				# Engines boost counterclockwise.
 				elif self.selected.type == "Engine":
-					return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'boost', 'dir': -1}])]
-					# TODO
+					# We need to make sure all Engines are boosting the same direction.
+					cmds = []
+					for comp in self.gamestate.station:
+						if comp.type == "Engine" and (comp.powered() or comp == self.selected):
+							cmds.append("ASSIGN:" + json.dumps(comp.pos) + ":" + json.dumps([{'type': 'boost', 'dir': -1}]))
+					return cmds
 				else: SFX_ERROR.play()
 			elif event.key == pygame.K_w:
 				# Normal Hangar/Hangar panel page.
@@ -217,8 +221,12 @@ class GameDisplay:
 					self.lock.release()
 				# Engines boost clockwise.
 				elif self.selected.type == "Engine":
-					return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'boost', 'dir': 1}])]
-					# TODO
+					# We need to make sure all Engines are boosting the same direction.
+					cmds = []
+					for comp in self.gamestate.station:
+						if comp.type == "Engine" and (comp.powered() or comp == self.selected):
+							cmds.append("ASSIGN:" + json.dumps(comp.pos) + ":" + json.dumps([{'type': 'boost', 'dir': 1}]))
+					return cmds
 				else: SFX_ERROR.play()
 			elif event.key == pygame.K_e:
 				# Turn off the Component to save power.
