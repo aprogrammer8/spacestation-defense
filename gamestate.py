@@ -599,6 +599,15 @@ class Station(list):
 	def thrust_needed(self):
 		return THRUST_PER_COMPONENT * len(self)
 
+	def rotate(self):
+		if self.thrust > 0:
+			self.thrust -= self.thrust_needed()
+			rot = 90
+		else:
+			self.thrust += self.thrust_needed()
+			rot = -90
+		for comp in self:
+			comp.pos = rotate(comp.pos, rot)
 
 class Weapon:
 	def __init__(self, type, power, tier=1):

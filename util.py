@@ -4,6 +4,7 @@ import json
 from rules import *
 
 def rotate(pos, rot):
+	rot = rot % 360
 	if rot == 0: return pos
 	if rot == 90: return [-pos[1], pos[0]]
 	if rot == 180: return [-pos[0], -pos[1]]

@@ -174,6 +174,8 @@ def handle_server_msg(msg, display):
 	if msg.startswith("LOCAL:"):
 		display.add_chat(msg[6:])
 	if msg == "ROUND":
+		if abs(gamestate.station.thrust) >= gamestate.station.thrust_needed():
+			gamestate.station.rotate()
 		gamestate.upkeep(clientside=True)
 		display.full_redraw()
 	if msg.startswith("SPAWN ENEMIES:"):

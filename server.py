@@ -139,6 +139,8 @@ def main():
 		players_move()
 		enemies_move()
 		sock.send(encode("ROUND"))
+		if abs(gamestate.station.thrust) >= gamestate.station.thrust_needed():
+			gamestate.station.rotate()
 		changes = gamestate.upkeep()
 		if changes: sock.send(encode("SPAWN ENEMIES:" + json.dumps(changes)))
 		# Dump gamestate to a file so it can be restored in case of a crash.
