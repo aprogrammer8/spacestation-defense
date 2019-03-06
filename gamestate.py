@@ -353,7 +353,6 @@ class Entity:
 
 	def moves_planned(self):
 		"""Filters the list of planned actions and returns only the moves."""
-		# Moves are always length 2, attacks will be length 3, or 4 if they've been stamped for accuracy.
 		return [move['move'] for move in self.actions if move['type'] == 'move']
 
 	def untargeted(self):

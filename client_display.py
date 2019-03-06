@@ -313,7 +313,8 @@ class GameDisplay:
 			draw_bar(self.window, PANEL_THRUST_BAR_RECT, TEXT_COLOR, THRUST_COLOR, THRUST_EMPTY_COLOR, self.gamestate.station.thrust_needed(), abs(self.gamestate.station.thrust))
 			# Hangars show a summary of their contents when selected.
 			if self.selected.type == "Hangar":
-				rect = PANEL_SPEED_RECT.move(0, 30)
+				# We have to adjust the size because the speed rect is sized for a line of text, not a bar.
+				rect = PANEL_SPEED_RECT.move(0, 30 + 2).inflate(0, 4)
 				draw_text(self.window, "Capacity: " + str(self.selected.current_fill()) + "/" + str(HANGAR_CAPACITY), TEXT_COLOR, rect, FONT)
 				rect.move_ip(0, 20)
 				draw_bar(self.window, rect, TEXT_COLOR, CAPACITY_COLOR, CAPACITY_EMPTY_COLOR, HANGAR_CAPACITY, self.selected.current_fill())
@@ -416,20 +417,23 @@ class GameDisplay:
 
 	def project_move(self):
 		"""Show a yellow path from the selected Entity projecting the moves it's going to make."""
-		pos = (self.selected.pos[0]+self.offset[0], self.selected.pos[1]+self.offset[1])
+		moves = self.selected.moves_planned()
+		if not moves:
+			# Don't waste time.
+			return
+		pos = (self.selected.pos[0] + self.offset[0], self.selected.pos[1] + self.offset[1])
 		for move in self.selected.moves_planned():
-			pos = (pos[0]+move[0], pos[1]+move[1])
-			pygame.draw.rect(self.window, MOVE_PROJECTION_COLOR, (GAME_WINDOW_RECT.left+TILESIZE[0]*pos[0], GAME_WINDOW_RECT.top+TILESIZE[1]*pos[1], TILESIZE[0], TILESIZE[1]), 2)
-		pygame.display.flip()
+			pos = (pos[0] + move[0], pos[1] + move[1])
+			pygame.draw.rect(self.window, MOVE_PROJECTION_COLOR, (GAME_WINDOW_RECT.left + TILESIZE[0] * pos[0], GAME_WINDOW_RECT.top + TILESIZE[1] * pos[1], TILESIZE[0], TILESIZE[1]), 2)
+		pygame.display.update(self.calc_rect(self.selected.move_rect()).inflate(2, 2))
 
 	def clear_projected_move(self):
 		"""Clears the yellow projected path from a selected Entity."""
-		rect = pygame.Rect(self.selected.move_rect())
-		rect = pygame.Rect(self.calc_pos(rect.topleft), (rect.size[0]*TILESIZE[0], rect.size[1]*TILESIZE[1]))
+		# It seems like rounding requires a +2, +2 expansion.
+		rect = self.calc_rect(self.selected.move_rect()).inflate(2, 2)
 		self.window.fill((0,0,0), rect)
 		# Redraw the other gamestate entities clobbered when we erased.
-		# It seems like rounding requires a +1,+1 expansion.
-		self.draw_gamestate(rect.inflate_ip(1,1))
+		self.draw_gamestate(rect)
 
 	def project_placement(self):
 		"""Shows an outline of where the object will be during placement."""
@@ -440,17 +444,16 @@ class GameDisplay:
 
 	def clear_projected_placement(self):
 		"""Clears the outline of where the object will be during placement."""
-		p_rect = pygame.Rect(rect(spaces(self.placing['pos'], self.placing['shape'], self.placing['rot'])))
-		p_rect = pygame.Rect(self.calc_pos(p_rect.topleft), (p_rect.size[0]*TILESIZE[0], p_rect.size[1]*TILESIZE[1]))
+		p_rect = self.calc_rect(rect(spaces(self.placing['pos'], self.placing['shape'], self.placing['rot'])))
 		self.window.fill((0,0,0), p_rect)
 		# Redraw the other gamestate entities clobbered when we erased.
-		# It seems like rounding requires a +1,+1 expansion.
-		self.draw_gamestate(p_rect.inflate(1,1))
+		# It seems like rounding requires a +2, +2 expansion.
+		self.draw_gamestate(p_rect.inflate(2, 2))
 
 	def entity_pixel_rect(self, entity):
 		"""Finds the rectangle that an Entity is occupying (in terms of pixels)."""
 		rect = entity.rect()
-		return pygame.Rect(self.calc_pos(rect[0:2]), (rect[2]*TILESIZE[0], rect[3]*TILESIZE[1]))
+		return pygame.Rect(self.calc_pos(rect[0:2]), (rect[2] * TILESIZE[0], rect[3] * TILESIZE[1]))
 
 	def erase(self, rect):
 		"""Takes a pixel rect and erases only the gameboard entities on it (by redrawing the grid.)"""
@@ -460,6 +463,9 @@ class GameDisplay:
 	def draw_grid(self, rect=None):
 		"""Draw the game window grid within the specified Rect. The Rect should be measured in pixel position."""
 		if rect:
+			# Account for the offset being in the wrong direction.
+			rect.inflate_ip((TILESIZE[0], TILESIZE[1]))
+			rect.move_ip((TILESIZE[0] // 2, TILESIZE[1] // 2))
 			# Make sure the lines aren't misaligned.
 			xoffset = (rect.x - GAME_WINDOW_RECT.x) % TILESIZE[0]
 			yoffset = (rect.y - GAME_WINDOW_RECT.y) % TILESIZE[1]
@@ -473,8 +479,8 @@ class GameDisplay:
 
 	def draw_gamestate(self, rect=None, exclude=None, flip=True):
 		"""Draw the game window within the specified Rect."""
-		if not rect: rect = GAME_WINDOW_RECT
 		self.draw_grid(rect)
+		if not rect: rect = GAME_WINDOW_RECT
 		for salvage in self.gamestate.salvages:
 			if rect.colliderect(self.entity_pixel_rect(salvage)) and exclude != salvage:
 				self.window.blit(IMAGE_DICT['salvage'], self.calc_pos(salvage.pos))
