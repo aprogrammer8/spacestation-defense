@@ -213,6 +213,7 @@ class Button:
 		draw_text(self.window, self.label, self.textcolor, self.textrect, self.font)
 
 def draw_bar(window, rect, border_color, fill_color, empty_color, capacity, value):
+		"""Draws a bar representing progress, life, or whatever."""
 		pygame.draw.rect(window, border_color, rect, 1)
 		#inner_rect = (rect.left+1, rect.top+1, rect.w-2, rect.h-2)
 		if capacity > 0:
@@ -224,8 +225,9 @@ def draw_bar(window, rect, border_color, fill_color, empty_color, capacity, valu
 		if value>0: pygame.draw.rect(window, fill_color, fill_rect, 0)
 		if value<capacity: pygame.draw.rect(window, empty_color, empty_rect, 0)
 
-# A list of buttons to be displayed like a TextList. It's unfortunate that this couldn't inherit anything.
+# It's unfortunate that this couldn't inherit anything.
 class ButtonList:
+	"""A list of Buttons to be displayed like a TextList."""
 	def __init__(self, window, rect, bgcolor, bordercolor, textcolor, active_color, inactive_color, font):
 		self.window = window
 		self.rect = rect
