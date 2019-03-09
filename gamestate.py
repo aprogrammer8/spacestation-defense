@@ -34,7 +34,7 @@ class Gamestate:
 	def draw_cards(self, num):
 		draws = []
 		for i in range(num):
-			draws += {'player':self.players[self.draw_pointer], 'card':draw_card()}
+			draws += {'player': self.players[self.draw_pointer], 'card': draw_card()}
 			self.draw_pointer += 1
 			if self.draw_pointer >= len(self.players): self.draw_pointer = 0
 		return draws
@@ -65,18 +65,20 @@ class Gamestate:
 				return self.send_enemies(wave)
 
 	def send_enemies(self, enemies):
-		"Accepts enemies to send as passed by the mission's wave method and returns the changes that must be made to the gamestate."
+		"Accepts enemies to send as passed by the mission's wave method, calls insert_enemies, but also returns the data that insert_enemies needs to be called with, so that it can be sent out to clients."
 		inserts = []
 		for enemy_type in enemies:
 			for i in range(enemies[enemy_type]):
 				# The rot value of 0 is a placeholder.
-				inserts.append({'type':enemy_type, 'pos':self.find_open_pos(), 'rot':0})
+				inserts.append({'type': enemy_type, 'pos': self.find_open_pos(), 'rot': 0})
 				self.insert_enemies((inserts[-1],))
 		return inserts
 
 	def insert_enemies(self, enemies):
 		"""Inserts the given enemies into the Gamestate. Takes a sequence of dicts with enemy type names as keys and their board positions as values."""
 		for enemy in enemies:
+			# Asteroids aren't technically enemies, but they're handled by the same function.
+			if enemy['type'] == "Asteroid": self.asteroids.append(asteroid(enemy['pos'], enemy['rot']))
 			if enemy['type'] == "Drone": self.enemy_ships.append(drone(enemy['pos'], enemy['rot']))
 			elif enemy['type'] == "Kamikaze Drone": self.enemy_ships.append(kamikaze_drone(enemy['pos'], enemy['rot']))
 			else: print("Unrecognized enemy type:", enemy)
@@ -266,7 +268,9 @@ def draw_card():
 
 class Entity:
 	"""An Entity is anything that has a position on the board, cannot be overlapped by another Entity, and can be targeted."""
-	def __init__(self, pos, shape, rot, salvage, hull, shield=0, shield_regen=(0,), weapons=(), speed=0):
+	def __init__(self, entity_type, team, pos, shape, rot, salvage, hull, shield=0, shield_regen=(0,), weapons=(), speed=0, wave=0, size=0):
+		self.type = entity_type
+		self.team = team
 		self.pos = pos
 		# self.shape is a tuple of other positions expressed as offsets from the main pos (when rot == 0), that the Entity also occupies (used for Entities bigger than 1x1).
 		self.shape = shape
@@ -283,6 +287,12 @@ class Entity:
 		self.salvage = salvage
 		# The sequence of actions the Entity plans to make.
 		self.actions = []
+		# Enemy only fields.
+		self.wave = wave
+		# Ally only fields.
+		self.size = size
+		# Probes can carry salvage.
+		if self.type == "Probe": self.load = 0
 
 	def spaces(self):
 		"""Returns all spaces the Entity occupies."""
@@ -397,18 +407,11 @@ class Entity:
 					break
 			i += 1
 
-
-class Ship(Entity):
-	def __init__(self, type, team, pos, shape, rot, salvage, hull, shield, shield_regen, weapons, speed, wave=0, size=0):
-		Entity.__init__(self, pos=pos, shape=shape, rot=rot, salvage=salvage, hull=hull, shield=shield, shield_regen=shield_regen, weapons=weapons, speed=speed)
-		self.type = type
-		self.team = team
-		# Enemy only fields.
-		self.wave = wave
-		# Ally only fields.
-		self.size = size
-		# Probes can carry salvage.
-		if self.type == "Probe": self.load = 0
+	def random_move(self):
+		"""Assigns a random move to the Entity. Used for asteroids."""
+		if random.randint(1, 2) == 1:
+			move = random.choice(([0, 1], [0, -1], [1, 0], [-1, 0]))
+			self.actions = [{'type': 'move', 'move': move}]
 
 	def collect(self, salvage):
 		"""The Ship picks up a piece of salvage. Only Probes can do this."""
@@ -429,10 +432,9 @@ class Ship(Entity):
 class Component(Entity):
 	"""A Station Component."""
 	def __init__(self, pos, station, type, rot, hull):
-		Entity.__init__(self, pos, shape=((1,0),(0,1),(1,1)), rot=rot, salvage=COMPONENT_SALVAGE, hull=hull, shield=0, shield_regen=(0,))
+		Entity.__init__(self, type, "ally", pos, shape=((1,0),(0,1),(1,1)), rot=rot, salvage=COMPONENT_SALVAGE, hull=hull, shield=0, shield_regen=(0,))
 		if type not in COMPONENT_TYPES: raise TypeException("Not a valid station component type: " + type)
 		self.station = station
-		self.type = type
 		if type == "Shield Generator":
 			self.__shield = self.__maxshield = SHIELD_GEN_CAP
 			self.shield_regen_amounts = SHIELD_GEN_REGEN
@@ -534,7 +536,7 @@ class Component(Entity):
 		self.progress += progress
 		self.station.salvage -= progress
 		if self.progress >= SHIP_CONSTRUCTION_COSTS[self.project]:
-			# First, make sure the Hangar is still alive. The self.station thing is a hack to get aronud needing the Gamestate.
+			# First, make sure the Hangar is still alive.
 			for comp in self.station:
 				if comp.type == "Hangar" and comp.pos == self.hangar:
 					# Position and rotation don't matter for ships spawning in a Hangar. They'll be set when the ship launches.
@@ -609,6 +611,7 @@ class Station(list):
 		for comp in self:
 			comp.pos = rotate(comp.pos, rot)
 
+
 class Weapon:
 	def __init__(self, type, power, tier=1):
 		self.type = type
@@ -644,7 +647,7 @@ class Mission:
 			(0,0): "Connector",
 			(-2,0): "Connector",
 			(2,0): "Connector",
-			(2,-2): "Engine",
+			(2,-2): "Shield Generator",
 			(0,-2): "Power Generator",
 			(0,2): "Laser Turret",
 			(-4,0): "Hangar",
@@ -656,13 +659,13 @@ class Mission:
 	def wave(self, num):
 		"""This method acccepts a wave number and returns a dict of enemy type:count, a reward for clearing it, and a number of turns until the next wave arrives."""
 		# TEMP
-		return {'Drone':6}, None, 5
+		return {'Drone': 6, 'Asteroid': 5}, None, 5
 
 
 def hit_chance(attack, target):
 	"""Calculates the hit rate of a given attack type against the target ship."""
 	# Station components can never be missed by anything.
-	if type(target) == Component: return 100
+	if type(target) == Component or target.type == "Asteroid": return 100
 	if target.type in ('Probe', 'Drone', 'Kamikaze Drone'): return {'laser':75, 'missile':25}[attack]
 	# Error message that should never get triggered.
 	print("Did not have a hit chance for", attack, "against a", target.type)
@@ -682,12 +685,15 @@ COMPONENT_TYPES = (
 
 def drone(pos, rot=0):
 	weapons = (Weapon('laser', 1, 1),)
-	return Ship("Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=1, hull=5, shield=0, shield_regen=(0,), weapons=weapons, speed=3)
+	return Entity("Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=1, hull=5, shield=0, shield_regen=(0,), weapons=weapons, speed=3)
 
 def kamikaze_drone(pos, rot=0):
-	return Ship("Kamikaze Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=5)
+	return Entity("Kamikaze Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=5)
 
 # Player ships.
 
 def probe(pos, rot=0):
-	return Ship("Probe", team='player', pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=3, size=1)
+	return Entity("Probe", team='player', pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=3, size=1)
+
+def asteroid(pos, rot=0):
+	return Entity("Asteroid", team=None, pos=pos, shape=(), rot=rot, salvage=0, hull=ASTEROID_HULL, shield=0, shield_regen=(0,), weapons=(), speed=1)

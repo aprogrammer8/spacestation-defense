@@ -125,6 +125,8 @@ IMAGE_DICT = {
 	"Hangar": "images/hangar.png",
 	"Factory": "images/factory.png",
 	"Engine": "images/engine.png",
+	# Asteroids.
+	"Asteroid": "images/salvage1.png",
 	# Misc.
 	"salvage": "images/salvage1.png",
 }

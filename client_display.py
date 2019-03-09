@@ -138,7 +138,7 @@ class GameDisplay:
 					callback = button.handle_mousebuttondown(event)
 					if callback:
 						# Hangar launch buttons.
-						if type(callback) == Ship:
+						if type(callback) == Entity:
 							self.placing = {'ship': callback, 'pos': callback.pos, 'shape': callback.shape, 'rot': callback.rot}
 							self.project_placement()
 						# Factory assignment buttons.
@@ -311,7 +311,7 @@ class GameDisplay:
 			draw_text(self.window, shield_repr(self.selected), TEXT_COLOR, PANEL_SHIELD_RECT, FONT)
 			draw_bar(self.window, PANEL_SHIELD_BAR_RECT, TEXT_COLOR, SHIELD_COLOR, SHIELD_DAMAGE_COLOR, self.selected.maxshield, self.selected.shield)
 		y = 0
-		if type(self.selected) == Ship:
+		if type(self.selected) == Entity:
 			draw_text(self.window, "Speed: " + str(self.selected.speed), TEXT_COLOR, PANEL_SPEED_RECT, FONT)
 		if self.selected.weapons:
 			draw_text(self.window, "Weapons:", TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN, FONT)

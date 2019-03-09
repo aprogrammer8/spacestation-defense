@@ -55,6 +55,11 @@ def enemies_move():
 		# Now make it happen.
 		process_actions(enemy)
 
+def asteroids_move():
+	for asteroid in gamestate.asteroids:
+		asteroid.random_move()
+		process_actions(asteroid)
+
 def process_actions(entity):
 	"""Takes an Entity with all its actions set, plays them out, and then encodes them as JSON and sends them so the clients can do the same."""
 	skip = False
@@ -68,6 +73,7 @@ def process_actions(entity):
 		entity.shield_regen()
 		playout_actions(entity)
 	sock.send(encode("ACTION:" + json.dumps(orig_pos) + ';' + json.dumps(entity.actions)))
+
 
 def playout_actions(entity):
 	"""Takes an Entity and plays out its actions, reflecting the changes in the gamestate."""
@@ -118,6 +124,7 @@ def playout_actions(entity):
 	# The legality checks are handled inside the method.
 	if entity.type == "Factory": entity.work()
 
+
 def main():
 	global sock, players, gamestate
 	sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -138,6 +145,7 @@ def main():
 		sock.send(encode("DONE"))
 		players_move()
 		enemies_move()
+		asteroids_move()
 		sock.send(encode("ROUND"))
 		if abs(gamestate.station.thrust) >= gamestate.station.thrust_needed():
 			gamestate.station.rotate()
