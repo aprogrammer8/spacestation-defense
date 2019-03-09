@@ -244,6 +244,31 @@ class Gamestate:
 			self.jump(ship, pos, rot)
 		return True
 
+	def assign_random_targets(self, entity, enemy=True):
+		"""Target all an Entity's weapons at random enemies (allies if the enemy param is True)."""
+		if enemy: targets = self.allied_ships + self.station
+		else: targets = self.enemy_ships + self.asteroids
+		i = 0
+		for weapon in entity.untargeted():
+			# For now, we just pick out the first possible target.
+			for target in targets:
+				if self.in_range(entity, entity.weapons[weapon], target):
+					entity.target(i, target.pos)
+					break
+			i += 1
+
+	def assign_random_move(self, entity) -> bool:
+		"""Assigns a random move to the Entity. Used for asteroids and sometimes enemies. Returns True if a move was made, False if no moves were legal."""
+		valid_moves = []
+		for move in ([0, 1], [0, -1], [1, 0], [-1, 0]):
+			if not self.invalid_move(entity, move): valid_moves.append(move)
+		if not valid_moves:
+			return False
+		move = random.choice(valid_moves)
+		entity.actions.append({'type': 'move', 'move': move})
+		return True
+
+
 
 def slope(p1, p2):
 	"""Returns the slope between two points, handling division by zero with a high value if the numerator is not also zero, or 1 if it is."""
@@ -393,30 +418,6 @@ class Entity:
 					weapons.append(self.index[weapon])
 					break
 		return weapons
-
-	def random_targets(self, gamestate, enemy=True):
-		"""Target all weapons at random enemies (allies if the enemy param is True)."""
-		if enemy: targets = gamestate.allied_ships + gamestate.station
-		else: targets = gamestate.enemy_ships + gamestate.asteroids
-		i = 0
-		for weapon in self.untargeted():
-			# For now, we just pick out the first possible target.
-			for target in targets:
-				if gamestate.in_range(self, self.weapons[weapon], target):
-					self.target(i, target.pos)
-					break
-			i += 1
-
-	def random_move(self, gamestate) -> bool:
-		"""Assigns a random move to the Entity. Used for asteroids and sometimes enemies. Returns True if a move was made, False if no moves were legal."""
-		valid_moves = []
-		for move in ([0, 1], [0, -1], [1, 0], [-1, 0]):
-			if not gamestate.invalid_move(self, move): valid_moves.append(move)
-		if not valid_moves:
-			return False
-		move = random.choice(valid_moves)
-		self.actions.append({'type': 'move', 'move': move})
-		return True
 
 	def collect(self, salvage):
 		"""The Ship picks up a piece of salvage. Only Probes can do this."""
