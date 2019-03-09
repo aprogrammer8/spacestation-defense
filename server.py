@@ -46,18 +46,15 @@ def enemies_move():
 	for enemy in gamestate.enemy_ships:
 		enemy.random_targets(gamestate, enemy=True)
 		while enemy.untargeted() and enemy.moves_left():
-			valid_moves = []
-			for move in ([0, 1], [0, -1], [1, 0], [-1, 0]):
-				if not gamestate.invalid_move(enemy, move): valid_moves.append(move)
-			if not valid_moves: break
-			enemy.actions.append({'type': 'move', 'move': random.choice(valid_moves)})
+			if not enemy.random_move(gamestate): break
 			enemy.random_targets(gamestate, enemy=True)
 		# Now make it happen.
 		process_actions(enemy)
 
 def asteroids_move():
 	for asteroid in gamestate.asteroids:
-		asteroid.random_move()
+		if random.random() <= ASTEROID_MOVE_CHANCE:
+			asteroid.random_move(gamestate)
 		process_actions(asteroid)
 
 def process_actions(entity):

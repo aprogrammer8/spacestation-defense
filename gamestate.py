@@ -79,7 +79,7 @@ class Gamestate:
 		for enemy in enemies:
 			# Asteroids aren't technically enemies, but they're handled by the same function.
 			if enemy['type'] == "Asteroid": self.asteroids.append(asteroid(enemy['pos'], enemy['rot']))
-			if enemy['type'] == "Drone": self.enemy_ships.append(drone(enemy['pos'], enemy['rot']))
+			elif enemy['type'] == "Drone": self.enemy_ships.append(drone(enemy['pos'], enemy['rot']))
 			elif enemy['type'] == "Kamikaze Drone": self.enemy_ships.append(kamikaze_drone(enemy['pos'], enemy['rot']))
 			else: print("Unrecognized enemy type:", enemy)
 
@@ -119,7 +119,7 @@ class Gamestate:
 	def invalid_move(self, entity, move):
 		"""Helper function that takes an Entity and a proposed move, and checks all destination spaces for obstructions."""
 		for space in entity.projected_spaces():
-			occupied = self.occupied([space[0]+move[0], space[1]+move[1]])
+			occupied = self.occupied([space[0] + move[0], space[1] + move[1]])
 			# Have to also check for equality, because big ships will overlap themselves when they move.
 			if occupied and occupied != entity: return occupied
 		return False
@@ -137,9 +137,9 @@ class Gamestate:
 		dist = [abs(target[0] - source[0]), abs(target[1] - source[1])]
 		total_dist = dist[0] + dist[1]
 		# It's ugly, but it finds the distance with magnitude reduced to 1 or -1.
-		dir = ({True: 1, False: -1}[target[0]>source[0]], {True: 1, False: -1}[target[1]>source[1]])
+		dir = ({True: 1, False: -1}[target[0] > source[0]], {True: 1, False: -1}[target[1] > source[1]])
 		probe = [source[0], source[1]]
-		step_x, step_y = dist[0]/total_dist, dist[1]/total_dist
+		step_x, step_y = dist[0] / total_dist, dist[1] / total_dist
 		counter = [0, 0]
 		while probe != target:
 			if probe != source:
@@ -407,11 +407,16 @@ class Entity:
 					break
 			i += 1
 
-	def random_move(self):
-		"""Assigns a random move to the Entity. Used for asteroids."""
-		if random.randint(1, 2) == 1:
-			move = random.choice(([0, 1], [0, -1], [1, 0], [-1, 0]))
-			self.actions = [{'type': 'move', 'move': move}]
+	def random_move(self, gamestate) -> bool:
+		"""Assigns a random move to the Entity. Used for asteroids and sometimes enemies. Returns True if a move was made, False if no moves were legal."""
+		valid_moves = []
+		for move in ([0, 1], [0, -1], [1, 0], [-1, 0]):
+			if not gamestate.invalid_move(self, move): valid_moves.append(move)
+		if not valid_moves:
+			return False
+		move = random.choice(valid_moves)
+		self.actions.append({'type': 'move', 'move': move})
+		return True
 
 	def collect(self, salvage):
 		"""The Ship picks up a piece of salvage. Only Probes can do this."""
