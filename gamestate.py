@@ -306,8 +306,11 @@ class Entity:
 		if type(self) != Component: self.maxshield = self.shield = shield
 		self.shield_regen_amounts = shield_regen
 		self.shield_regen_pointer = 0
-		self.weapons = weapons
 		self.speed = speed
+		# Weapons are a little more complicated to initialize, since we need to pass the dicts of params to the Weapon constructor.
+		self.weapons = []
+		for w in weapons:
+			self.weapons.append(Weapon(**w))
 		# This field refers to salvage dropped when the Entity is destroyed.
 		self.salvage = salvage
 		# The sequence of actions the Entity plans to make.
@@ -445,11 +448,8 @@ class Component(Entity):
 			self.__shield = self.__maxshield = SHIELD_GEN_CAP
 			self.shield_regen_amounts = SHIELD_GEN_REGEN
 		if type == "Laser Turret":
-			self.weapons = (
-				Weapon('laser', 5, 2),
-				Weapon('laser', 5, 2),
-				Weapon('laser', 5, 2)
-			)
+			for w in LASER_TURRET_WEAPONS:
+				self.weapons.append(Weapon(**w))
 		if type == "Power Generator":
 			# For now, the rule for starting power is half the max power.
 			self.station.power += POWER_GEN_CAP // 2
@@ -690,16 +690,15 @@ COMPONENT_TYPES = (
 # The functions below initialize entity types.
 
 def drone(pos, rot=0):
-	weapons = (Weapon('laser', 1, 1),)
-	return Entity("Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=1, hull=5, shield=0, shield_regen=(0,), weapons=weapons, speed=3)
+	return Entity("Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=DRONE_DROP, hull=DRONE_HULL, shield=DRONE_SHIELD, shield_regen=DRONE_SHIELD_REGEN, weapons=DRONE_WEAPONS, speed=DRONE_SPEED)
 
 def kamikaze_drone(pos, rot=0):
-	return Entity("Kamikaze Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=5)
+	return Entity("Kamikaze Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=KAMIKAZE_DRONE_DROP, hull=KAMIKAZE_DRONE_HULL, shield=KAMIKAZE_DRONE_SHIELD, shield_regen=KAMIKAZE_DRONE_SHIELD_REGEN, weapons=KAMIKAZE_DRONE_WEAPONS, speed=KAMIKAZE_DRONE_SPEED)
 
 # Player ships.
 
 def probe(pos, rot=0):
-	return Entity("Probe", team='player', pos=pos, shape=(), rot=rot, salvage=1, hull=10, shield=0, shield_regen=(0,), weapons=(), speed=3, size=1)
+	return Entity("Probe", team='player', pos=pos, shape=(), rot=rot, salvage=PROBE_DROP, hull=PROBE_HULL, shield=PROBE_SHIELD, shield_regen=PROBE_SHIELD_REGEN, weapons=PROBE_WEAPONS, speed=PROBE_SPEED, size=PROBE_SIZE)
 
 def asteroid(pos, rot=0):
-	return Entity("Asteroid", team=None, pos=pos, shape=(), rot=rot, salvage=0, hull=ASTEROID_HULL, shield=0, shield_regen=(0,), weapons=(), speed=1)
+	return Entity("Asteroid", team=None, pos=pos, shape=(), rot=rot, salvage=ASTEROID_DROP, hull=ASTEROID_HULL, shield=0, shield_regen=(0,), weapons=(), speed=1)
