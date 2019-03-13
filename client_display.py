@@ -40,6 +40,8 @@ class GameDisplay:
 		self.assigning = False
 		# When placing something (such as launching a ship from a Hangar), this holds the pos, rot, and shape.
 		self.placing = None
+		# The name of the player whose hand is selected.
+		self.hand = self.player_name
 
 	def event_respond(self, event) -> list:
 		"""The basic method for receiving an event from pygame and reacting to it. Returns a list of commands that should be sent up to the server."""
@@ -155,6 +157,10 @@ class GameDisplay:
 				pygame.display.update(self.chatbar.rect)
 				self.lock.release()
 				if entry: return ["LOCAL:" + self.player_name + ":" + entry]
+
+			# Open the card menu.
+			elif event.key == pygame.K_LCTRL or event.key == pygame.K_RCTRL:
+				self.show_hand()
 
 			# Everything else depends on something being selected, so instead of adding the condition everywhere, I just put a return here.
 			elif not self.selected: return []
@@ -420,6 +426,29 @@ class GameDisplay:
 			rect.move_ip(0, h+5)
 
 		pygame.display.update(PANEL_RECT)
+
+	def show_hand(self):
+		"""Fill the panel with info about a hand of cards."""
+		# First, clear it.
+		pygame.draw.rect(self.window, PANEL_COLOR, PANEL_RECT, 0)
+		# Say whose hand it is.
+		draw_text(self.window, self.hand + "'s hand", TEXT_COLOR, PANEL_NAME_RECT, FONT)
+		# Find the actual hand.
+		for player in self.gamestate.players:
+			if player.name == self.hand: break
+		self.panel_buttons = []
+		rect = CARD_BEGIN_RECT.copy()
+		for card in player.hand:
+			# Subtracting 2 from the width because it also needs to fit inside the Button.
+			h = get_height(text, rect.w-2, FONT)
+			# Check whether the current button is for a ship scheduled to launch. If so, the button should be different colors.
+			button = Button(self.window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_CARD_BUTTON_COLOR, INACTIVE_CARD_BUTTON_COLOR, TEXT_COLOR, FONT, CARD_DESCRIPTIONS[card.name], card.name)
+			button.draw()
+			self.panel_buttons.append(button)
+			rect.move_ip(0, h+5)
+
+		pygame.display.update(PANEL_RECT)
+
 
 	def select_pos(self, pos):
 		"""Takes a gameboard logical position and finds the object on it, then calls select."""
