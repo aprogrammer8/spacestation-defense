@@ -326,9 +326,8 @@ class GameDisplay:
 		if self.selected.maxshield > 0:
 			draw_text(self.window, shield_repr(self.selected), TEXT_COLOR, PANEL_SHIELD_RECT, FONT)
 			draw_bar(self.window, PANEL_SHIELD_BAR_RECT, TEXT_COLOR, SHIELD_COLOR, SHIELD_DAMAGE_COLOR, self.selected.maxshield, self.selected.shield)
+		draw_text(self.window, "Speed: " + str(self.selected.speed), TEXT_COLOR, PANEL_SPEED_RECT, FONT)
 		y = 0
-		if type(self.selected) == Entity:
-			draw_text(self.window, "Speed: " + str(self.selected.speed), TEXT_COLOR, PANEL_SPEED_RECT, FONT)
 		if self.selected.weapons:
 			draw_text(self.window, "Weapons:", TEXT_COLOR, PANEL_WEAPON_DESC_BEGIN, FONT)
 			y += LABEL_HEIGHT + LABEL_SPACING
@@ -350,7 +349,7 @@ class GameDisplay:
 			draw_bar(self.window, PANEL_THRUST_BAR_RECT, TEXT_COLOR, THRUST_COLOR, THRUST_EMPTY_COLOR, self.gamestate.station.thrust_needed(), abs(self.gamestate.station.thrust))
 			# Hangars show a summary of their contents when selected.
 			if self.selected.type == "Hangar":
-				rect = PANEL_SPEED_RECT.copy()
+				rect = PANEL_SPEED_RECT.move(0, y + 30)
 				# We have to adjust the size because the speed rect is sized for a line of text, not a bar.
 				rect.h = BAR_HEIGHT
 				draw_text(self.window, "Capacity: " + str(self.selected.current_fill()) + "/" + str(HANGAR_CAPACITY), TEXT_COLOR, rect, FONT)
@@ -370,7 +369,7 @@ class GameDisplay:
 				else:
 					project = self.selected.project
 				if project:
-					rect = PANEL_SPEED_RECT.move(0, 30)
+					rect = PANEL_SPEED_RECT.move(0, y + 30)
 					draw_text(self.window, "Building " + project + ", " + str(self.selected.progress) + "/" + str(SHIP_CONSTRUCTION_COSTS[project]), TEXT_COLOR, rect, FONT)
 					rect.move_ip(0, LABEL_HEIGHT + LABEL_SPACING)
 					rect.h = BAR_HEIGHT
