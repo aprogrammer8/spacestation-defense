@@ -62,15 +62,15 @@ class Gamestate:
 			if self.time <= 0:
 				wave, self.rewards[self.nextwave], self.time = self.mission.wave(self.nextwave)
 				self.nextwave += 1
-				return self.send_enemies(wave)
+				return self.send_enemies(wave, self.nextwave - 1)
 
-	def send_enemies(self, enemies):
+	def send_enemies(self, enemies, wavenum):
 		"Accepts enemies to send as passed by the mission's wave method, calls insert_enemies, but also returns the data that insert_enemies needs to be called with, so that it can be sent out to clients."
 		inserts = []
 		for enemy_type in enemies:
 			for i in range(enemies[enemy_type]):
 				# The rot value of 0 is a placeholder.
-				inserts.append({'type': enemy_type, 'pos': self.find_open_pos(), 'rot': 0})
+				inserts.append({'type': enemy_type, 'pos': self.find_open_pos(), 'rot': 0, 'wave': wavenum})
 				self.insert_enemies((inserts[-1],))
 		return inserts
 
@@ -79,8 +79,8 @@ class Gamestate:
 		for enemy in enemies:
 			# Asteroids aren't technically enemies, but they're handled by the same function.
 			if enemy['type'] == "Asteroid": self.asteroids.append(asteroid(enemy['pos'], enemy['rot']))
-			elif enemy['type'] == "Drone": self.enemy_ships.append(drone(enemy['pos'], enemy['rot']))
-			elif enemy['type'] == "Kamikaze Drone": self.enemy_ships.append(kamikaze_drone(enemy['pos'], enemy['rot']))
+			elif enemy['type'] == "Drone": self.enemy_ships.append(drone(enemy['pos'], enemy['rot'], enemy['wave']))
+			elif enemy['type'] == "Kamikaze Drone": self.enemy_ships.append(kamikaze_drone(enemy['pos'], enemy['rot'], enemy['wave']))
 			else: print("Unrecognized enemy type:", enemy)
 
 	def add_salvage(self, salvage):
@@ -689,11 +689,11 @@ COMPONENT_TYPES = (
 
 # The functions below initialize entity types.
 
-def drone(pos, rot=0):
-	return Entity("Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=DRONE_DROP, hull=DRONE_HULL, shield=DRONE_SHIELD, shield_regen=DRONE_SHIELD_REGEN, weapons=DRONE_WEAPONS, speed=DRONE_SPEED)
+def drone(pos, rot=0, wave=0):
+	return Entity("Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=DRONE_DROP, hull=DRONE_HULL, shield=DRONE_SHIELD, shield_regen=DRONE_SHIELD_REGEN, weapons=DRONE_WEAPONS, speed=DRONE_SPEED, wave=wave)
 
-def kamikaze_drone(pos, rot=0):
-	return Entity("Kamikaze Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=KAMIKAZE_DRONE_DROP, hull=KAMIKAZE_DRONE_HULL, shield=KAMIKAZE_DRONE_SHIELD, shield_regen=KAMIKAZE_DRONE_SHIELD_REGEN, weapons=KAMIKAZE_DRONE_WEAPONS, speed=KAMIKAZE_DRONE_SPEED)
+def kamikaze_drone(pos, rot=0, wave=0):
+	return Entity("Kamikaze Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=KAMIKAZE_DRONE_DROP, hull=KAMIKAZE_DRONE_HULL, shield=KAMIKAZE_DRONE_SHIELD, shield_regen=KAMIKAZE_DRONE_SHIELD_REGEN, weapons=KAMIKAZE_DRONE_WEAPONS, speed=KAMIKAZE_DRONE_SPEED, wave=wave)
 
 # Player ships.
 
