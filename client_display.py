@@ -159,19 +159,23 @@ class GameDisplay:
 			# Everything else depends on something being selected, so instead of adding the condition everywhere, I just put a return here.
 			elif not self.selected: return []
 
-			# Entering assignment mode.
+			# Targeting mode.
 			elif event.key == pygame.K_SPACE and not self.animating():
-				# The players can't assign actions to enemies or to asteroids, or to units that don't have any abilities.
-				if self.selected in self.gamestate.enemy_ships or self.selected in self.gamestate.asteroids or (not self.selected.weapons and not self.selected.speed):
+				# Don't handle it if already in assigning mode; or else it will keep resetting.
+				if type(self.assigning) == int: return []
+				# The players can't assign targets to enemies or to asteroids, or to units that don't have any weapons.
+				if self.selected in self.gamestate.enemy_ships or self.selected in self.gamestate.asteroids or not self.selected.weapons:
 					SFX_ERROR.play()
 					return []
+				self.assigning = 0
+				self.select()
+
+			# Z clears a unit's actions.
+			elif event.key == pygame.K_z and not self.animating():
+				if self.selected.weapons and type(self.assigning) == int:
+					self.assigning = 0
 				self.clear_projected_move()
-				self.selected.actions = [] # TODO remove
-				if self.selected.weapons: self.assigning = 0
-				else: self.assigning = True
-				# Clear out old actions.
 				return ["ASSIGN:" + json.dumps(self.selected.pos) + ":[]"]
-				# We don't need to update the panel ourselves here because the ASSIGN command will get sent to the server and come back, and the client will call us back.
 
 			# Esc gets out of assignment or placement mode.
 			elif event.key == pygame.K_ESCAPE and not self.animating():
@@ -261,6 +265,12 @@ class GameDisplay:
 					SFX_ERROR.play()
 					return []
 				return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions + [{'type': 'move', 'move': move}])]
+
+		elif event.type == pygame.KEYUP:
+			# Make sure this doesn't trigger on units that don't have weapons.
+			if event.key == pygame.K_SPACE and type(self.assigning) == int:
+				self.assigning = False
+				self.select()
 
 		# Closing the game. We handle this last because it's the rarest.
 		elif event.type == pygame.QUIT: sys.exit()
