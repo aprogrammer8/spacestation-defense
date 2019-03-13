@@ -185,7 +185,7 @@ class GameDisplay:
 					self.clear_projected_placement()
 					self.placing = None
 
-			# Shift cycles weapons.
+			# Cycle weapons.
 			elif self.assigning is not False and event.key == pygame.K_TAB:
 				self.assigning += 1
 				if self.assigning == len(self.selected.weapons): self.assigning = 0
