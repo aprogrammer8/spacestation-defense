@@ -438,10 +438,11 @@ class GameDisplay:
 		self.panel_buttons = []
 		rect = CARD_BEGIN_RECT.copy()
 		for card in player.hand:
+			text = card.name.upper() + "\n" + CARD_DESCRIPTIONS[card.name]
 			# Subtracting 2 from the width because it also needs to fit inside the Button.
 			h = get_height(text, rect.w-2, FONT)
 			# Check whether the current button is for a ship scheduled to launch. If so, the button should be different colors.
-			button = Button(self.window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_CARD_BUTTON_COLOR, INACTIVE_CARD_BUTTON_COLOR, TEXT_COLOR, FONT, CARD_DESCRIPTIONS[card.name], card.name)
+			button = Button(self.window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_CARD_BUTTON_COLOR, INACTIVE_CARD_BUTTON_COLOR, TEXT_COLOR, FONT, text, card.name)
 			button.draw()
 			self.panel_buttons.append(button)
 			rect.move_ip(0, h+5)

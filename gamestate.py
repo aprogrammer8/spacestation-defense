@@ -21,6 +21,7 @@ class Gamestate:
 			self.rewards = {}
 			self.players = []
 			for player in players: self.players.append(Player(player))
+			for player in self.players: player.hand += [Card("Power Surge"), Card("Planetary Cannon")]
 			# The draw pointer is used to keep track of who will get the next card the players draw.
 			self.draw_pointer = 0
 			self.mission = Mission("missions/"+mission)
@@ -236,7 +237,6 @@ class Gamestate:
 			del hangar.contents[index]
 			# Clear actions so the ship won't come out with moves.
 			ship.actions = []
-			# TODO check Salvage collection
 			if ship.team == 'player':
 				self.allied_ships.append(ship)
 			else:

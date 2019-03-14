@@ -65,3 +65,12 @@ SHIP_DESCRIPTIONS = {
 		str(PROBE_CAPACITY) + " Salvage. " +
 		str(SHIP_CONSTRUCTION_COSTS['Probe']) + " Salvage to build.",
 }
+
+# Careds.
+CARD_PLANETARY_CANNON_DAMAGE = 200
+CARD_DESCRIPTIONS = {
+	"Power Surge":
+		"Fill all Power Generators.",
+	"Planetary Cannon":
+		"Deal " + str(CARD_PLANETARY_CANNON_DAMAGE) + " damage to an enemy.",
+}
