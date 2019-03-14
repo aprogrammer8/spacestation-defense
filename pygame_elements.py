@@ -100,13 +100,14 @@ class InputBox:
 # A list of separate text items to be displayed on a pygame window, inside a specified area and with items separated.
 # The main useful feature is automatic rearrangement of the text items when new ones are inserted or deleted.
 class TextList:
-	def __init__(self, window, rect, bgcolor, bordercolor, textcolor, font, items=[]):
+	def __init__(self, window, rect, bgcolor, bordercolor, textcolor, font, items=None):
 		self.window = window
 		self.rect = rect
 		self.bgcolor = bgcolor
 		self.bordercolor = bordercolor
 		self.textcolor = textcolor
 		self.font = font
+		if items is None: items = []
 		self.message_list = items
 		self.new_height = 0 # The y that a new message will start at.
 		self.spacing = 1

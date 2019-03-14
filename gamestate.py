@@ -280,8 +280,9 @@ def slope(p1, p2):
 
 
 class Player:
-	def __init__(self, name, cards=[]):
+	def __init__(self, name, cards=None):
 		self.name = name
+		if cards is None: cards = []
 		self.hand = cards
 
 class Card:
@@ -558,7 +559,8 @@ class Composite:
 
 class Station(list):
 	"""Station is an extension of a list, and its methods basically just propagate the calls down to each Component."""
-	def __init__(self, li=[]):
+	def __init__(self, li=None):
+		if li is None: li = []
 		list.__init__(self, li)
 		self.power = 0
 		self.salvage = 6
