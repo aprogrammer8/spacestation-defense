@@ -8,15 +8,15 @@ def draw_text(window, text, color, rect, font, spacing=2, aa=True, bgcolor=None)
 	y = rect.top
 	font_height = font.size("Tg")[1]
 	while text:
-		i = 1
+		i = 0
 		# Cut if the row of text will be outside our area.
 		if y + font_height > rect.bottom:
 			break
 		# Determine maximum width of line.
-		while font.size(text[:i])[0] < rect.w and i < len(text):
+		while font.size(text[:i+1])[0] < rect.w and i < len(text) and text[i] != "\n":
 			i += 1
-		# If we've wrapped the text, then adjust the wrap to the last word.
-		if i < len(text):
+		# If we've wrapped the text and it wasn't due to a newline, then adjust the wrap to the last word.
+		if i < len(text) and text[i] != "\n":
 			i = text.rfind(" ", 0, i) + 1
 		# Render the line and blit it to the window.
 		if bgcolor:
@@ -26,7 +26,8 @@ def draw_text(window, text, color, rect, font, spacing=2, aa=True, bgcolor=None)
 			image = font.render(text[:i], aa, color)
 			window.blit(image, (rect.x, y))
 		y += font_height + spacing
-		# Remove the text we just blitted.
+		# Remove the text we just blitted. Newlines need to be cut out too.
+		if len(text) > i and text[i] == "\n": i += 1
 		text = text[i:]
 	# Return the height of the result.
 	return y-rect.top
@@ -37,12 +38,13 @@ def get_height(text, width, font, spacing=2):
 	y = 0
 	font_height = font.size("Tg")[1]
 	while text:
-		i = 1
-		while font.size(text[:i])[0] < width and i < len(text):
+		i = 0
+		while font.size(text[:i+1])[0] < width and i < len(text) and text[i] != "\n":
 			i += 1
-		if i < len(text):
+		if i < len(text) and text[i] != "\n":
 			i = text.rfind(" ", 0, i) + 1
 		y += font_height + spacing
+		if len(text) > i and text[i] == "\n": i += 1
 		text = text[i:]
 	return y
 
@@ -159,6 +161,8 @@ class Chat:
 	def handle_mousebuttondown(self, event):
 		return self.entry_box.handle_mousebuttondown(event)
 	def add_message(self, message):
+		# Add a space after the name and colon, to avoid line length exploits.
+		message = message[:message.index(':')+1] + " " + message[message.index(':')+1:]
 		self.log.add(message)
 		self.entry_box.draw()
 	def draw(self):
