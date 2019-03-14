@@ -41,7 +41,7 @@ class GameDisplay:
 		# When placing something (such as launching a ship from a Hangar), this holds the pos, rot, and shape.
 		self.placing = None
 		# The name of the player whose hand is selected.
-		self.hand = self.player_name
+		self.hand = None
 
 	def event_respond(self, event) -> list:
 		"""The basic method for receiving an event from pygame and reacting to it. Returns a list of commands that should be sent up to the server."""
@@ -162,6 +162,14 @@ class GameDisplay:
 			elif event.key == pygame.K_LCTRL or event.key == pygame.K_RCTRL:
 				self.show_hand()
 
+			# Cycle hands / weapons.
+			elif event.key == pygame.K_TAB:
+				if self.hand:
+					self.cycle_hand()
+				elif self.assigning is not False:
+					self.assigning += 1
+					if self.assigning == len(self.selected.weapons): self.assigning = 0
+
 			# Everything else depends on something being selected, so instead of adding the condition everywhere, I just put a return here.
 			elif not self.selected: return []
 
@@ -190,11 +198,6 @@ class GameDisplay:
 				if self.placing:
 					self.clear_projected_placement()
 					self.placing = None
-
-			# Cycle weapons.
-			elif self.assigning is not False and event.key == pygame.K_TAB:
-				self.assigning += 1
-				if self.assigning == len(self.selected.weapons): self.assigning = 0
 
 			# Q, W, E and R are the unique action keys.
 			elif event.key == pygame.K_q:
@@ -417,7 +420,7 @@ class GameDisplay:
 		for ship in SHIP_CONSTRUCTION_COSTS:
 			text = SHIP_DESCRIPTIONS[ship]
 			# Subtracting 2 from the width because it also needs to fit inside the Button.
-			h = get_height(text, rect.w-2, FONT)
+			h = get_height(text, rect.w - 2, FONT)
 			# Check whether the current button is for a ship scheduled to launch. If so, the button should be different colors.
 			button = Button(self.window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_FACTORY_PROJECT_BUTTON_COLOR, INACTIVE_FACTORY_PROJECT_BUTTON_COLOR, TEXT_COLOR, FONT, text, ship)
 			button.draw()
@@ -428,6 +431,10 @@ class GameDisplay:
 
 	def show_hand(self):
 		"""Fill the panel with info about a hand of cards."""
+		self.lock.acquire()
+		self.selected = None
+		self.assigning = False
+		if not self.hand: self.hand = self.player_name
 		# First, clear it.
 		pygame.draw.rect(self.window, PANEL_COLOR, PANEL_RECT, 0)
 		# Say whose hand it is.
@@ -440,15 +447,24 @@ class GameDisplay:
 		for card in player.hand:
 			text = card.name.upper() + "\n" + CARD_DESCRIPTIONS[card.name]
 			# Subtracting 2 from the width because it also needs to fit inside the Button.
-			h = get_height(text, rect.w-2, FONT)
+			h = get_height(text, rect.w - 2, FONT)
 			# Check whether the current button is for a ship scheduled to launch. If so, the button should be different colors.
 			button = Button(self.window, pygame.Rect(rect.x, rect.y, rect.w, h+2), ACTIVE_CARD_BUTTON_COLOR, INACTIVE_CARD_BUTTON_COLOR, TEXT_COLOR, FONT, text, card.name)
 			button.draw()
 			self.panel_buttons.append(button)
-			rect.move_ip(0, h+5)
+			rect.move_ip(0, h + 5)
 
 		pygame.display.update(PANEL_RECT)
+		self.lock.release()
 
+	def cycle_hand(self):
+		"""A wrapper around show_hand that shows the next player's hand."""
+		for i, player in enumerate(self.gamestate.players):
+			if player.name == self.hand:
+				i += 1
+				if i >= len(self.gamestate.players): i = 0
+				self.hand = self.gamestate.players[i].name
+				return self.show_hand()
 
 	def select_pos(self, pos):
 		"""Takes a gameboard logical position and finds the object on it, then calls select."""
@@ -467,6 +483,8 @@ class GameDisplay:
 		   If pos is not provided, select will pass whatever salvage is under the selected Entity to fill_panel.
 		   If pos is provided, select will check that pos for salvage instead. This is useful to selecte a space with no Entity on it.
 		"""
+		# Signal other code that we're not showing a hand.
+		self.hand = None
 		if self.selected:
 			self.project_move()
 			pos = self.selected.pos
