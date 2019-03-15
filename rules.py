@@ -1,7 +1,5 @@
 """This module contains game balance parameters."""
 
-# TODO move hit chances into here
-
 # Asteroids.
 SALVAGE_START_TIME = 5
 ASTEROID_MOVE_CHANCE = 1/2
