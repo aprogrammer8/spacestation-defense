@@ -227,8 +227,8 @@ def draw_bar(window, rect, border_color, fill_color, empty_color, capacity, valu
 			fill_rect = pygame.Rect(rect.left+1, rect.top+1, rect.w-2, rect.h-2)
 		empty_rect = pygame.Rect(fill_rect.right, rect.top+1, rect.w-2-fill_rect.w, rect.h-2)
 		# We have to check these manually, because pygame.Rect apparently has a minimum size of 2x2.
-		if value>0: pygame.draw.rect(window, fill_color, fill_rect, 0)
-		if value<capacity: pygame.draw.rect(window, empty_color, empty_rect, 0)
+		if value > 0: pygame.draw.rect(window, fill_color, fill_rect, 0)
+		if value < capacity: pygame.draw.rect(window, empty_color, empty_rect, 0)
 
 # It's unfortunate that this couldn't inherit anything.
 class ButtonList:
