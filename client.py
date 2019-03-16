@@ -199,7 +199,7 @@ def execute_move(cmd, display):
 		print("Entity dead already: ", json.loads(parts[0]), ", planned actions =", actions)
 		return
 	# Subtract power for used components (excepy Hangars), and skip unused ones.
-	if type(entity) == Component and entity.type != "Hangar":
+	if isinstance(entity, Component) and entity.type != "Hangar":
 		if not entity.powered() or not gamestate.station.use_power(): return
 		# If a station component was selected, then this needs to be reflected on the panel.
 		#if type(display.selected) == Component: display.select()

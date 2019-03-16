@@ -97,7 +97,7 @@ class GameDisplay:
 					return [string]
 				pos = self.reverse_calc_pos(event.pos)
 				# Factory assignments need to have a Hangar specified to put the ship in when they're done.
-				if self.selected and self.selected.type == "Factory" and type(self.assigning) == str:
+				if self.selected and self.selected.type == "Factory" and isinstance(self.assigning, str):
 					entity = self.gamestate.occupied(pos)
 					if entity and entity.type == "Hangar":
 						# Form the return string ahead of time, since we have some things we need to do inbetween that and returning.
@@ -140,11 +140,11 @@ class GameDisplay:
 					callback = button.handle_mousebuttondown(event)
 					if callback:
 						# Hangar launch buttons.
-						if type(callback) == Entity:
+						if isinstance(callback, Entity):
 							self.placing = {'ship': callback, 'pos': callback.pos, 'shape': callback.shape, 'rot': callback.rot}
 							self.project_placement()
 						# Factory assignment buttons.
-						elif type(callback) == str:
+						elif isinstance(callback, str):
 							# Still need to select a Hangar, so we store the selected ship name in a variable that will persist.
 							self.assigning = callback
 
@@ -176,7 +176,7 @@ class GameDisplay:
 			# Targeting mode.
 			elif event.key == pygame.K_SPACE and not self.animating():
 				# Don't handle it if already in assigning mode; or else it will keep resetting.
-				if type(self.assigning) == int: return []
+				if isinstance(self.assigning, int): return []
 				# The players can't assign targets to enemies or to asteroids, or to units that don't have any weapons.
 				if self.selected in self.gamestate.enemy_ships or self.selected in self.gamestate.asteroids or not self.selected.weapons:
 					SFX_ERROR.play()
@@ -186,7 +186,7 @@ class GameDisplay:
 
 			# Z clears a unit's actions.
 			elif event.key == pygame.K_z and not self.animating():
-				if self.selected.weapons and type(self.assigning) == int:
+				if self.selected.weapons and isinstance(self.assigning, int):
 					self.assigning = 0
 				self.clear_projected_move()
 				return ["ASSIGN:" + json.dumps(self.selected.pos) + ":[]"]
@@ -277,7 +277,7 @@ class GameDisplay:
 
 		elif event.type == pygame.KEYUP:
 			# Make sure this doesn't trigger on units that don't have weapons.
-			if event.key == pygame.K_SPACE and type(self.assigning) == int:
+			if event.key == pygame.K_SPACE and isinstance(self.assigning, int):
 				self.assigning = False
 				self.select()
 

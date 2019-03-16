@@ -69,7 +69,7 @@ class Gamestate:
 		"Accepts enemies to send as passed by the mission's wave method, calls insert_enemies, but also returns the data that insert_enemies needs to be called with, so that it can be sent out to clients."
 		inserts = []
 		for enemy_type in enemies:
-			for i in range(enemies[enemy_type]):
+			for _ in range(enemies[enemy_type]):
 				# The rot value of 0 is a placeholder.
 				inserts.append({'type': enemy_type, 'pos': self.find_open_pos(), 'rot': 0, 'wave': wavenum})
 				self.insert_enemies((inserts[-1],))
@@ -304,7 +304,7 @@ class Entity:
 		self.rot = rot
 		self.maxhull = self.hull = hull
 		# Components can't have their shield property set, because it's not really theirs.
-		if type(self) != Component: self.maxshield = self.shield = shield
+		if not isinstance(self, Component): self.maxshield = self.shield = shield
 		self.shield_regen_amounts = shield_regen
 		self.shield_regen_pointer = 0
 		self.speed = speed
@@ -401,26 +401,10 @@ class Entity:
 	def untargeted(self):
 		"""Returns all weapons with no target."""
 		# First, construct a list of indexes of weapons.
-		weapons = []
-		i = 0
-		for w in self.weapons:
-			weapons.append(i)
-			i += 1
+		weapons = list(range(len(self.weapons)))
 		# Now filter out the ones that have targets.
 		for action in self.actions:
 			if action['type'] == 'attack': weapons.remove(action['weapon'])
-		return weapons
-
-	def all_in_range(self, gamestate, enemy):
-		"""Returns all weapons that can hit something from the opposing team from our current position. enemy is a bool saying which team this Entity is on."""
-		weapons = []
-		if enemy: targets = gamestate.allied_ships + gamestate.station
-		else: targets = gamestate.enemy_ships + gamestate.asteroids
-		for weapon in self.weapons:
-			for target in target:
-				if gamestate.in_range(self, weapon.type, target):
-					weapons.append(self.index[weapon])
-					break
 		return weapons
 
 	def collect(self, salvage):
@@ -442,8 +426,8 @@ class Entity:
 class Component(Entity):
 	"""A Station Component."""
 	def __init__(self, pos, station, type, rot, hull):
-		Entity.__init__(self, type, "ally", pos, shape=((1,0),(0,1),(1,1)), rot=rot, salvage=COMPONENT_SALVAGE, hull=hull, shield=0, shield_regen=(0,))
-		if type not in COMPONENT_TYPES: raise TypeException("Not a valid station component type: " + type)
+		Entity.__init__(self, type, "ally", pos, shape=((1,0), (0,1), (1,1)), rot=rot, salvage=COMPONENT_SALVAGE, hull=hull, shield=0, shield_regen=(0,))
+		if type not in COMPONENT_TYPES: raise TypeError("Not a valid station component type: " + type)
 		self.station = station
 		if type == "Shield Generator":
 			self.__shield = self.__maxshield = SHIELD_GEN_CAP
@@ -652,15 +636,15 @@ class Mission:
 	def __init__(self, filename):
 		# There should be a shitton of tunable parameters in here. For now, just give them all placeholder values.
 		self.starting_station = {
-			(0,0): "Connector",
-			(-2,0): "Connector",
-			(2,0): "Connector",
-			(2,-2): "Shield Generator",
-			(0,-2): "Power Generator",
-			(0,2): "Laser Turret",
-			(-4,0): "Hangar",
-			(-2,-2): "Factory",
-			(4,0): "Engine",
+			(0, 0): "Connector",
+			(-2, 0): "Connector",
+			(2, 0): "Connector",
+			(2, -2): "Shield Generator",
+			(0, -2): "Power Generator",
+			(0, 2): "Laser Turret",
+			(-4, 0): "Hangar",
+			(-2, -2): "Factory",
+			(4, 0): "Engine",
 		}
 		self.starting_cards = 4
 
@@ -673,7 +657,7 @@ class Mission:
 def hit_chance(attack, target):
 	"""Calculates the hit rate of a given attack type against the target ship."""
 	# Station components can never be missed by anything.
-	if type(target) == Component or target.type == "Asteroid": return 100
+	if isinstance(target, Component) or target.type == "Asteroid": return 100
 	if target.type in ('Probe', 'Drone', 'Kamikaze Drone'): return {'laser':75, 'missile':25}[attack]
 	# Error message that should never get triggered.
 	print("Did not have a hit chance for", attack, "against a", target.type)
