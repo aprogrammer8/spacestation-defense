@@ -175,8 +175,9 @@ class GameDisplay:
 
 			# Targeting mode.
 			elif event.key == pygame.K_SPACE and not self.animating():
+
 				# Don't handle it if already in assigning mode; or else it will keep resetting.
-				if isinstance(self.assigning, int): return []
+				if type(self.assigning) == int: return []
 				# The players can't assign targets to enemies or to asteroids, or to units that don't have any weapons.
 				if self.selected in self.gamestate.enemy_ships or self.selected in self.gamestate.asteroids or not self.selected.weapons:
 					SFX_ERROR.play()
