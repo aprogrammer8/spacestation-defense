@@ -108,14 +108,14 @@ class GameDisplay:
 					else:
 						SFX_ERROR.play()
 				# This must be checked with "is False", because 0 would mean True for this purpose.
-				if self.assigning is False or not self.selected: self.select_pos(pos)
+				if self.assigning is False or not self.selected: self.select(pos)
 				# The only other things that can be assigned by clicking are weapons.
 				elif self.selected.weapons:
 					target = self.gamestate.occupied(pos)
 					# If you try to target nothing, we assume you want to deselect the unit, since that would almost never be a mistake.
 					if not target:
 						self.assigning = False
-						self.select_pos(pos)
+						self.select(pos)
 					# Don't let things target themselves.
 					elif target == self.selected:
 						SFX_ERROR.play()
@@ -467,25 +467,19 @@ class GameDisplay:
 				self.hand = self.gamestate.players[i].name
 				return self.show_hand()
 
-	def select_pos(self, pos):
-		"""Takes a gameboard logical position and finds the object on it, then calls select."""
-		entity = self.gamestate.occupied(list(pos))
-		# First clear the currently projected move if we're selecting away from sonething else.
-		if self.selected and entity != self.selected:
-			self.clear_projected_move()
-		self.selected = entity
-		if not entity:
-			# If we're clearing self.selected, we should get out of assigning mode too.
-			self.assigning = False
-		self.select(pos)
-
 	def select(self, pos=None):
-		"""An envelope around fill_panel that also finds the salvage under the selected Entity and projects its movement plan.
-		   If pos is not provided, select will pass whatever salvage is under the selected Entity to fill_panel.
-		   If pos is provided, select will check that pos for salvage instead. This is useful to selecte a space with no Entity on it.
-		"""
+		"""Selects a gameboard space by logical position (or the space of the selected Entity if no pos is passed) and calls other functions to fill the UI with information."""
 		# Signal other code that we're not showing a hand.
 		self.hand = None
+		if pos:
+			entity = self.gamestate.occupied(list(pos))
+			# First clear the currently projected move if we're selecting away from sonething else.
+			if self.selected and entity != self.selected:
+				self.clear_projected_move()
+			self.selected = entity
+			if not entity:
+				# If we're clearing self.selected, we should get out of assigning mode too.
+				self.assigning = False
 		if self.selected:
 			self.project_move()
 			pos = self.selected.pos
