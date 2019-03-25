@@ -187,7 +187,7 @@ class GameDisplay:
 
 			# Z clears a unit's actions.
 			elif event.key == pygame.K_z and not self.animating():
-				if self.selected.weapons and isinstance(self.assigning, int):
+				if self.selected.weapons and type(self.assigning) == int:
 					self.assigning = 0
 				self.clear_projected_move()
 				return ["ASSIGN:" + json.dumps(self.selected.pos) + ":[]"]
