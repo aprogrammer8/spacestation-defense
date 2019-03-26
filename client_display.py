@@ -36,38 +36,35 @@ class GameDisplay:
 		pygame.display.flip()
 		# Selected Entity.
 		self.selected = None
-		# This variable holds whatever data needs holding during a unit assignment: the index of the weapon being targeted, the name of the ship being assigned to a Factory, etc.
-		self.assigning = False
-		# When placing something (such as launching a ship from a Hangar), this holds the pos, rot, and shape.
-		self.placing = None
+		self.details_view = False
+		# This variable holds whatever data needs holding during a unit assignment: the index of the weapon being targeted, the name of the ship being assigned to a Factory, or a dict of information about the ship being launched from a Hangar.
+		self.assigning = None
 		# The name of the player whose hand is selected.
 		self.hand = None
 
 	def event_respond(self, event) -> list:
 		"""The basic method for receiving an event from pygame and reacting to it. Returns a list of commands that should be sent up to the server."""
-		# In the case of mousemotion, all we need to do is check all the buttons to see if they need to be redrawn.
-		# For now, mousemotion outside of the panel doesn't do anything.
 		if event.type == pygame.MOUSEMOTION:
-			# None of this stuff is supposed to work during an animation.
-			if self.animating(): return []
 			# If the mouse is over the panel, we just need to check if any buttons need to be updated.
 			if TOTAL_PANEL_RECT.collidepoint(event.pos):
 				rects_to_update = []
 				for button in self.panel_buttons + [self.done_button]:
 					if button.handle_mousemotion(event):
 						rects_to_update.append(button.rect)
+				self.lock.acquire()
 				pygame.display.update(rects_to_update)
+				self.lock.release()
 			# This happens while placing something.
-			elif GAME_WINDOW_RECT.collidepoint(event.pos) and self.placing:
+			elif GAME_WINDOW_RECT.collidepoint(event.pos) and type(self.assigning) == dict:
 				pos = self.reverse_calc_pos(event.pos)
-				if pos != self.placing['pos']:
-					self.clear_projected_placement()
-					self.placing['pos'] = pos
-					self.project_placement()
+				if pos != self.assigning['pos']:
+					self.clear_projected_placement(flip=True)
+					self.assigning['pos'] = pos
+					self.project_placement(flip=True)
 
-		# Clicks are a little more complicated. We have to handle the callbacks of any buttons clicked, and account for clicks on the rest of the screen.
+		# Clicks.
 		if event.type == pygame.MOUSEBUTTONDOWN:
-			# Recolor chatbar entry box if necesary.
+			# Chatbar entry box - recolor if necesary.
 			if self.chatbar.handle_mousebuttondown(event):
 				self.lock.acquire()
 				pygame.display.update(self.chatbar.entry_box.rect)
@@ -75,61 +72,52 @@ class GameDisplay:
 
 			# Game widow click events.
 			if GAME_WINDOW_RECT.collidepoint(event.pos):
-				self.lock.acquire()
-				# Handle the case of launching a ship from a Hangar.
-				if self.placing:
-					# Find the index of the ship in the Hangar's contents.
-					index = self.selected.contents.index(self.placing['ship'])
-					# Make sure the launch is legal.
-					if not self.gamestate.hangar_launch(self.selected, index, self.placing['pos'], self.placing['rot'], test=True):
-						# If not, check for the override keys.
-						pressed = pygame.key.get_pressed()
-						if not pressed[pygame.K_LSHIFT] and not pressed[pygame.K_RSHIFT]:
-							SFX_ERROR.play()
-							# This case has to release the lock separately since we're returning before we reach the end of the block.
-							self.lock.release()
-							return []
-					# Form the return string ahead of time, since we have some things we need to do inbetween that and returning.
-					string = "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'launch', 'index': index, 'pos': self.placing['pos'], 'rot': self.placing['rot']}])
-					self.clear_projected_placement()
-					self.placing = None
-					self.lock.release()
-					return [string]
 				pos = self.reverse_calc_pos(event.pos)
-				# Factory assignments need to have a Hangar specified to put the ship in when they're done.
-				if self.selected and self.selected.type == "Factory" and isinstance(self.assigning, str):
-					entity = self.gamestate.occupied(pos)
-					if entity and entity.type == "Hangar":
-						# Form the return string ahead of time, since we have some things we need to do inbetween that and returning.
-						string = "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'build', 'ship': self.assigning, 'hangar': entity.pos}])
-						self.assigning = False
-						self.lock.release()
-						return [string]
-					else:
-						SFX_ERROR.play()
-				# This must be checked with "is False", because 0 would mean True for this purpose.
-				if self.assigning is False or not self.selected: self.select(pos)
-				# The only other things that can be assigned by clicking are weapons.
-				elif self.selected.weapons:
+				# Selecting units - the most basic case.
+				if self.assigning is None: self.select(pos)
+				# Targeting weapons.
+				elif type(self.assigning) == int:
 					target = self.gamestate.occupied(pos)
 					# If you try to target nothing, we assume you want to deselect the unit, since that would almost never be a mistake.
 					if not target:
-						self.assigning = False
+						self.assigning = None
 						self.select(pos)
 					# Don't let things target themselves.
 					elif target == self.selected:
 						SFX_ERROR.play()
 					# Valid targets.
-					elif self.gamestate.in_range(self.selected, self.selected.weapons[self.assigning].type, target):
+					elif self.gamestate.in_range(self.selected, self.selected.weapons[self.assigning].type, target) or override():
 						self.selected.target(self.assigning, target.pos) # TODO this is the only one that modifies the Gamestate from inside client_display. I should look for a workaround.
 						self.assigning += 1
 						if self.assigning == len(self.selected.weapons): self.assigning = 0
-						self.lock.release()
 						return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions)]
 					# If the target is valid, but not reachable.
 					else:
 						SFX_ERROR.play()
-				self.lock.release()
+				# Launching a ship from a Hangar.
+				elif type(self.assigning) == dict:
+					# Find the index of the ship in the Hangar's contents.
+					index = self.selected.contents.index(self.assigning['ship'])
+					# Make sure the launch is legal.
+					if not self.gamestate.hangar_launch(self.selected, index, self.assigning['pos'], self.assigning['rot'], test=True) and not override():
+							SFX_ERROR.play()
+							return []
+					# Form the return string ahead of time, since we have some things we need to do inbetween that and returning.
+					string = "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'launch', 'index': index, 'pos': self.assigning['pos'], 'rot': self.assigning['rot']}])
+					self.clear_projected_placement(flip=True)
+					self.assigning = None
+					return [string]
+				# Factory Hangar assignments.
+				elif type(self.assigning) == str:
+					entity = self.gamestate.occupied(pos)
+					if entity and entity.type == "Hangar":
+						# Form the return string ahead of time, since we have some things we need to do inbetween that and returning.
+						string = "ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'build', 'ship': self.assigning, 'hangar': entity.pos}])
+						self.assigning = None
+						self.details_view = False
+						return [string]
+					else:
+						SFX_ERROR.play()
 
 			# Panel click events.
 			else:
@@ -141,8 +129,8 @@ class GameDisplay:
 					if callback:
 						# Hangar launch buttons.
 						if isinstance(callback, Entity):
-							self.placing = {'ship': callback, 'pos': callback.pos, 'shape': callback.shape, 'rot': callback.rot}
-							self.project_placement()
+							self.assigning = {'ship': callback, 'pos': callback.pos, 'shape': callback.shape, 'rot': callback.rot}
+							self.project_placement(flip=True)
 						# Factory assignment buttons.
 						elif isinstance(callback, str):
 							# Still need to select a Hangar, so we store the selected ship name in a variable that will persist.
@@ -152,8 +140,8 @@ class GameDisplay:
 		elif event.type == pygame.KEYDOWN:
 			# If the chatbar is active, just pass it the input and don't bother with gamestate commands.
 			if self.chatbar.entry_box.active:
-				self.lock.acquire()
 				entry = self.chatbar.handle_event(event)
+				self.lock.acquire()
 				pygame.display.update(self.chatbar.rect)
 				self.lock.release()
 				if entry: return ["LOCAL:" + self.player_name + ":" + entry]
@@ -166,7 +154,7 @@ class GameDisplay:
 			elif event.key == pygame.K_TAB:
 				if self.hand:
 					self.cycle_hand()
-				elif self.assigning is not False:
+				elif self.assigning is not None:
 					self.assigning += 1
 					if self.assigning == len(self.selected.weapons): self.assigning = 0
 
@@ -175,7 +163,6 @@ class GameDisplay:
 
 			# Targeting mode.
 			elif event.key == pygame.K_SPACE and not self.animating():
-
 				# Don't handle it if already in assigning mode; or else it will keep resetting.
 				if type(self.assigning) == int: return []
 				# The players can't assign targets to enemies or to asteroids, or to units that don't have any weapons.
@@ -189,16 +176,13 @@ class GameDisplay:
 			elif event.key == pygame.K_z and not self.animating():
 				if self.selected.weapons and type(self.assigning) == int:
 					self.assigning = 0
-				self.clear_projected_move()
+				self.clear_projected_move(flip=True)
 				return ["ASSIGN:" + json.dumps(self.selected.pos) + ":[]"]
 
 			# Esc gets out of assignment or placement mode.
 			elif event.key == pygame.K_ESCAPE and not self.animating():
-				self.assigning = False
+				self.assigning = None
 				self.select()
-				if self.placing:
-					self.clear_projected_placement()
-					self.placing = None
 
 			# Q, W, E and R are the unique action keys.
 			elif event.key == pygame.K_q:
@@ -207,13 +191,11 @@ class GameDisplay:
 					return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps([{'type': 'hide'}])]
 				# Hangar/Factory details page.
 				elif self.selected.type == "Hangar":
-					self.lock.acquire()
-					self.fill_panel_hangar()
-					self.lock.release()
+					self.details_view = True
+					self.select()
 				elif self.selected.type == "Factory":
-					self.lock.acquire()
-					self.fill_panel_factory()
-					self.lock.release()
+					self.details_view = True
+					self.select()
 				# Engines boost counterclockwise.
 				elif self.selected.type == "Engine":
 					# We need to make sure all Engines are boosting the same direction.
@@ -224,15 +206,13 @@ class GameDisplay:
 					return cmds
 				else: SFX_ERROR.play()
 			elif event.key == pygame.K_w:
-				# Normal Hangar/Hangar panel page.
+				# Normal Hangar/Factory panel page.
 				if self.selected.type == "Hangar":
-					self.lock.acquire()
+					self.details_view = False
 					self.select()
-					self.lock.release()
 				elif self.selected.type == "Factory":
-					self.lock.acquire()
+					self.details_view = False
 					self.select()
-					self.lock.release()
 				# Engines boost clockwise.
 				elif self.selected.type == "Engine":
 					# We need to make sure all Engines are boosting the same direction.
@@ -274,12 +254,14 @@ class GameDisplay:
 				if obstacle and obstacle.type != "Hangar":
 					SFX_ERROR.play()
 					return []
+				# We have to call this here because if we wait for the command to come back in, we won't know what the move to clear was.
+				#self.clear_projected_move(flip=True)
 				return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions + [{'type': 'move', 'move': move}])]
 
 		elif event.type == pygame.KEYUP:
 			# Make sure this doesn't trigger on units that don't have weapons.
-			if event.key == pygame.K_SPACE and isinstance(self.assigning, int):
-				self.assigning = False
+			if event.key == pygame.K_SPACE and type(self.assigning) == int:
+				self.assigning = None
 				self.select()
 
 		# Closing the game. We handle this last because it's the rarest.
@@ -287,8 +269,8 @@ class GameDisplay:
 
 	def add_chat(self, msg):
 		"""Add a message to the chat bar and automatically update the display."""
-		self.lock.acquire()
 		self.chatbar.add_message(msg)
+		self.lock.acquire()
 		pygame.display.update(self.chatbar.rect)
 		self.lock.release()
 
@@ -308,6 +290,102 @@ class GameDisplay:
 		"""reverse_calc_rect converts a pixel rect on screen to a gameboard logical rect."""
 		return pygame.Rect(self.reverse_calc_pos((rect[0], rect[1])), (rect[2] // TILESIZE[0], rect[3] // TILESIZE[1]))
 
+	def entity_pixel_rect(self, entity):
+		"""Finds the rectangle that an Entity is occupying (in terms of pixels)."""
+		rect = entity.rect()
+		return pygame.Rect(self.calc_pos(rect[0:2]), (rect[2] * TILESIZE[0], rect[3] * TILESIZE[1]))
+
+	def select(self, pos=None):
+		"""Selects a gameboard space by logical position (or the space of the selected Entity if no pos is passed) and calls other functions to fill the UI with information."""
+		if self.selected:
+			self.clear_projected_placement()
+			self.clear_projected_move()
+		# Signal other code that we're not showing a hand.
+		self.hand = None
+		if pos:
+			new_selected = self.gamestate.occupied(list(pos))
+			# Switch back to normal view iff we're selected away from something else.
+			if new_selected != self.selected: self.details_view = False
+			self.selected = new_selected
+		if self.selected:
+			pos = self.selected.pos
+			# Regenerate artifacts.
+			self.project_move()
+			self.project_placement()
+		# If we're clearing self.selected, we should get out of assigning mode too.
+		else: self.assigning = None
+		# Now find the Salvage.
+		# FIXME This is an imperfect method, as it makes it impossible to see salvage that's under a big ship but not under its central pos.
+		salvage = None
+		for s in self.gamestate.salvages:
+			if s.pos == pos: salvage = s
+		if not self.details_view:
+			self.fill_panel(salvage)
+		else:
+			if self.selected.type == "Hangar": self.fill_panel_hangar()
+			elif self.selected.type == "Factory": self.fill_panel_factory()
+		self.lock.acquire()
+		pygame.display.flip()
+		self.lock.release()
+
+	def deselect(self):
+		"""Clears the panel and all Display artifacts."""
+		self.selected = None
+		self.assigning = None
+		self.fill_panel()
+		self.clear_projected_move()
+		self.clear_projected_placement()
+		self.lock.acquire()
+		pygame.display.flip()
+		self.lock.release()
+
+	def project_move(self, flip=False):
+		"""Shows a yellow path from the selected Entity projecting the moves it's going to make."""
+		moves = self.selected.moves_planned()
+		if not moves:
+			# Don't waste time.
+			return
+		pos = (self.selected.pos[0] + self.offset[0], self.selected.pos[1] + self.offset[1])
+		for move in self.selected.moves_planned():
+			pos = (pos[0] + move[0], pos[1] + move[1])
+			pygame.draw.rect(self.window, MOVE_PROJECTION_COLOR, (GAME_WINDOW_RECT.left + TILESIZE[0] * pos[0], GAME_WINDOW_RECT.top + TILESIZE[1] * pos[1], TILESIZE[0], TILESIZE[1]), 2)
+		if flip:
+			self.lock.acquire()
+			pygame.display.update(self.calc_rect(self.selected.move_rect()).inflate(2, 2))
+			self.lock.release()
+
+	def clear_projected_move(self, flip=False):
+		"""Clears the yellow projected path from a selected Entity."""
+		# Make this check internally so it's always safe to call this.
+		if not self.selected: return
+		# It seems like rounding requires a +2, +2 expansion.
+		rect = self.calc_rect(self.selected.move_rect()).inflate(2, 2)
+		self.window.fill((0,0,0), rect)
+		# Redraw the other gamestate entities clobbered when we erased.
+		self.draw_gamestate(rect, flip=flip)
+
+	def project_placement(self, flip=False):
+		"""Shows an outline of where the object will be during placement."""
+		# Make this check internally so it's safe to call this function when it isn't applicable.
+		if type(self.assigning) != dict: return
+		placement_spaces = spaces(self.assigning['pos'], self.assigning['shape'], self.assigning['rot'])
+		for space in placement_spaces:
+			pygame.draw.rect(self.window, PLACEMENT_PROJECTION_COLOR, (*self.calc_pos(space), TILESIZE[0], TILESIZE[1]), 2)
+		if flip:
+			self.lock.acquire()
+			pygame.display.update(self.calc_rect(rect(placement_spaces)).inflate(2, 2))
+			self.lock.release()
+
+	def clear_projected_placement(self, flip=False):
+		"""Clears the outline of where the object will be during placement."""
+		# Make this check internally so it's safe to call this function when it isn't applicable.
+		if type(self.assigning) != dict: return
+		p_rect = self.calc_rect(rect(spaces(self.assigning['pos'], self.assigning['shape'], self.assigning['rot'])))
+		self.window.fill((0,0,0), p_rect)
+		if flip:
+			# Redraw the other gamestate entities clobbered when we erased.
+			self.draw_gamestate(p_rect.inflate(2, 2))
+
 	def fill_panel(self, salvage=None):
 		"""fills the panel with information about the given object."""
 		# First, clear it.
@@ -317,13 +395,9 @@ class GameDisplay:
 		# Draw info of whatever salvage is here first, so that it still gets drawn if there's no object.
 		if salvage: draw_text(self.window, str(salvage), TEXT_COLOR, PANEL_SALVAGE_RECT, FONT)
 		# This catch is here so we can call fill_panel() with nothing selected to blank it.
-		if not self.selected:
-			pygame.display.update(PANEL_RECT)
-			return
+		if not self.selected: return
 		draw_text(self.window, self.selected.type, TEXT_COLOR, PANEL_NAME_RECT, FONT)
-		# This must be checked with "is False", because 0 would mean True for this purpose.
-		if self.assigning is not False: draw_text(self.window, "Assigning...", ASSIGNING_TEXT_COLOR, PANEL_ASSIGNING_RECT, FONT)
-		else: pygame.draw.rect(self.window, PANEL_COLOR, PANEL_ASSIGNING_RECT, 0)
+		if self.assigning is not None: draw_text(self.window, "Assigning...", ASSIGNING_TEXT_COLOR, PANEL_ASSIGNING_RECT, FONT)
 		# Hull and shield.
 		draw_text(self.window, str(self.selected.hull) + "/" + str(self.selected.maxhull), TEXT_COLOR, PANEL_HULL_RECT, FONT)
 		draw_bar(self.window, PANEL_HULL_BAR_RECT, TEXT_COLOR, HULL_COLOR, HULL_DAMAGE_COLOR, self.selected.maxhull, self.selected.hull)
@@ -379,8 +453,6 @@ class GameDisplay:
 					rect.h = BAR_HEIGHT
 					draw_bar(self.window, rect, TEXT_COLOR, CONSTRUCTION_COLOR, CONSTRUCTION_EMPTY_COLOR, SHIP_CONSTRUCTION_COSTS[project], self.selected.progress)
 
-		pygame.display.update(PANEL_RECT)
-
 	def fill_panel_hangar(self):
 		"""An alternative to fill_panel called on a Hangar to show the details of its contents."""
 		# First, clear it.
@@ -405,8 +477,6 @@ class GameDisplay:
 			self.panel_buttons.append(button)
 			rect.move_ip(0, h+5)
 
-		pygame.display.update(PANEL_RECT)
-
 	def fill_panel_factory(self):
 		"""An alternative to fill_panel called on a Factory to show the production menu."""
 		# First, clear it.
@@ -428,13 +498,10 @@ class GameDisplay:
 			self.panel_buttons.append(button)
 			rect.move_ip(0, h+5)
 
-		pygame.display.update(PANEL_RECT)
-
 	def show_hand(self):
 		"""Fill the panel with info about a hand of cards."""
-		self.lock.acquire()
 		self.selected = None
-		self.assigning = False
+		self.assigning = None
 		if not self.hand: self.hand = self.player_name
 		# First, clear it.
 		pygame.draw.rect(self.window, PANEL_COLOR, PANEL_RECT, 0)
@@ -455,6 +522,7 @@ class GameDisplay:
 			self.panel_buttons.append(button)
 			rect.move_ip(0, h + 5)
 
+		self.lock.acquire()
 		pygame.display.update(PANEL_RECT)
 		self.lock.release()
 
@@ -466,69 +534,6 @@ class GameDisplay:
 				if i >= len(self.gamestate.players): i = 0
 				self.hand = self.gamestate.players[i].name
 				return self.show_hand()
-
-	def select(self, pos=None):
-		"""Selects a gameboard space by logical position (or the space of the selected Entity if no pos is passed) and calls other functions to fill the UI with information."""
-		# Signal other code that we're not showing a hand.
-		self.hand = None
-		if pos:
-			entity = self.gamestate.occupied(list(pos))
-			# First clear the currently projected move if we're selecting away from sonething else.
-			if self.selected and entity != self.selected:
-				self.clear_projected_move()
-			self.selected = entity
-			if not entity:
-				# If we're clearing self.selected, we should get out of assigning mode too.
-				self.assigning = False
-		if self.selected:
-			self.project_move()
-			pos = self.selected.pos
-		# Now find the Salvage.
-		# FIXME This is an imperfect method, as it makes it impossible to see salvage that's under a big ship but not under its central pos.
-		salvage = None
-		for s in self.gamestate.salvages:
-			if s.pos == pos: salvage = s
-		self.fill_panel(salvage)
-
-	def project_move(self):
-		"""Show a yellow path from the selected Entity projecting the moves it's going to make."""
-		moves = self.selected.moves_planned()
-		if not moves:
-			# Don't waste time.
-			return
-		pos = (self.selected.pos[0] + self.offset[0], self.selected.pos[1] + self.offset[1])
-		for move in self.selected.moves_planned():
-			pos = (pos[0] + move[0], pos[1] + move[1])
-			pygame.draw.rect(self.window, MOVE_PROJECTION_COLOR, (GAME_WINDOW_RECT.left + TILESIZE[0] * pos[0], GAME_WINDOW_RECT.top + TILESIZE[1] * pos[1], TILESIZE[0], TILESIZE[1]), 2)
-		pygame.display.update(self.calc_rect(self.selected.move_rect()).inflate(2, 2))
-
-	def clear_projected_move(self):
-		"""Clears the yellow projected path from a selected Entity."""
-		# It seems like rounding requires a +2, +2 expansion.
-		rect = self.calc_rect(self.selected.move_rect()).inflate(2, 2)
-		self.window.fill((0,0,0), rect)
-		# Redraw the other gamestate entities clobbered when we erased.
-		self.draw_gamestate(rect)
-
-	def project_placement(self):
-		"""Shows an outline of where the object will be during placement."""
-		placement_spaces = spaces(self.placing['pos'], self.placing['shape'], self.placing['rot'])
-		for space in placement_spaces:
-			pygame.draw.rect(self.window, PLACEMENT_PROJECTION_COLOR, (*self.calc_pos(space), TILESIZE[0], TILESIZE[1]), 2)
-		pygame.display.update(self.calc_rect(rect(placement_spaces)))
-
-	def clear_projected_placement(self):
-		"""Clears the outline of where the object will be during placement."""
-		p_rect = self.calc_rect(rect(spaces(self.placing['pos'], self.placing['shape'], self.placing['rot'])))
-		self.window.fill((0,0,0), p_rect)
-		# Redraw the other gamestate entities clobbered when we erased.
-		# It seems like rounding requires a +2, +2 expansion.
-		self.draw_gamestate(p_rect.inflate(2, 2))
-
-	def entity_pixel_rect(self, entity):
-		"""Finds the rectangle that an Entity is occupying (in terms of pixels)."""
-		rect = entity.rect()
-		return pygame.Rect(self.calc_pos(rect[0:2]), (rect[2] * TILESIZE[0], rect[3] * TILESIZE[1]))
 
 	def erase(self, rect):
 		"""Takes a pixel rect and erases only the gameboard entities on it (by redrawing the grid.)"""
@@ -572,9 +577,11 @@ class GameDisplay:
 			if rect.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
 		if flip:
-			# I've heard that update the entire window is slower than flip at least on some hardawre.
+			self.lock.acquire()
+			# I've heard that calling update on the entire window is slower than flip at least on some hardawre.
 			if rect: pygame.display.update(rect)
 			else: pygame.display.flip()
+			self.lock.release()
 
 	def full_redraw(self):
 		"""Blank and redraw the entire game window."""
@@ -584,10 +591,12 @@ class GameDisplay:
 		pygame.display.flip()
 
 	def move(self, entity, move):
+		"""Starts an animation thread to move a unit."""
 		self.anim = threading.Thread(target=self.animate_move, name="move animation", args=(entity, move))
 		self.anim.start()
 
 	def animate_move(self, entity, move):
+		"""The function that the movemnet animation thread runs. This should never be called from the outside. Instead, call move."""
 		# Precalculate the rect we'll need to erase.
 		# TODO This probably only works with one-space ships.
 		move_rect = self.calc_rect(rect((entity.pos, (entity.pos[0] + move[0], entity.pos[1] + move[1]))))
@@ -616,13 +625,10 @@ class GameDisplay:
 		if self.anim and self.anim.is_alive(): return True
 		return False
 
-	def deselect(self):
-		"""An envelope that clears selected, assigning, placing, and clears both the panel and whatever stuff is onscreen from those variables."""
-		if self.selected:
-			self.clear_projected_move()
-			self.selected = None
-		self.assigning = False
-		self.fill_panel()
-		if self.placing:
-			self.clear_projected_placement()
-			self.placing = None
+
+
+def override() -> bool:
+	"""Returns whether an override key is pressed."""
+	pressed = pygame.key.get_pressed()
+	if pressed[pygame.K_LSHIFT] or pressed[pygame.K_RSHIFT]: return True
+	return False
