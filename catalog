@@ -1,14 +1,7 @@
-Space station components: (all have 50 hull)
- Shield Generator	- 100 shields over a range of 4, regenerate 1, then 3, then 8 when not being attacked
- Power Generator	- generates 5 power per turn and can store up to 25; most components take 2 to activate
- Laser Turret		- 3 5 damage lasers
+Space station components to add:
  Missile Turret		- 1 30 damage missile
  Lightning Turret	- 1 10 damage charge
  Antimatter Turret	- 2 8 damage blasts
- Connector		- always 4 way
- Engine			- provides 3 thrust
- Hangar			- holds up to 20 size worth of ships, can launch 1 ship per turn.
- Factory		- turns 2 salvage into production progress (can hold 100 salvage)
  Communications Relay	- allows players to communicate and enable the Distress Call card; maybe also gives you previews of the next wave
 
 Cards:
@@ -22,7 +15,7 @@ Cards:
  Transform		- turn any component into any other component
  Time Stop		- enemies are frozen and cannot be attacked for 5 rounds
  Shield Overcharge	- station takes no damage for 3 rounds
- Planetary Cannon	- deal 200 damage to any enemy ship corvette or bigger
+ Planetary Cannon	- deal 200 damage to any enemy ship
  Bomb			- deal 30 damage to all enemy ships in a 6x6, 7x5, 8x4 or 9x3 area
  Tractor Beam		- move up to 3 objects anywhere
  Relocation		- move up to 2 station components to any other locations (can switch them)
