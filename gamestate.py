@@ -10,7 +10,7 @@ class Gamestate:
 		else: # If no JSON, we load a new game from a mission.
 			self.station = Station()
 			self.enemy_ships = []
-			self.allied_ships = [probe([0, 5])]
+			self.allied_ships = [Probe([0, 5])]
 			self.asteroids = []
 			self.salvages = []
 			self.nextwave = 0
@@ -176,7 +176,7 @@ class Gamestate:
 		return False
 
 	def jump(self, entity, pos, rot=-1):
-		"""Jump an Entity to a position. A rot value of -1 means to not change it."""
+		"""Jump an Entity to a position. A rot value of -1 means to not change it. Salvage on the destination space will bbe automatically picked up if possible."""
 		entity.pos = pos
 		if rot != -1: entity.rot = rot
 		# The landing in Hangars is encapsulated in here, so client and server don't have to copy as much code.
@@ -191,8 +191,8 @@ class Gamestate:
 				if hasattr(entity, 'load'): self.station.receive_salvage(entity)
 				# These return signals are so the client can know whether to play a sound.
 				return "LANDED"
-			# Probes picking up salvage is also encapsulated.
-			if entity.type == "Probe":
+			# Pick up Salvage.
+			if isinstance(entity, SalvageCollector):
 				for salvage in self.salvages:
 					if salvage.pos == entity.pos:
 						entity.collect(salvage)
@@ -320,8 +320,6 @@ class Entity:
 		self.wave = wave
 		# Ally only fields.
 		self.size = size
-		# Probes can carry salvage.
-		if self.type == "Probe": self.load = 0
 
 	def spaces(self):
 		"""Returns all spaces the Entity occupies."""
@@ -407,20 +405,23 @@ class Entity:
 			if action['type'] == 'attack': weapons.remove(action['weapon'])
 		return weapons
 
-	def collect(self, salvage):
-		"""The Ship picks up a piece of salvage. Only Probes can do this."""
-		if self.type != "Probe":
-			return print("Something is wrong, this ship cannot pick up salvage:", self.type, self.pos)
-		collected = min(salvage.amount, PROBE_CAPACITY-self.load)
-		self.load += collected
-		salvage.amount -= collected
-
 	def hangar_describe(self):
 		"""Returns a string suitable for describing the Ship when it's in a Hangar."""
 		string = self.type + "; hull = " + str(self.hull) + "/" + str(self.maxhull) + ", shield = " + str(self.shield) + "/" + str(self.maxshield) + " (+" + str(self.shield_regen_amounts[self.shield_regen_pointer]) + ")"
-		if self.type == "Probe":
+		# I know it's kind of wrong design to have a method check what type the object is, but I decided it was better than just copying the method.
+		if isinstance(self, SalvageCollector):
 			string += "; carrying " + str(self.load) + " salvage"
 		return string
+
+
+class SalvageCollector:
+	def __init__(self):
+		self.load = 0
+	def collect(self, salvage):
+		"""The Ship picks up a piece of salvage. Only Probes can do this."""
+		collected = min(salvage.amount, PROBE_CAPACITY-self.load)
+		self.load += collected
+		salvage.amount -= collected
 
 
 class Component(Entity):
@@ -531,7 +532,7 @@ class Component(Entity):
 			for comp in self.station:
 				if comp.type == "Hangar" and comp.pos == self.hangar:
 					# Position and rotation don't matter for ships spawning in a Hangar. They'll be set when the ship launches.
-					if self.project == "Probe": comp.contents.append(probe([0,0], 0))
+					if self.project == "Probe": comp.contents.append(Probe([0,0], 0))
 					self.progress = 0
 					self.project = None
 					self.hangar = None
@@ -683,8 +684,11 @@ def kamikaze_drone(pos, rot=0, wave=0):
 
 # Player ships.
 
-def probe(pos, rot=0):
-	return Entity("Probe", team='player', pos=pos, shape=(), rot=rot, salvage=PROBE_DROP, hull=PROBE_HULL, shield=PROBE_SHIELD, shield_regen=PROBE_SHIELD_REGEN, weapons=PROBE_WEAPONS, speed=PROBE_SPEED, size=PROBE_SIZE)
+# A Probe is an Entity and a SalvageCollector.
+class Probe(Entity, SalvageCollector):
+	def __init__(self, pos, rot=0):
+		Entity.__init__(self, "Probe", team='player', pos=pos, shape=(), rot=rot, salvage=PROBE_DROP, hull=PROBE_HULL, shield=PROBE_SHIELD, shield_regen=PROBE_SHIELD_REGEN, weapons=PROBE_WEAPONS, speed=PROBE_SPEED, size=PROBE_SIZE)
+		SalvageCollector.__init__(self)
 
 def asteroid(pos, rot=0):
 	return Entity("Asteroid", team=None, pos=pos, shape=(), rot=rot, salvage=ASTEROID_DROP, hull=ASTEROID_HULL, shield=0, shield_regen=(0,), weapons=(), speed=1)
