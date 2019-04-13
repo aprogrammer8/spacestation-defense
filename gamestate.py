@@ -10,7 +10,7 @@ class Gamestate:
 		else: # If no JSON, we load a new game from a mission.
 			self.station = Station()
 			self.enemy_ships = []
-			self.allied_ships = [Probe([0, 5])]
+			self.allied_ships = [Probe(-1, [0, 5])]
 			self.asteroids = []
 			self.salvages = []
 			self.nextwave = 0
@@ -25,9 +25,16 @@ class Gamestate:
 			# The draw pointer is used to keep track of who will get the next card the players draw.
 			self.draw_pointer = 0
 			self.mission = Mission("missions/"+mission)
+			# Every entity will need an internal ID so we don't lose track if it moves or something.
+			self.next_id = 0
+
+	def get_id(self):
+		"""Increment an return the current Entity id. This should be called whenever a new Entity needs to be created."""
+		self.next_id += 1
+		return self.next_id
 
 	def init_station(self, data):
-		for pos in data: self.station.append(Component(list(pos), self.station, data[pos], 0, COMPONENT_HULL))
+		for pos in data: self.station.append(Component(self.get_id(), list(pos), self.station, data[pos], 0, COMPONENT_HULL))
 
 	#def encode(self):
 	#	"""Encodes the Gamestate into a JSON object that can be sent over the network."""
@@ -79,10 +86,14 @@ class Gamestate:
 		"""Inserts the given enemies into the Gamestate. Takes a sequence of dicts with enemy type names as keys and their board positions as values."""
 		for enemy in enemies:
 			# Asteroids aren't technically enemies, but they're handled by the same function.
-			if enemy['type'] == "Asteroid": self.asteroids.append(Asteroid(enemy['pos'], enemy['rot']))
-			elif enemy['type'] == "Drone": self.enemy_ships.append(Drone(enemy['pos'], enemy['rot'], enemy['wave']))
-			elif enemy['type'] == "Kamikaze Drone": self.enemy_ships.append(Lamikaze_Drone(enemy['pos'], enemy['rot'], enemy['wave']))
-			else: print("Unrecognized enemy type:", enemy)
+			if enemy['type'] == "Asteroid":
+				self.asteroids.append(Asteroid(self.get_id(), enemy['pos'], enemy['rot']))
+			elif enemy['type'] == "Drone":
+				self.enemy_ships.append(Drone(self.get_id(), enemy['pos'], enemy['rot'], enemy['wave']))
+			elif enemy['type'] == "Kamikaze Drone":
+				self.enemy_ships.append(Kamikaze_Drone(self.get_id(), enemy['pos'], enemy['rot'], enemy['wave']))
+			else:
+				print("Unrecognized enemy type:", enemy)
 
 	def add_salvage(self, salvage):
 		# If there's already one on the space, it stacks for simplicity.
@@ -294,8 +305,9 @@ def draw_card():
 
 class Entity:
 	"""An Entity is anything that has a position on the board, cannot be overlapped by another Entity, and can be targeted."""
-	def __init__(self, entity_type, team, pos, shape, rot, salvage, hull, shield=0, shield_regen=(0,), weapons=(), speed=0, wave=0, size=0):
-		self.type = entity_type
+	def __init__(self, id, type, team, pos, shape, rot, salvage, hull, shield=0, shield_regen=(0,), weapons=(), speed=0, wave=0, size=0):
+		self.id = id
+		self.type = type
 		self.team = team
 		self.pos = pos
 		# self.shape is a tuple of other positions expressed as offsets from the main pos (when rot == 0), that the Entity also occupies (used for Entities bigger than 1x1).
@@ -426,8 +438,8 @@ class SalvageCollector:
 
 class Component(Entity):
 	"""A Station Component."""
-	def __init__(self, pos, station, type, rot, hull):
-		Entity.__init__(self, type, "ally", pos, shape=((1,0), (0,1), (1,1)), rot=rot, salvage=COMPONENT_SALVAGE, hull=hull, shield=0, shield_regen=(0,))
+	def __init__(self, id, pos, station, type, rot, hull):
+		Entity.__init__(self, id, type, "ally", pos, shape=((1,0), (0,1), (1,1)), rot=rot, salvage=COMPONENT_SALVAGE, hull=hull, shield=0, shield_regen=(0,))
 		if type not in COMPONENT_TYPES: raise TypeError("Not a valid station component type: " + type)
 		self.station = station
 		if type == "Shield Generator":
@@ -677,20 +689,20 @@ COMPONENT_TYPES = (
 # Entity types.
 
 class Drone(Entity):
-	def __init__(self, pos, rot=0, wave=0):
-		Entity.__init__(self, "Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=DRONE_DROP, hull=DRONE_HULL, shield=DRONE_SHIELD, shield_regen=DRONE_SHIELD_REGEN, weapons=DRONE_WEAPONS, speed=DRONE_SPEED, wave=wave)
+	def __init__(self, id, pos, rot=0, wave=0):
+		Entity.__init__(self, id, "Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=DRONE_DROP, hull=DRONE_HULL, shield=DRONE_SHIELD, shield_regen=DRONE_SHIELD_REGEN, weapons=DRONE_WEAPONS, speed=DRONE_SPEED, wave=wave)
 
 class Kamikaze_Drone(Entity):
-	def __init__(self, pos, rot=0, wave=0):
-		Entity.__init__(self, "Kamikaze Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=KAMIKAZE_DRONE_DROP, hull=KAMIKAZE_DRONE_HULL, shield=KAMIKAZE_DRONE_SHIELD, shield_regen=KAMIKAZE_DRONE_SHIELD_REGEN, weapons=KAMIKAZE_DRONE_WEAPONS, speed=KAMIKAZE_DRONE_SPEED, wave=wave)
+	def __init__(self, id, pos, rot=0, wave=0):
+		Entity.__init__(self, id, "Kamikaze Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=KAMIKAZE_DRONE_DROP, hull=KAMIKAZE_DRONE_HULL, shield=KAMIKAZE_DRONE_SHIELD, shield_regen=KAMIKAZE_DRONE_SHIELD_REGEN, weapons=KAMIKAZE_DRONE_WEAPONS, speed=KAMIKAZE_DRONE_SPEED, wave=wave)
 
 # Player ships.
 
 class Probe(Entity, SalvageCollector):
-	def __init__(self, pos, rot=0):
-		Entity.__init__(self, "Probe", team='player', pos=pos, shape=(), rot=rot, salvage=PROBE_DROP, hull=PROBE_HULL, shield=PROBE_SHIELD, shield_regen=PROBE_SHIELD_REGEN, weapons=PROBE_WEAPONS, speed=PROBE_SPEED, size=PROBE_SIZE)
+	def __init__(self, id, pos, rot=0):
+		Entity.__init__(self, id, "Probe", team='player', pos=pos, shape=(), rot=rot, salvage=PROBE_DROP, hull=PROBE_HULL, shield=PROBE_SHIELD, shield_regen=PROBE_SHIELD_REGEN, weapons=PROBE_WEAPONS, speed=PROBE_SPEED, size=PROBE_SIZE)
 		SalvageCollector.__init__(self)
 
 class Asteroid(Entity):
-	def __init__(self, pos, rot=0):
-		Entity.__init__(self, "Asteroid", team=None, pos=pos, shape=(), rot=rot, salvage=ASTEROID_DROP, hull=ASTEROID_HULL, shield=0, shield_regen=(0,), weapons=(), speed=1)
+	def __init__(self, id, pos, rot=0):
+		Entity.__init__(self, id, "Asteroid", team=None, pos=pos, shape=(), rot=rot, salvage=ASTEROID_DROP, hull=ASTEROID_HULL, shield=0, shield_regen=(0,), weapons=(), speed=1)
