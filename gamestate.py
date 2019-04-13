@@ -9,12 +9,12 @@ class Gamestate:
 			return
 		else: # If no JSON, we load a new game from a mission.
 			self.station = Station()
-			self.enemy_ships = []
-			self.allied_ships = [Probe(-1, [0, 5])]
-			self.asteroids = []
-			self.salvages = []
+			self.ships = set()
+			self.asteroids = set()
+			self.salvages = set()
 			self.nextwave = 0
 			self.round = 0
+			self.ships.add(Probe(-1, [0, 5]))
 			# Number of turns left before the next wave should come.
 			self.time = 0
 			# Rewards for each sent wave. The gamestate tracks this itself for restoration purposes.
@@ -34,9 +34,7 @@ class Gamestate:
 		"""Returns the Entity occupying a gameboard space."""
 		for entity in self.station:
 			if pos in entity.spaces(): return entity
-		for entity in self.allied_ships:
-			if pos in entity.spaces(): return entity
-		for entity in self.enemy_ships:
+		for entity in self.ships:
 			if pos in entity.spaces(): return entity
 		for entity in self.asteroids:
 			if pos in entity.spaces(): return entity
@@ -119,7 +117,7 @@ class Gamestate:
 	# Basic mutating methods.
 
 	def init_station(self, data):
-		for pos in data: self.station.append(Component(self.get_id(), list(pos), self.station, data[pos], 0, COMPONENT_HULL))
+		for pos in data: self.station.add(Component(self.get_id(), list(pos), self.station, data[pos], 0, COMPONENT_HULL))
 
 	#def encode(self):
 	#	"""Encodes the Gamestate into a JSON object that can be sent over the network."""
@@ -134,8 +132,7 @@ class Gamestate:
 
 	def clear(self):
 		"""Clears the stored actions and moves of all gamestate objects."""
-		for ship in self.allied_ships: ship.actions = []
-		for ship in self.enemy_ships: ship.actions = []
+		for ship in self.ships: ship.actions = []
 		for component in self.station: component.actions = []
 		for asteroid in self.asteroids: asteroid.actions = []
 
@@ -143,11 +140,11 @@ class Gamestate:
 		"""Do every-round tasks, like regenerating power and salvage decay and stuff."""
 		self.clear()
 		self.station.power_regen()
-		# Salvage decay. We make a new list to avoid messings things up by changing the size during iteration.
-		new_salvages = []
+		# Salvage decay. We make a new set to avoid messings things up by changing the size during iteration.
+		new_salvages = set()
 		for salvage in self.salvages:
 			salvage.decay()
-			if salvage.amount > 0: new_salvages.append(salvage)
+			if salvage.amount > 0: new_salvages.add(salvage)
 		self.salvages = new_salvages
 		if not clientside:
 			# Advance the mission track.
@@ -172,11 +169,11 @@ class Gamestate:
 		for enemy in enemies:
 			# Asteroids aren't technically enemies, but they're handled by the same function.
 			if enemy['type'] == "Asteroid":
-				self.asteroids.append(Asteroid(self.get_id(), enemy['pos'], enemy['rot']))
+				self.asteroids.add(Asteroid(self.get_id(), enemy['pos'], enemy['rot']))
 			elif enemy['type'] == "Drone":
-				self.enemy_ships.append(Drone(self.get_id(), enemy['pos'], enemy['rot'], enemy['wave']))
+				self.ships.add(Drone(self.get_id(), enemy['pos'], enemy['rot'], enemy['wave']))
 			elif enemy['type'] == "Kamikaze Drone":
-				self.enemy_ships.append(Kamikaze_Drone(self.get_id(), enemy['pos'], enemy['rot'], enemy['wave']))
+				self.ships.add(Kamikaze_Drone(self.get_id(), enemy['pos'], enemy['rot'], enemy['wave']))
 			else:
 				print("Unrecognized enemy type:", enemy)
 
@@ -188,7 +185,7 @@ class Gamestate:
 				s.time = max(s.time, salvage.time)
 				return
 		# Otherwise, we just add it.
-		self.salvages.append(salvage)
+		self.salvages.add(salvage)
 
 	def jump(self, entity, pos, rot=-1):
 		"""Jump an Entity to a position. A rot value of -1 means to not change it. Salvage on the destination space will bbe automatically picked up if possible."""
@@ -199,8 +196,8 @@ class Gamestate:
 			obstacle = self.occupied_area(entity.spaces(), exclude=entity)
 			# If there's an obstacle other than a Hangar, then the server sent an invalid move and that's not the client's responsibility.
 			if obstacle:
-				# Land it: remove it from the list of visible allied ships, and add it to the hangar's contents.
-				self.allied_ships.remove(entity)
+				# Land it: remove it from the list of visible ships, and add it to the hangar's contents.
+				self.ships.remove(entity)
 				obstacle.contents.append(entity)
 				# Dump any salvage the ship was carrying.
 				if hasattr(entity, 'load'): self.station.receive_salvage(entity)
@@ -224,13 +221,9 @@ class Gamestate:
 			if e == entity:
 				self.station.remove(e)
 				return
-		for e in self.allied_ships:
+		for e in self.ships:
 			if e == entity:
-				self.allied_ships.remove(e)
-				return
-		for e in self.enemy_ships:
-			if e == entity:
-				self.enemy_ships.remove(e)
+				self.ships.remove(e)
 				return
 		for e in self.asteroids:
 			if e == entity:
@@ -254,10 +247,7 @@ class Gamestate:
 			del hangar.contents[index]
 			# Clear actions so the ship won't come out with moves.
 			ship.actions = []
-			if ship.team == 'player':
-				self.allied_ships.append(ship)
-			else:
-				self.enemy_ships.append(ship)
+			self.ships.add(ship)
 			self.jump(ship, pos, rot)
 		return True
 
@@ -272,7 +262,8 @@ class Gamestate:
 			for comp in factory.station:
 				if comp.type == "Hangar" and comp.pos == factory.hangar:
 					# Position and rotation don't matter for ships spawning in a Hangar. They'll be set when the ship launches.
-					if factory.project == "Probe": comp.contents.append(Probe(self.get_id(), [0,0], 0))
+					if factory.project == "Probe":
+						comp.contents.append(Probe(self.get_id(), [0,0], 0))
 					factory.progress = 0
 					factory.project = None
 					factory.hangar = None
@@ -282,16 +273,16 @@ class Gamestate:
 
 	def assign_random_targets(self, entity):
 		"""Target all an Entity's weapons at random Entities of the opposite side."""
-		if entity.team == "enemy": targets = self.allied_ships + self.station
-		else: targets = self.enemy_ships + self.asteroids
-		i = 0
-		for weapon in entity.untargeted():
+		if entity.team == "enemy":
+			targets = {ship for ship in self.ships if ship.team == 'player'}.union(self.station)
+		else:
+			targets = {ship for ship in self.ships if ship.team == 'enemy'}.union(self.asteroids)
+		for i in entity.untargeted():
 			# For now, we just pick out the first possible target.
 			for target in targets:
-				if self.in_range(entity, entity.weapons[weapon], target):
+				if self.in_range(entity, entity.weapons[i], target):
 					entity.target(i, target.pos)
 					break
-			i += 1
 
 	def assign_random_move(self, entity) -> bool:
 		"""Assigns a random move to the Entity. Used for Asteroids and sometimes enemies. Returns True if a move was made, False if no moves were legal."""
@@ -464,7 +455,7 @@ class SalvageCollector:
 class Component(Entity):
 	"""A Station Component."""
 	def __init__(self, id, pos, station, type, rot, hull):
-		Entity.__init__(self, id, type, "ally", pos, shape=((1,0), (0,1), (1,1)), rot=rot, salvage=COMPONENT_SALVAGE, hull=hull, shield=0, shield_regen=(0,))
+		Entity.__init__(self, id, type, "player", pos, shape=((1,0), (0,1), (1,1)), rot=rot, salvage=COMPONENT_SALVAGE, hull=hull, shield=0, shield_regen=(0,))
 		if type not in COMPONENT_TYPES: raise TypeError("Not a valid station component type: " + type)
 		self.station = station
 		if type == "Shield Generator":
@@ -563,11 +554,11 @@ class Composite:
 	def __init__(self, components):
 		self.compoments = components
 
-class Station(list):
+class Station(set):
 	"""Station is an extension of a list, and its methods basically just propagate the calls down to each Component."""
-	def __init__(self, li=None):
-		if li is None: li = []
-		list.__init__(self, li)
+	def __init__(self, items=None):
+		if items is None: items = set()
+		set.__init__(self, items)
 		self.power = 0
 		self.salvage = 6
 		self.thrust = 0

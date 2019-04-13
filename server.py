@@ -37,14 +37,16 @@ def collect_input():
 
 
 def players_move():
-	# This one is very simple since no AI is necessary.
 	for component in gamestate.station: process_actions(component)
-	for ship in gamestate.allied_ships: process_actions(ship)
+	for ship in gamestate.ships:
+		if ship.team == 'player': process_actions(ship)
 
 
 def enemies_move():
-	for enemy in gamestate.enemy_ships:
+	for enemy in gamestate.ships:
+		if enemy.team == 'player': continue
 		gamestate.assign_random_targets(enemy)
+		# If there are still untargeted weapons after that, it's because the enemy wasn't in range, so if it can, it should move and try again.
 		while enemy.untargeted() and enemy.moves_left():
 			if not gamestate.assign_random_move(enemy): break
 			gamestate.assign_random_targets(enemy)

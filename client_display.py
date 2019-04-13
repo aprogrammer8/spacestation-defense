@@ -165,8 +165,8 @@ class GameDisplay:
 			elif event.key == pygame.K_SPACE and not self.animating():
 				# Don't handle it if already in assigning mode; or else it will keep resetting.
 				if type(self.assigning) == int: return []
-				# The players can't assign targets to enemies or to asteroids, or to units that don't have any weapons.
-				if self.selected in self.gamestate.enemy_ships or self.selected in self.gamestate.asteroids or not self.selected.weapons:
+				# The players can't assign targets to non-allied units, or to units that don't have any weapons.
+				if self.selected.team != 'player' or not self.selected.weapons:
 					SFX_ERROR.play()
 					return []
 				self.assigning = 0
@@ -567,10 +567,7 @@ class GameDisplay:
 		for entity in self.gamestate.station:
 			if rect.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
-		for entity in self.gamestate.enemy_ships:
-			if rect.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
-				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
-		for entity in self.gamestate.allied_ships:
+		for entity in self.gamestate.ships:
 			if rect.colliderect(self.entity_pixel_rect(entity)) and exclude != entity:
 				self.window.blit(IMAGE_DICT[entity.type], self.calc_pos(entity.pos))
 		for entity in self.gamestate.asteroids:
