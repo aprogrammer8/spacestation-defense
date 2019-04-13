@@ -79,9 +79,9 @@ class Gamestate:
 		"""Inserts the given enemies into the Gamestate. Takes a sequence of dicts with enemy type names as keys and their board positions as values."""
 		for enemy in enemies:
 			# Asteroids aren't technically enemies, but they're handled by the same function.
-			if enemy['type'] == "Asteroid": self.asteroids.append(asteroid(enemy['pos'], enemy['rot']))
-			elif enemy['type'] == "Drone": self.enemy_ships.append(drone(enemy['pos'], enemy['rot'], enemy['wave']))
-			elif enemy['type'] == "Kamikaze Drone": self.enemy_ships.append(kamikaze_drone(enemy['pos'], enemy['rot'], enemy['wave']))
+			if enemy['type'] == "Asteroid": self.asteroids.append(Asteroid(enemy['pos'], enemy['rot']))
+			elif enemy['type'] == "Drone": self.enemy_ships.append(Drone(enemy['pos'], enemy['rot'], enemy['wave']))
+			elif enemy['type'] == "Kamikaze Drone": self.enemy_ships.append(Lamikaze_Drone(enemy['pos'], enemy['rot'], enemy['wave']))
 			else: print("Unrecognized enemy type:", enemy)
 
 	def add_salvage(self, salvage):
@@ -674,21 +674,23 @@ COMPONENT_TYPES = (
 	"Factory",
 )
 
-# The functions below initialize entity types.
+# Entity types.
 
-def drone(pos, rot=0, wave=0):
-	return Entity("Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=DRONE_DROP, hull=DRONE_HULL, shield=DRONE_SHIELD, shield_regen=DRONE_SHIELD_REGEN, weapons=DRONE_WEAPONS, speed=DRONE_SPEED, wave=wave)
+class Drone(Entity):
+	def __init__(self, pos, rot=0, wave=0):
+		Entity.__init__(self, "Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=DRONE_DROP, hull=DRONE_HULL, shield=DRONE_SHIELD, shield_regen=DRONE_SHIELD_REGEN, weapons=DRONE_WEAPONS, speed=DRONE_SPEED, wave=wave)
 
-def kamikaze_drone(pos, rot=0, wave=0):
-	return Entity("Kamikaze Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=KAMIKAZE_DRONE_DROP, hull=KAMIKAZE_DRONE_HULL, shield=KAMIKAZE_DRONE_SHIELD, shield_regen=KAMIKAZE_DRONE_SHIELD_REGEN, weapons=KAMIKAZE_DRONE_WEAPONS, speed=KAMIKAZE_DRONE_SPEED, wave=wave)
+class Kamikaze_Drone(Entity):
+	def __init__(self, pos, rot=0, wave=0):
+		Entity.__init__(self, "Kamikaze Drone", team='enemy', pos=pos, shape=(), rot=rot, salvage=KAMIKAZE_DRONE_DROP, hull=KAMIKAZE_DRONE_HULL, shield=KAMIKAZE_DRONE_SHIELD, shield_regen=KAMIKAZE_DRONE_SHIELD_REGEN, weapons=KAMIKAZE_DRONE_WEAPONS, speed=KAMIKAZE_DRONE_SPEED, wave=wave)
 
 # Player ships.
 
-# A Probe is an Entity and a SalvageCollector.
 class Probe(Entity, SalvageCollector):
 	def __init__(self, pos, rot=0):
 		Entity.__init__(self, "Probe", team='player', pos=pos, shape=(), rot=rot, salvage=PROBE_DROP, hull=PROBE_HULL, shield=PROBE_SHIELD, shield_regen=PROBE_SHIELD_REGEN, weapons=PROBE_WEAPONS, speed=PROBE_SPEED, size=PROBE_SIZE)
 		SalvageCollector.__init__(self)
 
-def asteroid(pos, rot=0):
-	return Entity("Asteroid", team=None, pos=pos, shape=(), rot=rot, salvage=ASTEROID_DROP, hull=ASTEROID_HULL, shield=0, shield_regen=(0,), weapons=(), speed=1)
+class Asteroid(Entity):
+	def __init__(self, pos, rot=0):
+		Entity.__init__(self, "Asteroid", team=None, pos=pos, shape=(), rot=rot, salvage=ASTEROID_DROP, hull=ASTEROID_HULL, shield=0, shield_regen=(0,), weapons=(), speed=1)
