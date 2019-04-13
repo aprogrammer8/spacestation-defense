@@ -261,6 +261,22 @@ class Gamestate:
 			self.jump(ship, pos, rot)
 		return True
 
+	def factory_work(self, factory):
+		"""Progresses construction of a Factory, and places the ship if it finishes."""
+		if not factory.project or factory.actions == [{'type': 'off'}]: return
+		progress = min(FACTORY_SPEED, SHIP_CONSTRUCTION_COSTS[factory.project] - factory.progress, factory.station.salvage)
+		factory.progress += progress
+		factory.station.salvage -= progress
+		if factory.progress >= SHIP_CONSTRUCTION_COSTS[factory.project]:
+			# First, make sure the Hangar is still alive.
+			for comp in factory.station:
+				if comp.type == "Hangar" and comp.pos == factory.hangar:
+					# Position and rotation don't matter for ships spawning in a Hangar. They'll be set when the ship launches.
+					if factory.project == "Probe": comp.contents.append(Probe(self.get_id(), [0,0], 0))
+					factory.progress = 0
+					factory.project = None
+					factory.hangar = None
+					return
 
 	# Methods for assigning random actions.
 
@@ -542,22 +558,6 @@ class Component(Entity):
 			else: string += ", " + type + " x " + str(ship_dict[type])
 		return string
 
-	def work(self):
-		"""For Factories, progresses construction."""
-		if not self.project or self.actions == [{'type': 'off'}]: return
-		progress = min(FACTORY_SPEED, SHIP_CONSTRUCTION_COSTS[self.project] - self.progress, self.station.salvage)
-		self.progress += progress
-		self.station.salvage -= progress
-		if self.progress >= SHIP_CONSTRUCTION_COSTS[self.project]:
-			# First, make sure the Hangar is still alive.
-			for comp in self.station:
-				if comp.type == "Hangar" and comp.pos == self.hangar:
-					# Position and rotation don't matter for ships spawning in a Hangar. They'll be set when the ship launches.
-					if self.project == "Probe": comp.contents.append(Probe([0,0], 0))
-					self.progress = 0
-					self.project = None
-					self.hangar = None
-					return
 
 class Composite:
 	def __init__(self, components):

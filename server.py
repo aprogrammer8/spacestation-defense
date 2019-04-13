@@ -119,7 +119,7 @@ def playout_actions(entity):
 		else: print(action, "is an invalid action")
 
 	# The legality checks are handled inside the method.
-	if entity.type == "Factory": entity.work()
+	if entity.type == "Factory": gamestate.factory_work(entity)
 
 
 def main():

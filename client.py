@@ -251,7 +251,7 @@ def execute_move(cmd, display):
 		else: print(action, "is an invalid action")
 
 	# The legality checks (besides the power check) are handled inside the method.
-	if entity.type == "Factory": entity.work()
+	if entity.type == "Factory": gamestate.factory_work(entity)
 
 	# This hopefully won't be necessary in the end.
 	display.full_redraw()
