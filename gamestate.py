@@ -28,6 +28,8 @@ class Gamestate:
 			# Every entity will need an internal ID so we don't lose track if it moves or something.
 			self.next_id = 0
 
+	# Non-mutating methods.
+
 	def occupied(self, pos):
 		"""Returns the Entity occupying a gameboard space."""
 		for entity in self.station:
@@ -113,6 +115,8 @@ class Gamestate:
 		"""Increment an return the current Entity id. This should be called whenever a new Entity needs to be created."""
 		self.next_id += 1
 		return self.next_id
+
+	# Basic mutating methods.
 
 	def init_station(self, data):
 		for pos in data: self.station.append(Component(self.get_id(), list(pos), self.station, data[pos], 0, COMPONENT_HULL))
@@ -233,6 +237,8 @@ class Gamestate:
 				self.asteroids.remove(e)
 				return
 
+	# Type-specific mutating methods.
+
 	def hangar_launch(self, hangar, index, pos, rot, test=False):
 		"""Launch a ship from a Hangar. Returns True if the launch is legal. If test is True, it will return the legality of the launch but won't do it."""
 		try: ship = hangar.contents[index]
@@ -254,6 +260,9 @@ class Gamestate:
 				self.enemy_ships.append(ship)
 			self.jump(ship, pos, rot)
 		return True
+
+
+	# Methods for assigning random actions.
 
 	def assign_random_targets(self, entity):
 		"""Target all an Entity's weapons at random Entities of the opposite side."""
