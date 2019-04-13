@@ -28,6 +28,87 @@ class Gamestate:
 			# Every entity will need an internal ID so we don't lose track if it moves or something.
 			self.next_id = 0
 
+	def occupied(self, pos):
+		"""Returns the Entity occupying a gameboard space."""
+		for entity in self.station:
+			if pos in entity.spaces(): return entity
+		for entity in self.allied_ships:
+			if pos in entity.spaces(): return entity
+		for entity in self.enemy_ships:
+			if pos in entity.spaces(): return entity
+		for entity in self.asteroids:
+			if pos in entity.spaces(): return entity
+
+	def occupied_area(self, spaces, exclude=None):
+		"""Returns an Entity occupying any of a sequence of spaces."""
+		for space in spaces:
+			entity = self.occupied(space)
+			if entity and entity != exclude: return entity
+
+	def find_open_pos(self, size=(1,1)):
+		"""Searches through all game objects and finds an unoccupied position to put the enemy on."""
+		while True:
+			pos = [random.randint(-5,5), random.randint(5,7)]
+			if not self.occupied(pos): return pos
+
+	def invalid_move(self, entity, move):
+		"""Takes an Entity and a proposed move, and checks all destination spaces for obstructions."""
+		for space in entity.projected_spaces():
+			occupied = self.occupied([space[0] + move[0], space[1] + move[1]])
+			# Have to also check for equality, because big ships will overlap themselves when they move.
+			if occupied and occupied != entity: return occupied
+		return False
+
+	def path(self, source_entity, source, type, target):
+		"""Attempts to find a path for an attack to get from one space to a target space. The source_entity is needed so we don't count it as an obstacle."""
+		dist = [abs(target[0] - source[0]), abs(target[1] - source[1])]
+		total_dist = dist[0] + dist[1]
+		# It's ugly, but it finds the distance with magnitude reduced to 1 or -1.
+		dir = ({True: 1, False: -1}[target[0] > source[0]], {True: 1, False: -1}[target[1] > source[1]])
+		probe = [source[0], source[1]]
+		step_x, step_y = dist[0] / total_dist, dist[1] / total_dist
+		counter = [0, 0]
+		while probe != target:
+			if probe != source:
+				block = self.occupied(probe)
+				# Make sure we don't fail if we run over another space of the same entity.
+				if block and block != source_entity: break
+			# Only increment the counter if neither one is already above 1.
+			if not (counter[0] > 1 or counter[1] > 1):
+				counter[0] += step_x
+				counter[1] += step_y
+			if counter[0] < 1 and counter[1] < 1: continue
+			# If only x has advanced enough.
+			if counter[0] >= 1 and counter[1] < 1:
+				counter[0] -= 1
+				probe[0] += dir[0]
+				dist[0] -= 1
+			# If only y has advanced enough.
+			elif counter[1] >= 1 and counter[0] < 1:
+				counter[1] -= 1
+				probe[1] += dir[1]
+				dist[1] -= 1
+			# They've both advanced, so we need to check which one is higher.
+			else:
+				if counter[0] > counter[1]:
+					counter[0] -= 1
+					probe[0] += dir[0]
+					dist[0] -= 1
+				else:
+					counter[1] -= 1
+					probe[1] += dir[1]
+					dist[1] -= 1
+		if probe == target: return True
+		return False
+
+	def in_range(self, source, type, target):
+		"""Determines whether a source is in range of a target. type is the type of attack - some might have range limits."""
+		# Try all source spaces to all target spaces.
+		for source_space in source.projected_spaces():
+			for target_space in target.spaces():
+				if self.path(source, source_space, type, target_space): return True
+		return False
+
 	def get_id(self):
 		"""Increment an return the current Entity id. This should be called whenever a new Entity needs to be created."""
 		self.next_id += 1
@@ -55,7 +136,7 @@ class Gamestate:
 		for asteroid in self.asteroids: asteroid.actions = []
 
 	def upkeep(self, clientside=False):
-		"""Do every-round tasks, like regenerating power and stuff."""
+		"""Do every-round tasks, like regenerating power and salvage decay and stuff."""
 		self.clear()
 		self.station.power_regen()
 		# Salvage decay. We make a new list to avoid messings things up by changing the size during iteration.
@@ -104,87 +185,6 @@ class Gamestate:
 				return
 		# Otherwise, we just add it.
 		self.salvages.append(salvage)
-
-	def occupied(self, pos):
-		"""Returns the Entity occupying a gameboard space."""
-		for entity in self.station:
-			if pos in entity.spaces(): return entity
-		for entity in self.allied_ships:
-			if pos in entity.spaces(): return entity
-		for entity in self.enemy_ships:
-			if pos in entity.spaces(): return entity
-		for entity in self.asteroids:
-			if pos in entity.spaces(): return entity
-
-	def occupied_area(self, spaces, exclude=None):
-		"""Returns an Entity occupying any of a sequence of spaces."""
-		for space in spaces:
-			entity = self.occupied(space)
-			if entity and entity != exclude: return entity
-
-	def find_open_pos(self, size=(1,1)):
-		"""Searches through all game objects and finds an unoccupied position to put the enemy on."""
-		while True:
-			pos = [random.randint(-5,5), random.randint(5,7)]
-			if not self.occupied(pos): return pos
-
-	def invalid_move(self, entity, move):
-		"""Helper function that takes an Entity and a proposed move, and checks all destination spaces for obstructions."""
-		for space in entity.projected_spaces():
-			occupied = self.occupied([space[0] + move[0], space[1] + move[1]])
-			# Have to also check for equality, because big ships will overlap themselves when they move.
-			if occupied and occupied != entity: return occupied
-		return False
-
-	def in_range(self, source, type, target):
-		"""Determines whether a source is in range of a target. type is the type of attack - some might have range limits."""
-		# Try all source spaces to all target spaces.
-		for source_space in source.projected_spaces():
-			for target_space in target.spaces():
-				if self.path(source, source_space, type, target_space): return True
-		return False
-
-	def path(self, source_entity, source, type, target):
-		"""Attempts to find a path for an attack to get from one space to a target space. The source_entity is needed so we don't count it as an obstacle."""
-		dist = [abs(target[0] - source[0]), abs(target[1] - source[1])]
-		total_dist = dist[0] + dist[1]
-		# It's ugly, but it finds the distance with magnitude reduced to 1 or -1.
-		dir = ({True: 1, False: -1}[target[0] > source[0]], {True: 1, False: -1}[target[1] > source[1]])
-		probe = [source[0], source[1]]
-		step_x, step_y = dist[0] / total_dist, dist[1] / total_dist
-		counter = [0, 0]
-		while probe != target:
-			if probe != source:
-				block = self.occupied(probe)
-				# Make sure we don't fail if we run over another space of the same entity.
-				if block and block != source_entity: break
-			# Only increment the counter if neither one is already above 1.
-			if not (counter[0] > 1 or counter[1] > 1):
-				counter[0] += step_x
-				counter[1] += step_y
-			if counter[0] < 1 and counter[1] < 1: continue
-			# If only x has advanced enough.
-			if counter[0] >= 1 and counter[1] < 1:
-				counter[0] -= 1
-				probe[0] += dir[0]
-				dist[0] -= 1
-			# If only y has advanced enough.
-			elif counter[1] >= 1 and counter[0] < 1:
-				counter[1] -= 1
-				probe[1] += dir[1]
-				dist[1] -= 1
-			# They've both advanced, so we need to check which one is higher.
-			else:
-				if counter[0] > counter[1]:
-					counter[0] -= 1
-					probe[0] += dir[0]
-					dist[0] -= 1
-				else:
-					counter[1] -= 1
-					probe[1] += dir[1]
-					dist[1] -= 1
-		if probe == target: return True
-		return False
 
 	def jump(self, entity, pos, rot=-1):
 		"""Jump an Entity to a position. A rot value of -1 means to not change it. Salvage on the destination space will bbe automatically picked up if possible."""
@@ -255,9 +255,9 @@ class Gamestate:
 			self.jump(ship, pos, rot)
 		return True
 
-	def assign_random_targets(self, entity, enemy=True):
-		"""Target all an Entity's weapons at random enemies (allies if the enemy param is True)."""
-		if enemy: targets = self.allied_ships + self.station
+	def assign_random_targets(self, entity):
+		"""Target all an Entity's weapons at random Entities of the opposite side."""
+		if entity.team == "enemy": targets = self.allied_ships + self.station
 		else: targets = self.enemy_ships + self.asteroids
 		i = 0
 		for weapon in entity.untargeted():
@@ -269,7 +269,7 @@ class Gamestate:
 			i += 1
 
 	def assign_random_move(self, entity) -> bool:
-		"""Assigns a random move to the Entity. Used for asteroids and sometimes enemies. Returns True if a move was made, False if no moves were legal."""
+		"""Assigns a random move to the Entity. Used for Asteroids and sometimes enemies. Returns True if a move was made, False if no moves were legal."""
 		valid_moves = []
 		for move in ([0, 1], [0, -1], [1, 0], [-1, 0]):
 			if not self.invalid_move(entity, move): valid_moves.append(move)
