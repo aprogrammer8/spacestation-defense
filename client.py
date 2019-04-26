@@ -272,8 +272,8 @@ def await_animation(display):
 				missed_buffer.append(msg)
 		for event in pygame.event.get():
 			response = display.event_respond(event)
-			# The repsonse is always a message to be sent to the server.
-			if response: sock.send(encode(response))
+			if response:
+				for r in response: sock.send(encode(r))
 
 def init_images():
 	"""The images defined in client_config.py need to be fixed for transparency. But client_config.py can't do that, because it runs before the pygame display has been initialized. So we do it here."""
