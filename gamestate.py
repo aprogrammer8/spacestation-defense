@@ -114,6 +114,11 @@ class Gamestate:
 		self.next_id += 1
 		return self.next_id
 
+	def get_entity_from_id(self, id):
+		"""Returns the Entity object with the specified id."""
+		for entity in self.station.union(self.ships, self.asteroids):
+			if entity.id == id: return entity
+
 	# Basic mutating methods.
 
 	def init_station(self, data):
