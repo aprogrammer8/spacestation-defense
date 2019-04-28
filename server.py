@@ -24,16 +24,18 @@ def collect_input():
 			pass
 		# When a player is ready to proceed.
 		elif msg == "DONE":
+			# Find the player in the list and mark them as ready.
 			for player in players:
 				if player.name == player_name:
 					player.done = True
 					break
+			# Check if all players are ready, and if so, move on.
 			done = True
 			for player in players:
 				if not player.done:
 					done = False
 					break
-			if done: break
+			if done: return
 
 
 def players_move():
