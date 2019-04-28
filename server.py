@@ -41,7 +41,6 @@ def enemy_ai():
 	for enemy in gamestate.ships:
 		if enemy.team != 'enemy': continue
 		command = assign_random_targets(gamestate, enemy)
-		print(command)
 		if command: interpret_assign(gamestate, command)
 		# If there are still untargeted weapons after that, it's because the enemy wasn't in range, so if it can, it should move and try again.
 		while enemy.untargeted() and enemy.moves_left():
@@ -50,7 +49,6 @@ def enemy_ai():
 				break
 			interpret_assign(gamestate, move_cmd)
 			command = assign_random_targets(gamestate, enemy)
-			print(command)
 			if command: interpret_assign(gamestate, command)
 		sock.send(encode(command))
 
@@ -58,7 +56,6 @@ def asteroid_ai():
 	for asteroid in gamestate.asteroids:
 		if random.random() <= ASTEROID_MOVE_CHANCE:
 			command = assign_random_move(gamestate, asteroid)
-			print(command)
 			interpret_assign(gamestate, command)
 			sock.send(encode(command))
 

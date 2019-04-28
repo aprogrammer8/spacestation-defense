@@ -158,6 +158,7 @@ def play(players):
 		events = selector.select(0)
 		for key, _ in events:
 			msg = recv_message(key.fileobj)
+			print(msg)
 			handle_server_msg(msg, display)
 		# Catch missed messages.
 		for m in missed_buffer:

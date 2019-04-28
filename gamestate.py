@@ -261,7 +261,7 @@ class Gamestate:
 		self.salvages.add(salvage)
 
 	def jump(self, entity, pos, rot=-1):
-		"""Jump an Entity to a position. A rot value of -1 means to not change it. Salvage on the destination space will bbe automatically picked up if possible."""
+		"""Jump an Entity to a position. A rot value of -1 means to not change it. Salvage on the destination space will be automatically picked up if possible."""
 		entity.pos = pos
 		if rot != -1: entity.rot = rot
 		# The landing in Hangars is encapsulated in here, so client and server don't have to copy as much code.
