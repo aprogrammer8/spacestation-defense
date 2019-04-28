@@ -121,6 +121,74 @@ class Gamestate:
 
 	# Basic mutating methods.
 
+	def playout(self):
+		"""Plays out all Entities actions."""
+		# We sort Entities in a top-left to bottom-right order for determinism.
+		entities_to_act = sorted(self.station.union(self.ships, self.asteroids),
+			# This lambda ensures (because False gtes sorted before True) that player stuff goes first, then enemy stuff, then asteroids; and within that, it goes by position.
+			key = lambda e: (e.team!='player', e.team!='enemy', e.pos))
+		for entity in entities_to_act:
+			if isinstance(entity, Component):
+				if entity.powered() and not self.station.use_power():
+					continue
+			else:
+				# Non-Components have independent shield regeneration.
+				entity.shield_regen()
+			# We yield each time the client needs to play an animation to reflect the action. The server will just do nothing with them when it calls this.
+			animation = self.playout_entity(entity)
+			if animation: yield animation
+
+	def playout_entity(self, entity):
+		"""Plays out the given Entity's actions."""
+		for action in entity.actions:
+			# Turning off power to auto-running components.
+			if action['type'] == 'off':
+				# Nothing we need to do here; the power was already not consumed.
+				continue
+			# Engines.
+			if action['type'] == 'boost':
+				self.station.thrust += ENGINE_SPEED * action['dir']
+			# Shield Generators hiding their shields.
+			elif action['type'] == 'hide':
+				# Nothing we need to do here.
+				continue
+			# Factory assignments.
+			elif action['type'] == 'build':
+				entity.project = action['ship']
+				entity.hangar = action['hangar']
+			# Hangar launches.
+			elif action['type'] == 'launch':
+				self.hangar_launch(entity, action['index'], action['pos'], action['rot'])
+				# TODO There should be an animation for this, but for now there isn't.
+			# Moves.
+			elif action['type'] == 'move':
+				# Don't process remaining actions if the ship lands in a Hangar.
+				if self.move(entity, action['move']) == "LANDED": break
+			# Attacks.
+			elif action['type'] == 'attack':
+				weapon = entity.weapons[action['weapon']]
+				target = self.occupied(action['target'])
+				# This should happen if we killed the target in a previous attack.
+				if not target: continue
+				# Determine whether the attack hits.
+				# TEMP: always hit
+				action['hit'] = True
+				#action['hit'] = random.randint(1, 100) <= hit_chance(weapon.type, target)
+				# Nothing is changed in the gamestate if the attack misses.
+				if not action['hit']: continue
+				target.take_damage(weapon.power, weapon.type)
+				# Remove dead targets.
+				if target.hull <= 0:
+					self.remove(target)
+					# Spawn salvage pile.
+					self.add_salvage(Salvage(target.pos, target.salvage))
+
+			else: print(action, "is an invalid action")
+
+		# The legality checks are handled inside the method.
+		if entity.type == "Factory": self.factory_work(entity)
+
+
 	def init_station(self, data):
 		for pos in data: self.station.add(Component(self.get_id(), list(pos), self.station, data[pos], 0, COMPONENT_HULL))
 
@@ -273,33 +341,6 @@ class Gamestate:
 					factory.project = None
 					factory.hangar = None
 					return
-
-	# Methods for assigning random actions.
-
-	def assign_random_targets(self, entity):
-		"""Target all an Entity's weapons at random Entities of the opposite side."""
-		if entity.team == "enemy":
-			targets = {ship for ship in self.ships if ship.team == 'player'}.union(self.station)
-		else:
-			targets = {ship for ship in self.ships if ship.team == 'enemy'}.union(self.asteroids)
-		for i in entity.untargeted():
-			# For now, we just pick out the first possible target.
-			for target in targets:
-				if self.in_range(entity, entity.weapons[i], target):
-					entity.target(i, target.pos)
-					break
-
-	def assign_random_move(self, entity) -> bool:
-		"""Assigns a random move to the Entity. Used for Asteroids and sometimes enemies. Returns True if a move was made, False if no moves were legal."""
-		valid_moves = []
-		for move in ([0, 1], [0, -1], [1, 0], [-1, 0]):
-			if not self.invalid_move(entity, move): valid_moves.append(move)
-		if not valid_moves:
-			return False
-		move = random.choice(valid_moves)
-		entity.actions.append({'type': 'move', 'move': move})
-		return True
-
 
 
 def slope(p1, p2):

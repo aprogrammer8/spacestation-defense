@@ -1,6 +1,6 @@
 """This module contains helper functions."""
 
-import json
+import json, random
 from rules import *
 
 def rotate(pos, rot):
@@ -43,9 +43,16 @@ def adjacent(spaces1, spaces2):
 
 def interpret_assign(gamestate, cmd, display=None):
 	"""Interprets a JSON-formatted ASSIGN command, sets the unit's actions, and updates the Display if necessary."""
-	unit_pos = json.loads(cmd[:cmd.index(':')])
-	unit = gamestate.occupied(unit_pos)
-	unit.actions = json.loads(cmd[cmd.index(':')+1:])
+	# For conveience, don't force callers to strip the "ASSIGN:" prefix before coming here.
+	if cmd.startswith("ASSIGN:"):
+		cmd = cmd[7:]
+	try:
+		unit_pos = json.loads(cmd[:cmd.index(':')])
+		unit = gamestate.occupied(unit_pos)
+		unit.actions = json.loads(cmd[cmd.index(':')+1:])
+	except Exception as e:
+		print("Error interpreting command string:", cmd)
+		raise e
 	if display and display.selected == unit: display.select()
 
 def shield_repr(entity):
@@ -66,3 +73,41 @@ def thrust_repr(station):
 	if station.thrust > 0: string += " (clockwise)"
 	elif station.thrust < 0: string += " (counterclockwise)"
 	return string
+
+def set_target(entity, index, pos):
+	"""Generates an ASSIGN command string to target the Entity's weapon at the provided index at pos."""
+	action_index = 0
+	# Check if the requested weapon is already targeting something. If so, replace that target so the weapon isn't getting double-used.
+	for action in entity.actions:
+		if action['type'] == 'attack' and action['weapon'] == index:
+			new_actions = entity.actions.copy()
+			new_actions[action_index] = {'type': 'attack', 'weapon': index, 'target': pos}
+			return "ASSIGN:" + json.dumps(entity.pos) + ":" + json.dumps(new_actions)
+		action_index += 1
+	return "ASSIGN:" + json.dumps(entity.pos) + ":" + json.dumps(entity.actions + [{'type': 'attack', 'weapon': index, 'target': pos}])
+
+def assign_random_targets(gamestate, entity):
+	"""Generates a list of ASSIGN command strings to target all an Entity's weapons at random Entities of the opposite side."""
+	if entity.team == "enemy":
+		targets = {ship for ship in gamestate.ships if ship.team == 'player'}.union(gamestate.station)
+	else:
+		targets = {ship for ship in gamestate.ships if ship.team == 'enemy'}.union(gamestate.asteroids)
+	command = ""
+	for i in entity.untargeted():
+		# For now, we just pick out the first possible target.
+		for target in targets:
+			if gamestate.in_range(entity, entity.weapons[i], target):
+				command = set_target(entity, i, target.pos)
+				# We have to do this intermediate interpreting because we need the next call to set_target to see the Entity with the current target already set, so it doesn't overwrite it.
+				interpret_assign(gamestate, command)
+				break
+	return command
+
+def assign_random_move(gamestate, entity):
+	"""Generates an ASSIGN command to assign a random move to the Entity. Returns None if no moves were legal."""
+	valid_moves = []
+	for move in ([0, 1], [0, -1], [1, 0], [-1, 0]):
+		if not gamestate.invalid_move(entity, move): valid_moves.append(move)
+	if valid_moves:
+		move = random.choice(valid_moves)
+		return "ASSIGN:" + json.dumps(entity.pos) + ":" + json.dumps(entity.actions + [{'type': 'move', 'move': move}])

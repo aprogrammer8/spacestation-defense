@@ -37,94 +37,36 @@ def collect_input():
 					break
 			if done: return
 
-
-def players_move():
-	for component in gamestate.station: process_actions(component)
-	for ship in gamestate.ships:
-		if ship.team == 'player': process_actions(ship)
-
-
-def enemies_move():
+def enemy_ai():
 	for enemy in gamestate.ships:
-		if enemy.team == 'player': continue
-		gamestate.assign_random_targets(enemy)
+		if enemy.team != 'enemy': continue
+		command = assign_random_targets(gamestate, enemy)
+		print(command)
+		if command: interpret_assign(gamestate, command)
 		# If there are still untargeted weapons after that, it's because the enemy wasn't in range, so if it can, it should move and try again.
 		while enemy.untargeted() and enemy.moves_left():
-			if not gamestate.assign_random_move(enemy): break
-			gamestate.assign_random_targets(enemy)
-		# Now make it happen.
-		process_actions(enemy)
+			move_cmd = assign_random_move(gamestate, enemy)
+			if not move_cmd:
+				break
+			interpret_assign(gamestate, move_cmd)
+			command = assign_random_targets(gamestate, enemy)
+			print(command)
+			if command: interpret_assign(gamestate, command)
+		sock.send(encode(command))
 
-def asteroids_move():
+def asteroid_ai():
 	for asteroid in gamestate.asteroids:
 		if random.random() <= ASTEROID_MOVE_CHANCE:
-			gamestate.assign_random_move(asteroid)
-		process_actions(asteroid)
+			command = assign_random_move(gamestate, asteroid)
+			print(command)
+			interpret_assign(gamestate, command)
+			sock.send(encode(command))
 
-def process_actions(entity):
+def process_actions():
 	"""Takes an Entity with all its actions set, plays them out, and then encodes them as JSON and sends them so the clients can do the same."""
-	skip = False
-	# Subtract power for used components (except Hangars).
-	if isinstance(entity, Component) and entity.type != "Hangar":
-		if not entity.powered() or not gamestate.station.use_power():
-			skip = True
-	# We'll need the original at the end if the Entity moved.
-	orig_pos = entity.pos[:]
-	if not skip:
-		entity.shield_regen()
-		playout_actions(entity)
-	sock.send(encode("ACTION:" + json.dumps(orig_pos) + ';' + json.dumps(entity.actions)))
-
-
-def playout_actions(entity):
-	"""Takes an Entity and plays out its actions, reflecting the changes in the gamestate."""
-	for action in entity.actions:
-		# Turning off power to auto-running components.
-		if action['type'] == 'off':
-			# Nothing we need to do here.
-			continue
-		# Engines.
-		if action['type'] == 'boost':
-			gamestate.station.thrust += ENGINE_SPEED * action['dir']
-		# Shield Generators hiding their shields.
-		elif action['type'] == 'hide':
-			# Nothing we need to do here.
-			continue
-		# Factory assignments.
-		elif action['type'] == 'build':
-			entity.project = action['ship']
-			entity.hangar = action['hangar']
-		# Hangar launches.
-		elif action['type'] == 'launch':
-			if not gamestate.hangar_launch(entity, action['index'], action['pos'], action['rot']):
-				# If the launch is illegal, we need to not send it back out to the clients.
-				return
-		# Moves.
-		elif action['type'] == 'move':
-			# Don't process remaining actions if the ship lands in a Hangar.
-			if gamestate.move(entity, action['move']) == "LANDED": break
-		# Attacks.
-		elif action['type'] == 'attack':
-			weapon = entity.weapons[action['weapon']]
-			target = gamestate.occupied(action['target'])
-			# This should happen if we killed the target in a previous attack.
-			if not target: continue
-			# Determine whether the attack hits.
-			action['hit'] = random.randint(1, 100) <= hit_chance(weapon.type, target)
-			# Nothing is changed in the gamestate if the attack misses.
-			if not action['hit']: continue
-			target.take_damage(weapon.power, weapon.type)
-			# Remove dead targets.
-			if target.hull <= 0:
-				gamestate.remove(target)
-				# Spawn salvage pile.
-				gamestate.add_salvage(Salvage(target.pos, target.salvage))
-
-		else: print(action, "is an invalid action")
-
-	# The legality checks are handled inside the method.
-	if entity.type == "Factory": gamestate.factory_work(entity)
-
+	# TEMP: Just play them out server-side; don't fill in accuracy or send them out or anything.
+	for _ in gamestate.playout(): pass
+	#sock.send(encode("ACTION:" + json.dumps(orig_pos) + ';' + json.dumps(entity.actions)))
 
 def main():
 	global sock, players, gamestate
@@ -144,9 +86,9 @@ def main():
 	while True:
 		collect_input()
 		sock.send(encode("DONE"))
-		players_move()
-		enemies_move()
-		asteroids_move()
+		enemy_ai()
+		asteroid_ai()
+		process_actions()
 		sock.send(encode("ROUND"))
 		if abs(gamestate.station.thrust) >= gamestate.station.thrust_needed():
 			gamestate.station.rotate()

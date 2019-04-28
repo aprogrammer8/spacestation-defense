@@ -174,6 +174,9 @@ def handle_server_msg(msg, display):
 	if msg.startswith("LOCAL:"):
 		display.add_chat(msg[6:])
 	if msg == "ROUND":
+		for animation in gamestate.playout():
+			print(animation)
+			display.full_redraw()
 		if abs(gamestate.station.thrust) >= gamestate.station.thrust_needed():
 			gamestate.station.rotate()
 		gamestate.upkeep(clientside=True)
@@ -184,77 +187,6 @@ def handle_server_msg(msg, display):
 		display.full_redraw()
 	if msg.startswith("ASSIGN:"):
 		interpret_assign(gamestate, msg[7:], display)
-	# Unit action happening commands.
-	if msg.startswith("ACTION:"):
-		execute_move(msg[msg.index(':')+1:], display)
-
-
-def execute_move(cmd, display):
-	"""Takes an ACTION command from the server and executes it."""
-	print("Executing move:", cmd)
-	parts = cmd.split(';')
-	entity = gamestate.occupied(json.loads(parts[0]))
-	actions = json.loads(parts[1])
-	if not entity:
-		print("Entity dead already: ", json.loads(parts[0]), ", planned actions =", actions)
-		return
-	# Subtract power for used components (excepy Hangars), and skip unused ones.
-	if isinstance(entity, Component) and entity.type != "Hangar":
-		if not entity.powered() or not gamestate.station.use_power(): return
-		# If a station component was selected, then this needs to be reflected on the panel.
-		#if type(display.selected) == Component: display.select()
-	entity.shield_regen()
-	for action in actions:
-		# Turning off power to auto-running components.
-		if action['type'] == 'off':
-			# Nothing we need to do here.
-			continue
-		# Engines.
-		if action['type'] == 'boost':
-			gamestate.station.thrust += ENGINE_SPEED * action['dir']
-		# Shield Generators hiding their shields.
-		elif action['type'] == 'hide':
-			continue
-		# Factory assignments.
-		elif action['type'] == 'build':
-			entity.project = action['ship']
-			entity.hangar = action['hangar']
-		# Hangar launches.
-		elif action['type'] == 'launch':
-			gamestate.hangar_launch(entity, action['index'], action['pos'], action['rot'])
-			display.full_redraw()
-		# Moves.
-		elif action['type'] == 'move':
-			display.move(entity, action['move'])
-			await_animation(display)
-			# Don't process remaining actions if the ship lands in a Hangar.
-			if gamestate.move(entity, action['move']) == "LANDED":
-				# But we still have to deselect it. If the player could retain selection of a ship landed in a Hangar, that could cause a lot of problems.
-				if display.selected == entity: display.deselect()
-				break
-		# Attacks.
-		elif action['type'] == 'attack':
-			weapon = entity.weapons[action['weapon']]
-			target = gamestate.occupied(action['target'])
-			# This should happen if we killed the target in a previous attack.
-			if not target: continue
-			# Nothing is changed in the gamestate if the attack misses.
-			if not action['hit']: continue
-			target.take_damage(weapon.power, weapon.type)
-			# Remove dead targets.
-			if target.hull <= 0:
-				gamestate.remove(target)
-				# Spawn salvage pile.
-				gamestate.add_salvage(Salvage(target.pos, target.salvage))
-				display.draw_gamestate()
-
-		else: print(action, "is an invalid action")
-
-	# The legality checks (besides the power check) are handled inside the method.
-	if entity.type == "Factory": gamestate.factory_work(entity)
-
-	# This hopefully won't be necessary in the end.
-	display.full_redraw()
 
 
 def await_animation(display):

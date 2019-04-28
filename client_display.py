@@ -87,10 +87,10 @@ class GameDisplay:
 						SFX_ERROR.play()
 					# Valid targets.
 					elif self.gamestate.in_range(self.selected, self.selected.weapons[self.assigning].type, target) or override():
-						self.selected.target(self.assigning, target.pos) # TODO this is the only one that modifies the Gamestate from inside client_display. I should look for a workaround.
+						command = set_target(self.selected, self.assigning, target.pos)
 						self.assigning += 1
 						if self.assigning == len(self.selected.weapons): self.assigning = 0
-						return ["ASSIGN:" + json.dumps(self.selected.pos) + ":" + json.dumps(self.selected.actions)]
+						return [command]
 					# If the target is valid, but not reachable.
 					else:
 						SFX_ERROR.play()
