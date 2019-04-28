@@ -593,7 +593,7 @@ class GameDisplay:
 		self.anim.start()
 
 	def animate_move(self, entity, move):
-		"""The function that the movemnet animation thread runs. This should never be called from the outside. Instead, call move."""
+		"""The function that the movement animation thread runs. This should never be called from the outside. Instead, call move."""
 		# Precalculate the rect we'll need to erase.
 		# TODO This probably only works with one-space ships.
 		move_rect = self.calc_rect(rect((entity.pos, (entity.pos[0] + move[0], entity.pos[1] + move[1]))))
