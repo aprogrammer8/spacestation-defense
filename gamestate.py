@@ -125,8 +125,8 @@ class Gamestate:
 		"""Plays out all Entities actions."""
 		# We sort Entities in a top-left to bottom-right order for determinism.
 		entities_to_act = sorted(self.station.union(self.ships, self.asteroids),
-			# This lambda ensures (because False gtes sorted before True) that player stuff goes first, then enemy stuff, then asteroids; and within that, it goes by position.
-			key = lambda e: (e.team!='player', e.team!='enemy', e.pos))
+			# This lambda ensures (because False gets sorted before True) that player stuff goes first, then enemy stuff, then asteroids; and within that, it goes by position.
+			key = lambda e: (e.team != 'player', e.team != 'enemy', e.pos))
 		for entity in entities_to_act:
 			if isinstance(entity, Component):
 				if entity.powered() and not self.station.use_power():
