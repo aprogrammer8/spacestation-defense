@@ -64,10 +64,11 @@ def asteroid_ai():
 			sock.send(encode(command))
 
 def process_actions():
-	"""Takes an Entity with all its actions set, plays them out, and then encodes them as JSON and sends them so the clients can do the same."""
-	# TEMP: Just play them out server-side; don't fill in accuracy or send them out or anything.
-	for _ in gamestate.playout(): pass
-	#sock.send(encode("ACTION:" + json.dumps(orig_pos) + ';' + json.dumps(entity.actions)))
+	"""Fill in random results, send them out, and then play everything out on the server side."""
+	for command in gamestate.resolve_rng():
+		sock.send(encode(command))
+	for _ in gamestate.playout():
+		pass
 
 def main():
 	global sock, players, gamestate

@@ -121,6 +121,23 @@ class Gamestate:
 
 	# Basic mutating methods.
 
+	def resolve_rng(self):
+		"""Fills in randomly generated accuracy wherever necessary, and acts as a generator for the commands needed to propagate this."""
+		# Order doesn't matter here since it's just assigning.
+		for entity in self.station.union(self.ships, self.asteroids):
+			# We need to update if and only if at least one action was changed, but we don't want to send out a bunch of updates for the same Entity if it had multiple attacks.
+			update_needed = False
+			for action in entity.actions:
+				if action['type'] == 'attack':
+					target = self.occupied(action['target'])
+					# This should only happen if they targeted a space that doesn't have an Entity anymore.
+					if not target:
+						continue
+					action['hit'] = random.randint(1, 100) <= hit_chance(entity.weapons[action['weapon']].type, target)
+					update_needed = True
+			if update_needed:
+				yield "ASSIGN:" + json.dumps(entity.pos) + ":" + json.dumps(entity.actions)
+
 	def playout(self):
 		"""Plays out all Entities actions."""
 		# We sort Entities in a top-left to bottom-right order for determinism.
@@ -166,16 +183,12 @@ class Gamestate:
 				if self.move(entity, action['move']) == "LANDED": break
 			# Attacks.
 			elif action['type'] == 'attack':
-				weapon = entity.weapons[action['weapon']]
+				# Nothing is changed in the gamestate if the attack misses.
+				if not action['hit']: continue
 				target = self.occupied(action['target'])
 				# This should happen if we killed the target in a previous attack.
 				if not target: continue
-				# Determine whether the attack hits.
-				# TEMP: always hit
-				action['hit'] = True
-				#action['hit'] = random.randint(1, 100) <= hit_chance(weapon.type, target)
-				# Nothing is changed in the gamestate if the attack misses.
-				if not action['hit']: continue
+				weapon = entity.weapons[action['weapon']]
 				target.take_damage(weapon.power, weapon.type)
 				# Remove dead targets.
 				if target.hull <= 0:
