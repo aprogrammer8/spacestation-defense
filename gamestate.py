@@ -151,55 +151,52 @@ class Gamestate:
 			else:
 				# Non-Components have independent shield regeneration.
 				entity.shield_regen()
+
 			# We yield each time the client needs to play an animation to reflect the action. The server will just do nothing with them when it calls this.
-			animation = self.playout_entity(entity)
-			if animation: yield animation
+			for action in entity.actions:
+				# Turning off power to auto-running components.
+				if action['type'] == 'off':
+					# Nothing we need to do here; the power was already not consumed.
+					continue
+				# Engines.
+				if action['type'] == 'boost':
+					self.station.thrust += ENGINE_SPEED * action['dir']
+				# Shield Generators hiding their shields.
+				elif action['type'] == 'hide':
+					# Nothing we need to do here.
+					continue
+				# Factory assignments.
+				elif action['type'] == 'build':
+					entity.project = action['ship']
+					entity.hangar = action['hangar']
+				# Hangar launches.
+				elif action['type'] == 'launch':
+					self.hangar_launch(entity, action['index'], action['pos'], action['rot'])
+					# TODO There should be an animation for this, but for now there isn't.
+				# Moves.
+				elif action['type'] == 'move':
+					yield entity, action
+					# Don't process remaining actions if the ship lands in a Hangar.
+					if self.move(entity, action['move']) == "LANDED": break
+				# Attacks.
+				elif action['type'] == 'attack':
+					# Nothing is changed in the gamestate if the attack misses.
+					if not action['hit']: continue
+					target = self.occupied(action['target'])
+					# This should happen if we killed the target in a previous attack.
+					if not target: continue
+					weapon = entity.weapons[action['weapon']]
+					target.take_damage(weapon.power, weapon.type)
+					# Remove dead targets.
+					if target.hull <= 0:
+						self.remove(target)
+						# Spawn salvage pile.
+						self.add_salvage(Salvage(target.pos, target.salvage))
 
-	def playout_entity(self, entity):
-		"""Plays out the given Entity's actions."""
-		for action in entity.actions:
-			# Turning off power to auto-running components.
-			if action['type'] == 'off':
-				# Nothing we need to do here; the power was already not consumed.
-				continue
-			# Engines.
-			if action['type'] == 'boost':
-				self.station.thrust += ENGINE_SPEED * action['dir']
-			# Shield Generators hiding their shields.
-			elif action['type'] == 'hide':
-				# Nothing we need to do here.
-				continue
-			# Factory assignments.
-			elif action['type'] == 'build':
-				entity.project = action['ship']
-				entity.hangar = action['hangar']
-			# Hangar launches.
-			elif action['type'] == 'launch':
-				self.hangar_launch(entity, action['index'], action['pos'], action['rot'])
-				# TODO There should be an animation for this, but for now there isn't.
-			# Moves.
-			elif action['type'] == 'move':
-				# Don't process remaining actions if the ship lands in a Hangar.
-				if self.move(entity, action['move']) == "LANDED": break
-			# Attacks.
-			elif action['type'] == 'attack':
-				# Nothing is changed in the gamestate if the attack misses.
-				if not action['hit']: continue
-				target = self.occupied(action['target'])
-				# This should happen if we killed the target in a previous attack.
-				if not target: continue
-				weapon = entity.weapons[action['weapon']]
-				target.take_damage(weapon.power, weapon.type)
-				# Remove dead targets.
-				if target.hull <= 0:
-					self.remove(target)
-					# Spawn salvage pile.
-					self.add_salvage(Salvage(target.pos, target.salvage))
+				else: print(action, "is an invalid action")
 
-			else: print(action, "is an invalid action")
-
-		# The legality checks are handled inside the method.
-		if entity.type == "Factory": self.factory_work(entity)
+			# The legality checks are handled inside the method.
+			if entity.type == "Factory": self.factory_work(entity)
 
 
 	def init_station(self, data):

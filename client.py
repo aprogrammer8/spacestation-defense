@@ -174,10 +174,17 @@ def play(players):
 def handle_server_msg(msg, display):
 	if msg.startswith("LOCAL:"):
 		display.add_chat(msg[6:])
+	if msg.startswith("ASSIGN:"):
+		interpret_assign(gamestate, msg[7:], display)
 	if msg == "ROUND":
 		for animation in gamestate.playout():
+			#display.full_redraw()
 			print(animation)
-			display.full_redraw()
+			if animation:
+				# Assume it's a move, because for now that's the only thing that's animated.
+				#entity = gamestate.occupied(animation[0])
+				display.move(animation[0], animation[1]['move'])
+				await_animation(display)
 		if abs(gamestate.station.thrust) >= gamestate.station.thrust_needed():
 			gamestate.station.rotate()
 		gamestate.upkeep(clientside=True)
@@ -186,8 +193,6 @@ def handle_server_msg(msg, display):
 		enemy_json = json.loads(msg[14:])
 		gamestate.insert_enemies(enemy_json)
 		display.full_redraw()
-	if msg.startswith("ASSIGN:"):
-		interpret_assign(gamestate, msg[7:], display)
 
 
 def await_animation(display):
