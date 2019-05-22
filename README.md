@@ -24,7 +24,7 @@ And I still think that's stupid. But moving back to Python made me appreciate st
 attempts crash because of a mispelled variable name or function args being passed in the wrong order or some crap.
 
 This project taught me that inheritance is a lot less useful in practice than it sounds. Every time I try to write a class that ought to be a subtype of another class, I subclass it and think, "what methods can we inherit"? And almost always the answer is "none, this type requires slightly
-different behavior for all of them so they all have to be completely separate". And as long as there any new fields you have to copy the whole massive argument list into the new constructor and use that ugly syntax for calling the parent constructor and pass the entire huge argument list again.
+different behavior for all of them so they all have to be completely separate". And of course that means you have to copy the whole massive argument list into the new constructor and use that ugly syntax for calling the parent constructor and pass the entire huge argument list again.
 It's disgusting. Composition really is better. I'm sure the gamestate.py module and the whole mess of classes would have come out a lot better if I had written it Go.
 
 The project gave me the following belief about object-oriented design altogether: data and code are different things and shouldn't be bundled this way. For the most part it's better to use structs and functions than objects and methods. I believe that the only reason for a function to be a
