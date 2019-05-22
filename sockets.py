@@ -1,4 +1,4 @@
-"""A couple of useful functions to make transmitting data between client and server more elegant."""
+"""A couple of useful functions to abstract transmitting data between client and server."""
 
 def recv_message(sock) -> str:
 	"""Call on the socket when you know there's a message. This will return it."""

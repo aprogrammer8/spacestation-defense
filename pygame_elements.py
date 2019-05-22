@@ -1,4 +1,4 @@
-# This module contains various functions and classes for commonly used UI elements, such as wrapped text, text input boxes, and buttons.
+"""This module contains various functions and classes for commonly used UI elements, such as wrapped text, text input boxes, and buttons."""
 
 import pygame
 
