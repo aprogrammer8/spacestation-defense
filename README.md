@@ -1,5 +1,6 @@
-Spacestation Defense was a project I originall envisioned when I was about 15, and tried to make with my amateur coding skills and poor knowledge of Pygame. I gave up. 5 years later, I picked the project back up thinking I'd make it for real and it would be my first real game I"d release.
-The game would be  network-enabled and has global and lobby chat.
+Spacestation Defense was a project I originall envisioned when I was about 15, and tried to make with my amateur coding skills and poor knowledge of Pygame. I gave up. 5 years later, I picked the project back up thinking I'd make it for real and it would be my first real game I'd release.
+The game would be network-enabled and have global and lobby chat.
+
 That was the same year where most of my beliefs about game design were formed. In a bittersweet conclusion, I abandoned the project for good after realizing that that the game was simply a bad idea at its heart. I didn't want to make a game I couldn't in good conscience recommend to other people.
 
 The game would work like this: a group of players command a space station to defend it against waves of enemy ships. Each round, the players would assign actions to each station component and defending ship they controlled. After all players were ready they would lock in their decisions and they would all play out followed by the enemies taking their turn.
@@ -14,7 +15,7 @@ I was also going to have cards. Defeating the last enemy of a wave would usually
 of the station was swarmed by Fighters to play Manual Targeting and wipe them out).
 
 The core design problem that disillusioned me was that it wasn't a good competitive game because there was too much randomness and not enough room for skill, and it wasn't a good casual game because it was too complicated and too much of a slog.
-Too much time spent assigning actions to each of possibly dozens of units for such incremental and unimpressive results. Not to mention that the average match would probably go on for at least to hundred rounds.
+Too much time spent assigning actions to each of possibly dozens of units for such incremental and unimpressive results. Not to mention that the average match would probably go on for at least two hundred rounds.
 
 I still don't consider the project a complete waste because I learned a ton about programming from it the second time around. I came to appreciate the value of abstraction when I found myself with a 300-line play() function in client.py and decided to separate out all the graphical frontend
 details to client_display.py, where client.py now mostly contains logic for communicating between the Display and the server (I left the graphical details of the lobby screen and other non-gameplay screens in client.py because they were simple enough and there were more urgent things to work on).
