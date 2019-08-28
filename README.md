@@ -26,7 +26,7 @@ attempts crash because of a mispelled variable name or function args being passe
 
 This project was also part of what led me to [my final stance on the philosophy of object-oriented programming](https://yujiri.xyz/computing/oop.html), which I arrived at a few months later.
 
-The code is probably a little light on comments since I didn't expect anyone else to ever read this. That's also why the lines are so long - I write in a terminal with 381 columns :O
+The code is probably a little light on comments since I didn't expect anyone else to ever read this. That's also why the lines are so long - I wrote it in a terminal with 381 columns :O (That was before I had learned to really appreciate [dwm](https://dwm.suckless.org)'s tiling ability; nowadays I usually work with the screen split horizontally.)
 
 server.go is the lobby server. client.py connects to it and enters the lobby; when a group of players in a match lobby agree to start a game server.go starts a process running server.py which is the match server.
 The game is playable in its current state; you can run the server locally, connect to to it, chat, open a lobby, start a game and shoot the endless Drones and Asteroids.
