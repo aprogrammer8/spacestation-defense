@@ -24,13 +24,7 @@ Moving back to Python for this project after working as an intern in Go was also
 And I still think that's stupid. But moving back to Python made me appreciate static typing and having a compiler to check it soooo much. I still really like Python in a lot of ways but it's miserable to want to test a feature that takes a minute to get to from game start only to have the first five
 attempts crash because of a mispelled variable name or function args being passed in the wrong order or some crap.
 
-This project taught me that inheritance is a lot less useful in practice than it sounds. Every time I try to write a class that ought to be a subtype of another class, I subclass it and think, "what methods can we inherit"? And almost always the answer is "none, this type requires slightly
-different behavior for all of them so they all have to be completely separate". And of course that means you have to copy the whole massive argument list into the new constructor and use that ugly syntax for calling the parent constructor and pass the entire huge argument list again.
-It's disgusting. Composition really is better. I'm sure the gamestate.py module and the whole mess of classes would have come out a lot better if I had written it Go.
-
-The project gave me the following belief about object-oriented design altogether: data and code are different things and shouldn't be bundled this way. For the most part it's better to use structs and functions than objects and methods. I believe that the only reason for a function to be a
-method of a data structure is if it only deals with that data structure, such as a take_damage() method, but not a shoot() method that takes a target and calls its take_damage(). I find it's much clearer most of the time to keep execution in a central place and not modify an object from
-within another object's method. I ended up moving more and more Entity methods into the Gamestate later on, since I thought they could be thought of as part of the Gamestate.
+This project was also part of what led me to [my final stance on the philosophy of object-oriented programming](https://yujiri.xyz/computing/oop.html), which I arrived at a few months later.
 
 The code is probably a little light on comments since I didn't expect anyone else to ever read this. That's also why the lines are so long - I write in a terminal with 381 columns :O
 
