@@ -1,4 +1,4 @@
-Spacestation Defense was a project I originall envisioned when I was probably 16, and tried to make with my amateur coding skills and poor knowledge of Pygame. I gave up. 4 years later, I picked the project back up thinking I'd make it for real and it would be my first real game I'd release.
+Spacestation Defense was a project I originally envisioned when I was probably 16, and tried to make with my amateur coding skills and poor knowledge of Pygame. I gave up. 4 years later, I picked the project back up thinking I'd make it for real and it would be my first real game I'd release.
 The game would be network-enabled and have global and lobby chat.
 
 That was the same year where most of my beliefs about game design were formed. In a bittersweet conclusion, I abandoned the project for good after realizing that that the game was simply a bad idea at its heart. I didn't want to make a game I couldn't in good conscience recommend to other people.
